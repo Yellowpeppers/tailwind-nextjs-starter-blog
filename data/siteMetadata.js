@@ -7,7 +7,7 @@ const siteMetadata = {
   language: 'en-us',
   theme: 'system', // system, dark or light
   siteUrl: 'https://neurohackslab.com', // 你的域名
-  siteRepo: 'https://github.com/你的GitHub用户名/neurohacks-lab',
+  siteRepo: 'https://github.com/yellowpeppers/neurohacks-lab',
   siteLogo: '/static/images/logo.png', // 先不动，以后再换
   socialBanner: '/static/images/twitter-card.png',
   mastodon: 'https://mastodon.social/@mastodonuser',
