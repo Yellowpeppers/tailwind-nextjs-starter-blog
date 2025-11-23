@@ -1,0 +1,53 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wave" x1="0" x2="1200" y1="420" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9" stop-opacity="0.15" />
+      <stop offset="1" stop-color="#7C3AED" stop-opacity="0.2" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="48" fill="#0F172A" />
+  <path
+    d="M0 420C125 360 225 420 350 420C475 420 575 360 700 360C825 360 925 420 1050 420C1125 420 1200 395 1200 395V630H0V420Z"
+    fill="url(#wave)"
+  />
+  <text
+    x="80"
+    y="288"
+    fill="#F8FAFC"
+    font-size="82"
+    font-family="'Space Grotesk','Inter',system-ui,sans-serif"
+    font-weight="700"
+  >
+    NeuroHacks Lab
+  </text>
+  <text
+    x="80"
+    y="360"
+    fill="#E0F2FE"
+    font-size="34"
+    font-family="'Space Grotesk','Inter',system-ui,sans-serif"
+    opacity="0.9"
+  >
+    Quiet ADHD Systems · Sensory-friendly tools · Evidence-first guides
+  </text>
+  <rect
+    x="80"
+    y="402"
+    width="360"
+    height="54"
+    rx="27"
+    fill="#0EA5E9"
+    fill-opacity="0.18"
+    stroke="#38BDF8"
+    stroke-width="1.5"
+  />
+  <text
+    x="108"
+    y="438"
+    fill="#BAE6FD"
+    font-size="26"
+    font-family="'Space Grotesk','Inter',system-ui,sans-serif"
+  >
+    neurohackslab.com
+  </text>
+</svg>
