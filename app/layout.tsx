@@ -60,6 +60,33 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const basePath = process.env.BASE_PATH || ''
+  const socialProfiles = [
+    siteMetadata.github,
+    siteMetadata.x,
+    siteMetadata.facebook,
+    siteMetadata.linkedin,
+    siteMetadata.instagram,
+    siteMetadata.threads,
+    siteMetadata.bluesky,
+    siteMetadata.mastodon,
+  ].filter(Boolean)
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: siteMetadata.title,
+    url: siteMetadata.siteUrl,
+    description: siteMetadata.description,
+    logo: `${siteMetadata.siteUrl}${siteMetadata.siteLogo}`,
+    sameAs: socialProfiles,
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        email: siteMetadata.email,
+        contactType: 'customer support',
+        availableLanguage: siteMetadata.language,
+      },
+    ],
+  }
 
   return (
     <html
@@ -69,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <link
         rel="apple-touch-icon"
-        sizes="76x76"
+        sizes="180x180"
         href={`${basePath}/static/favicons/apple-touch-icon.png`}
       />
       <link
@@ -88,9 +115,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <link
         rel="mask-icon"
         href={`${basePath}/static/favicons/safari-pinned-tab.svg`}
-        color="#5bbad5"
+        color="#0EA5E9"
       />
-      <meta name="msapplication-TileColor" content="#000000" />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <meta name="msapplication-TileColor" content="#0EA5E9" />
       <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fff" />
       <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000" />
       <link rel="alternate" type="application/rss+xml" href={`${basePath}/feed.xml`} />

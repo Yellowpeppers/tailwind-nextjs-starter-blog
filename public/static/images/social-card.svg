@@ -1,0 +1,76 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="630" fill="url(#bg-gradient)"/>
+    
+    <g opacity="0.15" stroke="#00F0FF" stroke-width="1.5">
+        <path d="M-50 100C150 150 300 50 500 200C700 350 850 250 1250 400" />
+        <path d="M-50 300C200 350 400 200 700 450C1000 700 1150 500 1300 600" />
+        <path d="M100 -50C150 150 50 300 200 500C350 700 250 850 400 1250" />
+        <circle cx="500" cy="200" r="4" fill="#00F0FF"/>
+        <circle cx="700" cy="450" r="4" fill="#00F0FF"/>
+        <circle cx="200" cy="500" r="4" fill="#00F0FF"/>
+    </g>
+
+    <g transform="translate(100, 80)">
+        <g>
+            <g transform="translate(-10, -10) scale(0.35)">
+                <g transform="translate(25, 25)">
+                    <rect x="25" y="15" width="20" height="120" rx="10" fill="#0F172A"/>
+                    <rect x="105" y="15" width="20" height="120" rx="10" fill="#0F172A"/>
+                    <path d="M45 75 C 65 95, 85 55, 105 75" stroke="#0EA5E9" stroke-width="12" stroke-linecap="round" fill="none"/>
+                    <circle cx="45" cy="75" r="6" fill="#0EA5E9"/>
+                    <circle cx="105" cy="75" r="6" fill="#0EA5E9"/>
+                </g>
+            </g>
+            <text x="90" y="65" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="72" fill="white" letter-spacing="-1">
+                NeuroHacks Lab
+            </text>
+        </g>
+
+        <text x="0" y="140" font-family="system-ui, sans-serif" font-weight="400" font-size="28" fill="#E2E8F0" max-width="800">
+            Quiet ADHD systems &amp; sensory-friendly tools for calmer, focused routines.
+        </text>
+
+        <g transform="translate(0, 200)">
+            <g transform="translate(0, 0)">
+                <rect x="-20" y="-15" width="900" height="80" rx="12" fill="white" fill-opacity="0.05"/>
+                <rect x="-20" y="-15" width="6" height="80" rx="3" fill="#00F0FF"/>
+                <path d="M30 10H50C55.5228 10 60 14.4772 60 20V45C60 50.5228 55.5228 55 50 55H30M30 10C24.4772 10 20 14.4772 20 20V45C20 50.5228 24.4772 55 30 55M30 10V55" stroke="#00F0FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <text x="90" y="35" font-family="system-ui, sans-serif" font-weight="700" font-size="28" fill="white">Free Resource Library</text>
+            </g>
+
+            <g transform="translate(0, 100)">
+                <rect x="-20" y="-15" width="900" height="90" rx="12" fill="white" fill-opacity="0.05"/>
+                <rect x="-20" y="-15" width="6" height="90" rx="3" fill="#4F46E5"/>
+                <path d="M25 10H55V25H25V10Z" stroke="#A78BFA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M25 40H55V55H25V40Z" stroke="#A78BFA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M40 25V40" stroke="#A78BFA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <text x="90" y="30" font-family="system-ui, sans-serif" font-weight="700" font-size="28" fill="white">Evidence-based Guides &amp; Workflow Templates</text>
+                <text x="90" y="60" font-family="system-ui, sans-serif" font-weight="400" font-size="20" fill="#CBD5E1">Built for neurodivergent focus blocks.</text>
+            </g>
+
+            <g transform="translate(0, 210)">
+                <rect x="-20" y="-15" width="900" height="90" rx="12" fill="white" fill-opacity="0.05"/>
+                <rect x="-20" y="-15" width="6" height="90" rx="3" fill="#00F0FF"/>
+                <path d="M20 32.5C20 32.5 25 20 40 20C55 20 60 32.5 60 32.5" stroke="#00F0FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M25 45C25 45 30 55 40 55C50 55 55 45 55 45" stroke="#00F0FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="40" cy="37.5" r="5" fill="#00F0FF"/>
+                <text x="90" y="30" font-family="system-ui, sans-serif" font-weight="700" font-size="28" fill="white">Sensory-friendly Kits &amp; Quiet Test Rituals</text>
+                <text x="90" y="60" font-family="system-ui, sans-serif" font-weight="400" font-size="20" fill="#CBD5E1">Community notes · Noise, tactile &amp; airflow tools.</text>
+            </g>
+        </g>
+
+        <g transform="translate(0, 530)">
+            <text x="0" y="0" font-family="system-ui, sans-serif" font-weight="700" font-size="24" fill="#00F0FF" letter-spacing="1">
+                neurohackslab.com
+            </text>
+            <text x="1000" y="0" font-family="system-ui, sans-serif" font-weight="500" font-size="18" fill="#94A3B8" text-anchor="end">
+                Independent · Calm · Science-backed
+            </text>
+        </g>
+    </g>
+    
+    <defs>
+        <linearGradient id="bg-gradient" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#0F172A"/> <stop offset="100%" stop-color="#1E1B4B"/> </linearGradient>
+    </defs>
+</svg>
