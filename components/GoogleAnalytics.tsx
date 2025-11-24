@@ -9,12 +9,13 @@ import siteMetadata from '@/data/siteMetadata'
 declare global {
   interface Window {
     dataLayer?: Record<string, unknown>[]
-    gtag?: (...args: unknown[]) => void
   }
 }
 
+type AnalyticsWithGA = typeof siteMetadata.analytics & { googleAnalyticsId?: string }
+
 export default function GoogleAnalytics() {
-  const measurementId = siteMetadata.analytics?.googleAnalyticsId
+  const measurementId = (siteMetadata.analytics as AnalyticsWithGA | undefined)?.googleAnalyticsId
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
