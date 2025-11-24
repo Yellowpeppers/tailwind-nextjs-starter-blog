@@ -47,5 +47,5 @@
 
 ## 部署
 1. 运行 `yarn build` 确认 Contentlayer 产物正常。
-2. 将仓库连接到 Vercel（或自选平台），环境变量按需配置（Buttondown、Umami、Giscus 等）。
+2. 将仓库连接到 Vercel（或自选平台），默认 GA4 ID 为 `G-SHQD9JY8DJ`，如需切换请设置 `NEXT_PUBLIC_GA_ID` 环境变量，并按需补充 Buttondown、Umami、Giscus 等服务。
 3. 部署后检查 OG Card、favicon、站点导航与订阅 CTA 是否符合最新品牌规范。

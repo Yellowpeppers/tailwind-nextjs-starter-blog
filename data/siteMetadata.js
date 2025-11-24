@@ -25,7 +25,10 @@ const siteMetadata = {
   locale: 'en-US',
   // set to true if you want a navbar fixed to the top
   stickyNav: false,
-  analytics: {},
+  analytics: {
+    // NEXT_PUBLIC_GA_ID 可覆盖默认 GA4 测量 ID
+    googleAnalyticsId: process.env.NEXT_PUBLIC_GA_ID || 'G-SHQD9JY8DJ',
+  },
   newsletter: {
     provider: '',
   },
