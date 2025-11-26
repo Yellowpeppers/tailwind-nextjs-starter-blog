@@ -320,7 +320,7 @@ export default function TestPage() {
   }, [isAnalyzing])
 
   const totalScore = useMemo(
-    () => answers.reduce((sum, value) => sum + (value ?? 0), 0),
+    () => answers.reduce((sum: number, value: number | null) => sum + (value ?? 0), 0),
     [answers]
   )
   const currentStep = completed ? QUESTIONS.length : currentIndex + 1
