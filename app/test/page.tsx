@@ -319,10 +319,11 @@ export default function TestPage() {
     }
   }, [isAnalyzing])
 
-  const totalScore = useMemo<number>(
-    () => answers.reduce((sum: number, value: number | null) => sum + (value ?? 0), 0),
-    [answers]
-  )
+  const totalScore = useMemo(() => {
+    return answers.reduce<number>((sum, value) => {
+      return sum + (value ?? 0)
+    }, 0)
+  }, [answers])
   const currentStep = completed ? QUESTIONS.length : currentIndex + 1
   const progress = (currentStep / QUESTIONS.length) * 100
 
