@@ -7,14 +7,14 @@ const lastUpdated = 'November 25, 2025'
 export default function PrivacyPage() {
   return (
     <section className="py-12">
-      <article className="prose prose-neutral mx-auto dark:prose-invert">
+      <article className="prose prose-neutral dark:prose-invert mx-auto">
         <h1>Privacy Policy</h1>
         <p>Last updated: {lastUpdated}</p>
         <p>
-          NeuroHacks Lab (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) operates digital tools,
-          educational content, and related services focused on neurodivergent-friendly workflows.
-          This Privacy Policy explains how we collect, use, and protect your information when you
-          visit our website, access interactive tools, or subscribe to our resources.
+          NeuroHacks Lab (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) operates digital
+          tools, educational content, and related services focused on neurodivergent-friendly
+          workflows. This Privacy Policy explains how we collect, use, and protect your information
+          when you visit our website, access interactive tools, or subscribe to our resources.
         </p>
 
         <h2>Information We Collect</h2>
@@ -38,7 +38,9 @@ export default function PrivacyPage() {
         <h2>How We Use Your Information</h2>
         <ul>
           <li>Deliver checklists, guides, and email sequences you specifically request.</li>
-          <li>Analyze anonymized usage data to improve site performance and prioritize new tools.</li>
+          <li>
+            Analyze anonymized usage data to improve site performance and prioritize new tools.
+          </li>
           <li>Maintain the safety, security, and reliability of our infrastructure.</li>
           <li>Respond to questions or feedback you send to our team.</li>
         </ul>

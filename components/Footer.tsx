@@ -25,14 +25,16 @@ export default function Footer() {
       <div className="grid gap-10 md:grid-cols-3">
         <div className="space-y-4">
           <div>
-            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">NeuroHacks Lab</p>
+            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              NeuroHacks Lab
+            </p>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Quiet ADHD systems &amp; sensory-friendly tools.
             </p>
           </div>
           <a
             href={`mailto:${contactEmail}`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 transition hover:text-primary-500 dark:text-gray-200"
+            className="hover:text-primary-500 inline-flex items-center gap-2 text-sm font-medium text-gray-700 transition dark:text-gray-200"
           >
             <Mail className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             <span>{contactEmail}</span>
@@ -53,13 +55,13 @@ export default function Footer() {
           </div>
         </div>
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+          <p className="text-sm font-semibold tracking-[0.2em] text-gray-500 uppercase dark:text-gray-400">
             Quick Links
           </p>
           <ul className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
             {quickLinks.map((link) => (
               <li key={link.label}>
-                <Link className="transition hover:text-primary-500" href={link.href}>
+                <Link className="hover:text-primary-500 transition" href={link.href}>
                   {link.label}
                 </Link>
               </li>
@@ -67,13 +69,13 @@ export default function Footer() {
           </ul>
         </div>
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+          <p className="text-sm font-semibold tracking-[0.2em] text-gray-500 uppercase dark:text-gray-400">
             Topics
           </p>
           <ul className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
             {topics.map((topic) => (
               <li key={topic.label}>
-                <Link className="transition hover:text-primary-500" href={topic.href}>
+                <Link className="hover:text-primary-500 transition" href={topic.href}>
                   {topic.label}
                 </Link>
               </li>

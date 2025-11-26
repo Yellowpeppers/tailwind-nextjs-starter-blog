@@ -233,7 +233,11 @@ const QUESTIONS: Question[] = [
 ]
 
 const OPTION_LABELS = ['Never', 'Rarely', 'Sometimes', 'Often', 'Very Often']
-const ANALYZING_MESSAGES = ['Analyzing responses...', 'Mapping neuro-profile...', 'Finalizing score...']
+const ANALYZING_MESSAGES = [
+  'Analyzing responses...',
+  'Mapping neuro-profile...',
+  'Finalizing score...',
+]
 const ANALYZING_DURATION = 2500
 
 type ResultBucket = {
@@ -365,23 +369,35 @@ export default function TestPage() {
 
   const QuestionView = () => (
     <>
-      <div className="flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+      <div className="flex items-center justify-between text-sm font-semibold tracking-wide text-gray-600 uppercase dark:text-gray-300">
         <span>
           Question {currentStep} of {QUESTIONS.length}
         </span>
         <button
           type="button"
           onClick={() => setMuted((prev) => !prev)}
-          className="flex items-center gap-2 text-xs font-normal text-gray-500 transition hover:text-primary-500"
+          className="hover:text-primary-500 flex items-center gap-2 text-xs font-normal text-gray-500 transition"
         >
           {muted ? 'Sound off' : 'Sound on'}
           {muted ? (
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path d="M9 9l6 6M15 9l-6 6" strokeLinecap="round" />
               <path d="M4 9h4l4-4v14l-4-4H4z" strokeLinejoin="round" />
             </svg>
           ) : (
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path d="M4 9h4l4-4v14l-4-4H4z" strokeLinejoin="round" />
               <path d="M16 9a4 4 0 010 6" strokeLinecap="round" />
               <path d="M19 7a7 7 0 010 10" strokeLinecap="round" />
@@ -391,7 +407,7 @@ export default function TestPage() {
       </div>
       <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
         <motion.div
-          className="h-2 rounded-full bg-primary-500"
+          className="bg-primary-500 h-2 rounded-full"
           initial={false}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.35, ease: 'easeInOut' }}
@@ -407,7 +423,7 @@ export default function TestPage() {
           transition={{ duration: 0.3, ease: 'easeOut' }}
           className="mt-8 space-y-6"
         >
-          <p className="text-sm font-medium text-primary-500">
+          <p className="text-primary-500 text-sm font-medium">
             {currentQuestion.isPartA ? 'Part A' : 'Part B'} · Question {currentStep}
           </p>
           <h1
@@ -420,7 +436,7 @@ export default function TestPage() {
                 key={label}
                 type="button"
                 onClick={() => handleAnswerSelect(index)}
-                className="rounded-2xl border border-gray-200 bg-white px-4 py-5 text-left text-base font-medium text-gray-900 transition hover:-translate-y-0.5 hover:border-primary-500 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                className="hover:border-primary-500 hover:text-primary-600 focus-visible:ring-primary-500 rounded-2xl border border-gray-200 bg-white px-4 py-5 text-left text-base font-medium text-gray-900 transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
               >
                 <div className="text-lg font-semibold">{label}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -438,17 +454,18 @@ export default function TestPage() {
     <div className="flex flex-col items-center gap-6 py-8 text-center">
       <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">🧠 Part A Complete!</div>
       <p className="max-w-md text-base text-gray-600 dark:text-gray-300">
-        Great job. You've finished the core screening questions. Take a deep breath before the final stretch.
+        Great job. You've finished the core screening questions. Take a deep breath before the final
+        stretch.
       </p>
       <motion.div
-        className="h-16 w-16 rounded-full border-4 border-primary-200 bg-primary-100 dark:border-primary-500/30 dark:bg-primary-500/20"
+        className="border-primary-200 bg-primary-100 dark:border-primary-500/30 dark:bg-primary-500/20 h-16 w-16 rounded-full border-4"
         animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
       />
       <button
         type="button"
         onClick={() => setIsBreak(false)}
-        className="rounded-2xl bg-primary-500 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-600"
+        className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-2xl px-6 py-3 text-base font-semibold text-white shadow-lg transition"
       >
         Continue to Part B →
       </button>
@@ -458,32 +475,37 @@ export default function TestPage() {
   const AnalyzingView = () => (
     <div className="flex flex-col items-center gap-6 py-12 text-center">
       <motion.div
-        className="h-24 w-24 rounded-full border-4 border-primary-200 bg-gradient-to-br from-primary-100 via-white to-primary-200 dark:border-primary-500/30 dark:from-primary-500/10 dark:via-transparent dark:to-primary-500/20"
+        className="border-primary-200 from-primary-100 to-primary-200 dark:border-primary-500/30 dark:from-primary-500/10 dark:to-primary-500/20 h-24 w-24 rounded-full border-4 bg-gradient-to-br via-white dark:via-transparent"
         animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
       />
       <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
         {ANALYZING_MESSAGES[analyzingMessageIndex]}
       </p>
-      <p className="text-sm text-gray-600 dark:text-gray-300">We’ll surface your ASRS insights in just a moment.</p>
+      <p className="text-sm text-gray-600 dark:text-gray-300">
+        We’ll surface your ASRS insights in just a moment.
+      </p>
     </div>
   )
 
   const IntroView = () => (
     <div className="space-y-6">
       <div className="space-y-3">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary-500">ASRS-v1.1</p>
+        <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
+          ASRS-v1.1
+        </p>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           Free Adult ADHD Screening
         </h1>
         <p className="text-base text-gray-600 dark:text-gray-300">
-          Answer 18 research-backed questions to understand how closely your experiences align with adult ADHD patterns.
+          Answer 18 research-backed questions to understand how closely your experiences align with
+          adult ADHD patterns.
         </p>
       </div>
       <button
         type="button"
         onClick={() => setQuizStarted(true)}
-        className="inline-flex items-center justify-center rounded-2xl bg-primary-500 px-6 py-3 text-lg font-semibold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-600"
+        className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 inline-flex items-center justify-center rounded-2xl px-6 py-3 text-lg font-semibold text-white shadow-lg transition"
       >
         Start Assessment
       </button>
@@ -492,16 +514,18 @@ export default function TestPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-10 py-10">
-      <div className="rounded-3xl border border-gray-200 bg-white/80 p-8 shadow-xl shadow-primary-500/5 backdrop-blur dark:border-gray-800 dark:bg-gray-900/80">
+      <div className="shadow-primary-500/5 rounded-3xl border border-gray-200 bg-white/80 p-8 shadow-xl backdrop-blur dark:border-gray-800 dark:bg-gray-900/80">
         {!quizStarted ? (
           <IntroView />
         ) : isAnalyzing ? (
           <AnalyzingView />
         ) : completed ? (
           <div className="mt-8 space-y-8">
-            <div className={`rounded-3xl border bg-white p-8 shadow-lg dark:bg-gray-900 ${resultBucket.borderClass}`}>
+            <div
+              className={`rounded-3xl border bg-white p-8 shadow-lg dark:bg-gray-900 ${resultBucket.borderClass}`}
+            >
               <div className="flex flex-col gap-6 md:grid md:grid-cols-3 md:items-center">
-                <div className="relative h-48 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-primary-100 via-white to-rose-100 shadow-lg shadow-primary-500/20 dark:from-primary-500/10 dark:via-gray-900 dark:to-rose-500/10 md:h-full">
+                <div className="from-primary-100 shadow-primary-500/20 dark:from-primary-500/10 relative h-48 w-full overflow-hidden rounded-2xl bg-gradient-to-br via-white to-rose-100 shadow-lg md:h-full dark:via-gray-900 dark:to-rose-500/10">
                   <Image
                     src="/static/images/result-brain.png"
                     alt="Illustration of brain scan for ADHD assessment"
@@ -512,21 +536,29 @@ export default function TestPage() {
                   />
                 </div>
                 <div className="space-y-6 md:col-span-2">
-                  <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold ${resultBucket.badgeBg} ${resultBucket.badgeText}`}>
+                  <div
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold ${resultBucket.badgeBg} ${resultBucket.badgeText}`}
+                  >
                     <span>Status</span>
-                    <span className="uppercase tracking-wide">{resultBucket.label}</span>
+                    <span className="tracking-wide uppercase">{resultBucket.label}</span>
                   </div>
                   <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Score</p>
-                      <p className={`text-6xl font-black ${resultBucket.toneClass}`}>{totalScore}</p>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Total Score
+                      </p>
+                      <p className={`text-6xl font-black ${resultBucket.toneClass}`}>
+                        {totalScore}
+                      </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">out of 72</p>
                     </div>
                     <div className="text-left md:text-right">
                       <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                         {resultBucket.label}
                       </p>
-                      <p className="text-base text-gray-600 dark:text-gray-300">{resultBucket.description}</p>
+                      <p className="text-base text-gray-600 dark:text-gray-300">
+                        {resultBucket.description}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -536,14 +568,16 @@ export default function TestPage() {
             <div className="space-y-4 text-center">
               <Link
                 href="/blog/best-quiet-fidget-toys"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-primary-500 via-rose-500 to-primary-500 px-8 py-4 text-lg font-semibold text-white shadow-xl shadow-primary-500/40 transition hover:translate-y-0.5 hover:opacity-90"
+                className="from-primary-500 to-primary-500 shadow-primary-500/40 inline-flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r via-rose-500 px-8 py-4 text-lg font-semibold text-white shadow-xl transition hover:translate-y-0.5 hover:opacity-90"
               >
-                <span role="img" aria-label="Sparkles">✨</span>
+                <span role="img" aria-label="Sparkles">
+                  ✨
+                </span>
                 <span>See Tools That Help (Read Guide) →</span>
               </Link>
               <Link
                 href="/"
-                className="text-base font-semibold text-gray-700 underline underline-offset-4 transition hover:text-primary-500 dark:text-gray-200"
+                className="hover:text-primary-500 text-base font-semibold text-gray-700 underline underline-offset-4 transition dark:text-gray-200"
               >
                 Back to Home
               </Link>
@@ -557,10 +591,13 @@ export default function TestPage() {
       </div>
 
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Based on the Adult ADHD Self-Report Scale (ASRS-v1.1) Symptom Checklist. This screening is for educational purposes only and is not a medical diagnosis. Material adapted from World Health Organization standards.
+        Based on the Adult ADHD Self-Report Scale (ASRS-v1.1) Symptom Checklist. This screening is
+        for educational purposes only and is not a medical diagnosis. Material adapted from World
+        Health Organization standards.
       </p>
       <p className="text-xs text-gray-400 dark:text-gray-500">
-        ASRS-v1.1 Copyright © New York University and Ronald C. Kessler, PhD. All rights reserved. Used with permission.
+        ASRS-v1.1 Copyright © New York University and Ronald C. Kessler, PhD. All rights reserved.
+        Used with permission.
       </p>
     </div>
   )

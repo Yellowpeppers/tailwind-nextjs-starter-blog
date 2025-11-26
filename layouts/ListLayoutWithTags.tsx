@@ -1,6 +1,6 @@
 'use client'
 
-import { MouseEvent, useRef, useState } from 'react'
+import { KeyboardEvent, MouseEvent, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { slug } from 'github-slugger'
 import { formatDate } from 'pliny/utils/formatDate'
@@ -108,6 +108,16 @@ export default function ListLayoutWithTags({
     tagScrollRef.current.scrollLeft = dragScrollLeft.current - dx
   }
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!tagScrollRef.current) return
+    if (event.key === 'ArrowRight') {
+      tagScrollRef.current.scrollBy({ left: 80, behavior: 'smooth' })
+    }
+    if (event.key === 'ArrowLeft') {
+      tagScrollRef.current.scrollBy({ left: -80, behavior: 'smooth' })
+    }
+  }
+
   return (
     <>
       <div className="mx-auto w-full">
@@ -119,22 +129,26 @@ export default function ListLayoutWithTags({
         <div className="pb-8">
           <div
             ref={tagScrollRef}
-            className={`flex select-none items-center gap-3 overflow-x-auto pb-4 no-scrollbar ${
+            className={`no-scrollbar flex items-center gap-3 overflow-x-auto pb-4 select-none ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
             onMouseDown={handleMouseDown}
             onMouseLeave={endDrag}
             onMouseUp={endDrag}
             onMouseMove={handleMouseMove}
+            onKeyDown={handleKeyDown}
+            tabIndex={0}
+            role="listbox"
+            aria-label="Filter posts by tag"
           >
             {pathname.startsWith('/blog') ? (
-              <span className="whitespace-nowrap rounded-full border border-pink-200 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-600">
+              <span className="rounded-full border border-pink-200 bg-pink-50 px-4 py-2 text-sm font-semibold whitespace-nowrap text-pink-600">
                 All Posts
               </span>
             ) : (
               <Link
                 href="/blog"
-                className="whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-pink-200 hover:text-pink-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300 dark:hover:border-pink-400"
+                className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold whitespace-nowrap text-gray-600 transition hover:border-pink-200 hover:text-pink-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300 dark:hover:border-pink-400"
               >
                 All Posts
               </Link>
@@ -145,7 +159,7 @@ export default function ListLayoutWithTags({
                 <Link
                   key={t}
                   href={`/tags/${slug(t)}`}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
                     isActive
                       ? 'border border-pink-200 bg-pink-50 text-pink-600 shadow-sm dark:border-pink-400/60 dark:bg-pink-400/10 dark:text-pink-100'
                       : 'border border-gray-200 bg-white text-gray-600 hover:border-pink-200 hover:text-pink-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300 dark:hover:border-pink-400'
@@ -169,7 +183,7 @@ export default function ListLayoutWithTags({
                     <div className="flex flex-col gap-6 xl:flex-row xl:items-center">
                       <div className="space-y-4">
                         <div>
-                          <p className="text-sm uppercase tracking-[0.2em] text-gray-400">
+                          <p className="text-sm tracking-[0.2em] text-gray-400 uppercase">
                             <time dateTime={date} suppressHydrationWarning>
                               {formatDate(date, siteMetadata.locale)}
                             </time>
@@ -185,7 +199,9 @@ export default function ListLayoutWithTags({
                             ))}
                           </div>
                         </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">{summary}</div>
+                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
+                          {summary}
+                        </div>
                         <div className="text-base leading-6 font-medium">
                           <Link
                             href={`/${path}`}
@@ -198,7 +214,7 @@ export default function ListLayoutWithTags({
                       </div>
                       {coverImage && (
                         <div
-                          className="flex-shrink-0 w-40 overflow-hidden rounded-2xl border border-gray-100 shadow-sm dark:border-gray-800 sm:w-52 lg:w-60"
+                          className="w-40 flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 shadow-sm sm:w-52 lg:w-60 dark:border-gray-800"
                           style={{ aspectRatio: '16 / 9' }}
                         >
                           <Image

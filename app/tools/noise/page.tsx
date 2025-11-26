@@ -45,7 +45,7 @@ export default function FocusNoisePage() {
     if (isPlaying) {
       audio.play().catch(() => setIsPlaying(false))
     }
-  }, [activeNoise])
+  }, [activeNoise, isPlaying])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -74,9 +74,13 @@ export default function FocusNoisePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="mx-auto max-w-4xl px-6 py-16">
         <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.5em] text-gray-400">Deep Work Utility</p>
+          <p className="text-xs font-semibold tracking-[0.5em] text-gray-400 uppercase">
+            Deep Work Utility
+          </p>
           <h1 className="mt-4 text-4xl font-bold text-gray-900">Deep Focus Noise Generator</h1>
-          <p className="mt-3 text-lg text-gray-600">Select a color frequency to mask distractions.</p>
+          <p className="mt-3 text-lg text-gray-600">
+            Select a color frequency to mask distractions.
+          </p>
         </div>
 
         <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-8 shadow-xl">
@@ -101,8 +105,12 @@ export default function FocusNoisePage() {
           <div className="mt-10 grid gap-10 md:grid-cols-2 md:items-center">
             <div className="space-y-6">
               <div className="text-gray-800">
-                <p className="text-xs font-semibold uppercase tracking-[0.4em] text-gray-400">Now Playing</p>
-                <h2 className="mt-2 text-2xl font-bold text-gray-900">{noiseTracks[activeNoise].label}</h2>
+                <p className="text-xs font-semibold tracking-[0.4em] text-gray-400 uppercase">
+                  Now Playing
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-gray-900">
+                  {noiseTracks[activeNoise].label}
+                </h2>
                 <p className="text-sm text-gray-500">{noiseTracks[activeNoise].sublabel}</p>
               </div>
 
@@ -118,7 +126,7 @@ export default function FocusNoisePage() {
                   {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
                 </button>
                 <div className="flex-1">
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+                  <div className="flex items-center justify-between text-xs font-semibold tracking-[0.3em] text-gray-400 uppercase">
                     <span>Volume</span>
                     <span>{Math.round(volume * 100)}%</span>
                   </div>
@@ -163,23 +171,37 @@ export default function FocusNoisePage() {
                 />
                 <div className="relative rounded-full bg-white px-6 py-4 text-center shadow">
                   <p className="text-sm font-semibold text-gray-500">Color</p>
-                  <p className="text-xl font-bold text-gray-900">{noiseTracks[activeNoise].label}</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {noiseTracks[activeNoise].label}
+                  </p>
                 </div>
               </motion.div>
             </div>
           </div>
 
           <div className="mt-10 rounded-2xl border border-gray-100 bg-gray-50 p-6 text-gray-700">
-            <p className="text-sm font-semibold uppercase tracking-[0.4em] text-pink-500">Why it works</p>
+            <p className="text-sm font-semibold tracking-[0.4em] text-pink-500 uppercase">
+              Why it works
+            </p>
             <p className="mt-3 text-base leading-relaxed text-gray-600">
-              Brown noise (low frequency) is often preferred by ADHD brains because it dampens the 'internal monologue' and creates a consistent
-              sound blanket, unlike White noise which can be too harsh.
+              Brown noise (low frequency) is often preferred by ADHD brains because it dampens the
+              'internal monologue' and creates a consistent sound blanket, unlike White noise which
+              can be too harsh.
             </p>
           </div>
         </div>
       </div>
 
-      <audio ref={audioRef} loop preload="auto" src={noiseTracks[activeNoise].src} className="hidden" />
+      <audio
+        ref={audioRef}
+        loop
+        preload="auto"
+        src={noiseTracks[activeNoise].src}
+        className="hidden"
+        aria-label="Focus noise player"
+      >
+        <track kind="captions" src="/static/captions/blank.vtt" label="Audio track" />
+      </audio>
     </div>
   )
 }

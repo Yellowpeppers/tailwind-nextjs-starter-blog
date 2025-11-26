@@ -4,7 +4,11 @@ import type { LinkProps } from 'next/link'
 import { AnchorHTMLAttributes } from 'react'
 import clsx from 'clsx'
 
-const CustomLink = ({ href, className, ...rest }: LinkProps & AnchorHTMLAttributes<HTMLAnchorElement>) => {
+const CustomLink = ({
+  href,
+  className,
+  ...rest
+}: LinkProps & AnchorHTMLAttributes<HTMLAnchorElement>) => {
   const isInternalLink = href && href.startsWith('/')
   const isAnchorLink = href && href.startsWith('#')
   const combinedClass = clsx('break-words', className)

@@ -25,21 +25,39 @@ const energyModes: Record<
     selectorHint: 'Quick Hit (5 mins)',
     description: 'Micro hits to re-engage your brain without spending a ton of energy.',
     selectorGradient: 'bg-pink-500 shadow-lg shadow-pink-300/70',
-    activities: ['Drink water', 'Stretch it out', '5 jumping jacks', 'Pet the cat', 'Deep belly breaths', 'Sip a hot drink'],
+    activities: [
+      'Drink water',
+      'Stretch it out',
+      '5 jumping jacks',
+      'Pet the cat',
+      'Deep belly breaths',
+      'Sip a hot drink',
+    ],
   },
   medium: {
     label: 'Medium',
     selectorHint: 'Sensory Reset',
     description: 'Regulate your nervous system with tactile or sensory boosts.',
     selectorGradient: 'bg-pink-500 shadow-lg shadow-pink-300/70',
-    activities: ['Cold water on your face', 'Wrap up in a weighted blanket', 'Blast your hype playlist', 'Diffuse a citrus scent'],
+    activities: [
+      'Cold water on your face',
+      'Wrap up in a weighted blanket',
+      'Blast your hype playlist',
+      'Diffuse a citrus scent',
+    ],
   },
   high: {
     label: 'High',
     selectorHint: 'Deep Dive (30+ mins)',
     description: 'Lean into the hyperfocus with immersive, soul-filling work.',
     selectorGradient: 'bg-pink-500 shadow-lg shadow-pink-300/70',
-    activities: ['Read a chapter', 'Sketch or draw', 'Walk outside', 'Tidy one zone', 'Cook something cozy'],
+    activities: [
+      'Read a chapter',
+      'Sketch or draw',
+      'Walk outside',
+      'Tidy one zone',
+      'Cook something cozy',
+    ],
   },
 }
 
@@ -70,14 +88,16 @@ export default function DopamineMenuPage() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#ffe4e6,_#fdf2f8_45%,_#ecfeff)]">
       <div className="mx-auto max-w-3xl px-6 py-16">
         <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-rose-400">Micro Tool</p>
+          <p className="text-xs font-semibold tracking-[0.4em] text-rose-400 uppercase">
+            Micro Tool
+          </p>
           <h1 className="mt-4 text-4xl font-black text-slate-900">The Dopamine Menu</h1>
           <p className="mt-3 text-lg text-slate-600">Don&apos;t doom-scroll. Spin the wheel.</p>
         </div>
 
         <section className="mt-12 space-y-10">
           <div>
-            <p className="text-center text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
+            <p className="text-center text-sm font-semibold tracking-[0.4em] text-slate-500 uppercase">
               How much time/energy do you have?
             </p>
             <div className="relative mt-5 grid grid-cols-3 gap-2 rounded-full bg-white/75 p-1 text-sm font-medium shadow-xl shadow-slate-200">
@@ -97,10 +117,14 @@ export default function DopamineMenuPage() {
                         transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                       />
                     ) : null}
-                    <span className={`relative z-10 block text-base font-semibold ${isActive ? 'text-white' : 'text-slate-600'}`}>
+                    <span
+                      className={`relative z-10 block text-base font-semibold ${isActive ? 'text-white' : 'text-slate-600'}`}
+                    >
                       {energyModes[energy].label}
                     </span>
-                    <span className={`relative z-10 block text-xs ${isActive ? 'text-white/90' : 'text-slate-400'}`}>
+                    <span
+                      className={`relative z-10 block text-xs ${isActive ? 'text-white/90' : 'text-slate-400'}`}
+                    >
                       {energyModes[energy].selectorHint}
                     </span>
                   </button>
@@ -117,15 +141,22 @@ export default function DopamineMenuPage() {
             transition={{ duration: 0.45, ease: 'easeOut' }}
           >
             <div className="pointer-events-none absolute -top-10 left-10 h-28 w-28 rounded-full bg-white/20 blur-3xl" />
-            <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
+            <div className="pointer-events-none absolute right-0 bottom-0 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
 
             <div className="relative">
-              <p className="text-sm uppercase tracking-[0.55em] text-white/80">Now Serving</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white/90">{energyModes[activeEnergy].description}</h2>
+              <p className="text-sm tracking-[0.55em] text-white/80 uppercase">Now Serving</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white/90">
+                {energyModes[activeEnergy].description}
+              </h2>
             </div>
 
-            <div className="relative mt-6 rounded-2xl bg-black/10 p-6 text-center backdrop-blur-md" aria-live="polite">
-              <p className="text-xs font-semibold uppercase tracking-[0.55em] text-white/70">Your pull</p>
+            <div
+              className="relative mt-6 rounded-2xl bg-black/10 p-6 text-center backdrop-blur-md"
+              aria-live="polite"
+            >
+              <p className="text-xs font-semibold tracking-[0.55em] text-white/70 uppercase">
+                Your pull
+              </p>
               <div className="mt-4 min-h-[72px] overflow-hidden text-3xl font-black tracking-tight drop-shadow">
                 <AnimatePresence mode="wait">
                   <motion.p
@@ -152,7 +183,10 @@ export default function DopamineMenuPage() {
 
             <div className="mt-7 flex flex-wrap gap-3 text-sm font-semibold text-white/90">
               {energyModes[activeEnergy].activities.map((activity) => (
-                <span key={activity} className="rounded-full bg-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white">
+                <span
+                  key={activity}
+                  className="rounded-full bg-white/20 px-4 py-2 text-xs tracking-[0.3em] text-white uppercase"
+                >
                   {activity}
                 </span>
               ))}

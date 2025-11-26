@@ -105,10 +105,7 @@ const exploreLinks = [
         stroke="currentColor"
         strokeWidth="1.8"
       >
-        <path
-          d="M6 3h11a2 2 0 012 2v14l-4-3-4 3-4-3-4 3V5a2 2 0 012-2z"
-          strokeLinejoin="round"
-        />
+        <path d="M6 3h11a2 2 0 012 2v14l-4-3-4 3-4-3-4 3V5a2 2 0 012-2z" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -138,21 +135,23 @@ export default async function Page() {
   const posts = allCoreContent(sortedPosts)
   return (
     <div className="space-y-16 py-6 md:space-y-20 md:py-10">
-      <section className="overflow-hidden rounded-3xl border border-gray-200 bg-gradient-to-br from-primary-50 via-white to-rose-50 px-8 py-12 shadow-2xl shadow-primary-200/40 dark:border-gray-800 dark:from-gray-900 dark:via-gray-900 dark:to-primary-900/20">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-500">
+      <section className="from-primary-50 shadow-primary-200/40 dark:to-primary-900/20 overflow-hidden rounded-3xl border border-gray-200 bg-gradient-to-br via-white to-rose-50 px-8 py-12 shadow-2xl dark:border-gray-800 dark:from-gray-900 dark:via-gray-900">
+        <p className="text-primary-500 text-sm font-semibold tracking-[0.2em] uppercase">
           Adult ADHD Test · WHO ASRS v1.1
         </p>
-        <h1 className="mt-4 text-4xl font-black leading-tight text-gray-900 sm:text-5xl dark:text-gray-100">
-          Free Adult <span className="text-primary-500">ADHD Test Online</span> &amp; Productivity Toolkit
+        <h1 className="mt-4 text-4xl leading-tight font-black text-gray-900 sm:text-5xl dark:text-gray-100">
+          Free Adult <span className="text-primary-500">ADHD Test Online</span> &amp; Productivity
+          Toolkit
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 dark:text-gray-300">
-          Is it ADHD or just modern life? Take the <strong>World Health Organization (WHO) ASRS v1.1</strong>{' '}
-          screening. No email required—just clarity, science, and neurodivergent-friendly tools.
+          Is it ADHD or just modern life? Take the{' '}
+          <strong>World Health Organization (WHO) ASRS v1.1</strong> screening. No email
+          required—just clarity, science, and neurodivergent-friendly tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <Link
             href="/test"
-            className="inline-flex items-center justify-center rounded-2xl bg-primary-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-primary-500/40 transition hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="bg-primary-500 shadow-primary-500/40 hover:bg-primary-600 focus-visible:ring-primary-500 inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-semibold text-white shadow-lg transition focus:outline-none focus-visible:ring-2"
           >
             Start Free Assessment →
           </Link>
@@ -162,11 +161,11 @@ export default async function Page() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-gray-200 bg-white/70 p-8 shadow-lg shadow-primary-500/10 dark:border-gray-800 dark:bg-gray-950/70">
+      <section className="shadow-primary-500/10 rounded-3xl border border-gray-200 bg-white/70 p-8 shadow-lg dark:border-gray-800 dark:bg-gray-950/70">
         <div className="grid gap-8 md:grid-cols-3">
           {trustFeatures.map((feature) => (
             <div key={feature.title} className="space-y-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-white">
+              <div className="bg-primary-50 text-primary-600 dark:bg-primary-500/10 flex h-12 w-12 items-center justify-center rounded-2xl dark:text-white">
                 {feature.icon}
               </div>
               <div>
@@ -183,12 +182,13 @@ export default async function Page() {
       <section className="rounded-3xl border-y border-gray-100 bg-gray-50 py-16 dark:border-gray-800 dark:bg-gray-900/50">
         <div className="px-6">
           <div className="space-y-3 text-center md:text-left">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary-500">
+            <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
               Explore NeuroHacks
             </p>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Resource Hub</h2>
             <p className="text-base text-gray-600 dark:text-gray-300">
-              Choose your path—jump straight into the ADHD assessment, shop trusted buying guides, or dive into research-backed topics.
+              Choose your path—jump straight into the ADHD assessment, shop trusted buying guides,
+              or dive into research-backed topics.
             </p>
           </div>
           <div className="mt-8 grid gap-6 md:grid-cols-3">
@@ -221,14 +221,15 @@ export default async function Page() {
 
       <section className="space-y-10">
         <div className="space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary-500">
+          <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
             Neurodivergent Tools
           </p>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             Latest Guides &amp; Reviews
           </h2>
           <p className="max-w-2xl text-base text-gray-600 dark:text-gray-300">
-            Deep dives into quiet sensory gear, focus rituals, and ADHD-friendly planning systems to pair with your ASRS v1.1 results.
+            Deep dives into quiet sensory gear, focus rituals, and ADHD-friendly planning systems to
+            pair with your ASRS v1.1 results.
           </p>
         </div>
         <ul className="divide-y divide-gray-200 dark:divide-gray-800">

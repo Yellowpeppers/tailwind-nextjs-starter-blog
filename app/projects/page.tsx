@@ -6,7 +6,7 @@ export const metadata = genPageMetadata({ title: 'Interactive Tools' })
 
 export default function Projects() {
   const totalProjects = projectsData.length
-  const remainingIsOdd = (Math.max(totalProjects - 1, 0)) % 2 === 1
+  const remainingIsOdd = Math.max(totalProjects - 1, 0) % 2 === 1
 
   return (
     <>
@@ -16,7 +16,8 @@ export default function Projects() {
             Interactive Tools
           </h1>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            Science-backed utilities to help you screen symptoms, focus better, and regulate sensory input.
+            Science-backed utilities to help you screen symptoms, focus better, and regulate sensory
+            input.
           </p>
         </div>
         <div className="container py-12">
