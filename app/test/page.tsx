@@ -284,8 +284,8 @@ export default function TestPage() {
   const [isBreak, setIsBreak] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analyzingMessageIndex, setAnalyzingMessageIndex] = useState(0)
-  const analyzeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const analyzeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const analyzeTimeoutRef = useRef<number | null>(null)
+  const analyzeIntervalRef = useRef<number | null>(null)
   const [muted, setMuted] = useState(false)
   const [playPop] = useSound('/static/sounds/pop.mp3', {
     volume: 0.4,
@@ -294,11 +294,11 @@ export default function TestPage() {
 
   useEffect(() => {
     return () => {
-      if (analyzeTimeoutRef.current) {
-        clearTimeout(analyzeTimeoutRef.current)
+      if (analyzeTimeoutRef.current !== null) {
+        window.clearTimeout(analyzeTimeoutRef.current)
       }
-      if (analyzeIntervalRef.current) {
-        clearInterval(analyzeIntervalRef.current)
+      if (analyzeIntervalRef.current !== null) {
+        window.clearInterval(analyzeIntervalRef.current)
       }
     }
   }, [])
@@ -312,8 +312,8 @@ export default function TestPage() {
     }
 
     return () => {
-      if (analyzeIntervalRef.current) {
-        clearInterval(analyzeIntervalRef.current)
+      if (analyzeIntervalRef.current !== null) {
+        window.clearInterval(analyzeIntervalRef.current)
         analyzeIntervalRef.current = null
       }
     }
@@ -331,8 +331,8 @@ export default function TestPage() {
   const triggerAnalyzingPhase = () => {
     setIsAnalyzing(true)
     setAnalyzingMessageIndex(0)
-    if (analyzeTimeoutRef.current) {
-      clearTimeout(analyzeTimeoutRef.current)
+    if (analyzeTimeoutRef.current !== null) {
+      window.clearTimeout(analyzeTimeoutRef.current)
     }
     analyzeTimeoutRef.current = window.setTimeout(() => {
       setIsAnalyzing(false)
