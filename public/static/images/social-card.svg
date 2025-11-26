@@ -14,8 +14,8 @@
         <g>
             <g transform="translate(-10, -10) scale(0.35)">
                 <g transform="translate(25, 25)">
-                    <rect x="25" y="15" width="20" height="120" rx="10" fill="#0F172A"/>
-                    <rect x="105" y="15" width="20" height="120" rx="10" fill="#0F172A"/>
+                    <rect x="25" y="15" width="20" height="120" rx="10" fill="#FFFFFF"/>
+                    <rect x="105" y="15" width="20" height="120" rx="10" fill="#FFFFFF"/>
                     <path d="M45 75 C 65 95, 85 55, 105 75" stroke="#0EA5E9" stroke-width="12" stroke-linecap="round" fill="none"/>
                     <circle cx="45" cy="75" r="6" fill="#0EA5E9"/>
                     <circle cx="105" cy="75" r="6" fill="#0EA5E9"/>
