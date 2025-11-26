@@ -319,7 +319,7 @@ export default function TestPage() {
     }
   }, [isAnalyzing])
 
-  const totalScore = useMemo(
+  const totalScore = useMemo<number>(
     () => answers.reduce((sum: number, value: number | null) => sum + (value ?? 0), 0),
     [answers]
   )
