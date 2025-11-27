@@ -1,46 +1,34 @@
-import projectsData from '@/data/projectsData'
-import Card from '@/components/Card'
 import { genPageMetadata } from 'app/seo'
+import {
+  BrainDumpCard,
+  FocusLabIntro,
+  SonicShieldCard,
+  TaskBreakerCard,
+  TimerCard,
+} from './FocusLabDashboard'
 
-export const metadata = genPageMetadata({ title: 'Interactive Tools' })
+export const metadata = genPageMetadata({ title: 'Focus Lab' })
 
 export default function Projects() {
-  const totalProjects = projectsData.length
-  const remainingIsOdd = Math.max(totalProjects - 1, 0) % 2 === 1
-
   return (
-    <>
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        <div className="space-y-2 pt-6 pb-8 md:space-y-5">
-          <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
-            Interactive Tools
-          </h1>
-          <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            Science-backed utilities to help you screen symptoms, focus better, and regulate sensory
-            input.
-          </p>
-        </div>
-        <div className="container py-12">
-          <div className="grid gap-8 md:grid-cols-2">
-            {projectsData.map((project, index) => {
-              const isHero = index === 0
-              const isLast = index === totalProjects - 1
-              const spanFullWidth = isHero || (!isHero && isLast && remainingIsOdd)
-
-              return (
-                <Card
-                  key={project.title}
-                  title={project.title}
-                  description={project.description}
-                  imgSrc={project.imgSrc}
-                  href={project.href}
-                  className={spanFullWidth ? 'md:col-span-2' : undefined}
-                />
-              )
-            })}
+    <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 lg:px-8">
+      <div className="space-y-10">
+        <FocusLabIntro />
+        <div className="grid auto-rows-min grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <SonicShieldCard />
+          </div>
+          <div className="lg:col-span-1">
+            <TimerCard />
+          </div>
+          <div className="lg:col-span-2">
+            <BrainDumpCard />
+          </div>
+          <div className="lg:col-span-1 lg:row-span-2">
+            <TaskBreakerCard />
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }

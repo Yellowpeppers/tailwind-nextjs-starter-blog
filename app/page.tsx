@@ -167,14 +167,14 @@ const faqItems = [
         explore our{' '}
         <Link
           href="/projects"
-          className="text-primary-500 font-semibold hover:text-primary-600 dark:hover:text-primary-400"
+          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-semibold"
         >
           Tools
         </Link>{' '}
         and{' '}
         <Link
           href="/blog"
-          className="text-primary-500 font-semibold hover:text-primary-600 dark:hover:text-primary-400"
+          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-semibold"
         >
           Guides
         </Link>{' '}
@@ -283,8 +283,8 @@ export default async function Page() {
               ADHD Test Online: Frequently Asked Questions
             </h2>
             <p className="text-base text-gray-600 dark:text-gray-300">
-              Get confident about how this adult ADHD screening works, why it&apos;s free, and what to
-              do next once you have your score.
+              Get confident about how this adult ADHD screening works, why it&apos;s free, and what
+              to do next once you have your score.
             </p>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-2">
