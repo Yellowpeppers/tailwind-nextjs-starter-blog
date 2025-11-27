@@ -8,7 +8,7 @@ import { sortPosts, allCoreContent } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
 
 export const metadata = {
-  title: 'Free Adult ADHD Test Online (ASRS v1.1) & Neurodivergent Tools - NeuroHacks Lab',
+  title: 'Free Adult ADHD Test Online (ASRS v1.1) - NeuroHacks Lab',
   description:
     'Take our free, private ADHD test online. Based on the WHO ASRS v1.1 checklist for adults. No email required, instant scoring, and focus tools included.',
 }
@@ -130,6 +130,60 @@ const exploreLinks = [
   },
 ]
 
+const faqItems = [
+  {
+    question: 'Is this ADHD test online accurate?',
+    answer: (
+      <>
+        This tool uses the ASRS v1.1, which is a scientifically validated screening checklist
+        developed by the World Health Organization. While no ADHD test online can replace a
+        doctor&apos;s diagnosis, it is highly reliable for identifying symptom patterns.
+      </>
+    ),
+  },
+  {
+    question: 'Is this really a free ADHD test?',
+    answer: (
+      <>
+        Yes. Unlike other sites that hide results behind a paywall, NeuroHacks Lab provides a
+        completely free ADHD test online with instant results.
+      </>
+    ),
+  },
+  {
+    question: 'Do I need to provide my email?',
+    answer: (
+      <>
+        No. We believe in privacy. You can take this adult ADHD screening directly in your browser
+        without signing up.
+      </>
+    ),
+  },
+  {
+    question: 'What should I do after taking the test?',
+    answer: (
+      <>
+        If your score indicates high symptoms, we recommend consulting a specialist. You can also
+        explore our{' '}
+        <Link
+          href="/projects"
+          className="text-primary-500 font-semibold hover:text-primary-600 dark:hover:text-primary-400"
+        >
+          Tools
+        </Link>{' '}
+        and{' '}
+        <Link
+          href="/blog"
+          className="text-primary-500 font-semibold hover:text-primary-600 dark:hover:text-primary-400"
+        >
+          Guides
+        </Link>{' '}
+        to manage your focus immediately.
+      </>
+    ),
+  },
+]
+
 export default async function Page() {
   const sortedPosts = sortPosts(allBlogs)
   const posts = allCoreContent(sortedPosts)
@@ -214,6 +268,34 @@ export default async function Page() {
                   </div>
                 </div>
               </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16">
+        <div className="rounded-3xl border border-gray-100 bg-white/80 px-8 py-16 shadow-xl dark:border-gray-800 dark:bg-gray-950/70">
+          <div className="mx-auto max-w-3xl space-y-4 text-center">
+            <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
+              FAQs
+            </p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              ADHD Test Online: Frequently Asked Questions
+            </h2>
+            <p className="text-base text-gray-600 dark:text-gray-300">
+              Get confident about how this adult ADHD screening works, why it&apos;s free, and what to
+              do next once you have your score.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {faqItems.map((faq) => (
+              <div
+                key={faq.question}
+                className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/80 p-6 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/60"
+              >
+                <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{faq.question}</p>
+                <p className="text-base text-gray-600 dark:text-gray-300">{faq.answer}</p>
+              </div>
             ))}
           </div>
         </div>

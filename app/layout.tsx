@@ -21,7 +21,7 @@ const space_grotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteMetadata.siteUrl),
+  metadataBase: new URL('https://neurohackslab.com'),
   title: {
     default: siteMetadata.title,
     template: `%s | ${siteMetadata.title}`,
@@ -30,14 +30,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: siteMetadata.title,
     description: siteMetadata.description,
-    url: './',
+    url: '/',
     siteName: siteMetadata.title,
     images: [siteMetadata.socialBanner],
     locale: 'en_US',
     type: 'website',
   },
   alternates: {
-    canonical: './',
+    canonical: '/',
     types: {
       'application/rss+xml': `${siteMetadata.siteUrl}/feed.xml`,
     },
@@ -97,6 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <head>
+        {/* Next.js auto-injects the default favicon link when /app/icon.png exists, so no extra tag is needed. */}
         <link
           rel="apple-touch-icon"
           sizes="180x180"
