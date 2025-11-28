@@ -6,6 +6,28 @@ import { ReactNode, useEffect, useRef, useState, createContext, useContext } fro
 // Context for passing drag controls to children
 const DragHandleContext = createContext<DragControls | null>(null)
 
+// --- Helper Functions ---
+
+const playClickSound = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+  const oscillator = audioContext.createOscillator()
+  const gainNode = audioContext.createGain()
+
+  oscillator.type = 'sine'
+  oscillator.frequency.setValueAtTime(800, audioContext.currentTime) // High pitch beep
+  oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1) // Drop pitch
+
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+
+  oscillator.start()
+  oscillator.stop(audioContext.currentTime + 0.1)
+}
+
 // --- Shared Components ---
 
 const SegmentedControl = <T extends string>({
@@ -115,9 +137,10 @@ type WidgetCardProps = {
   title: string
   subtitle: string
   children: ReactNode
+  onHeaderClick?: () => void
 }
 
-const WidgetCard = ({ title, subtitle, children }: WidgetCardProps) => {
+const WidgetCard = ({ title, subtitle, children, onHeaderClick }: WidgetCardProps) => {
   const [showInfo, setShowInfo] = useState(false)
   const infoRef = useRef<HTMLDivElement>(null)
 
@@ -142,6 +165,14 @@ const WidgetCard = ({ title, subtitle, children }: WidgetCardProps) => {
         className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
         onPointerDown={(e) => {
           dragControls?.start(e)
+        }}
+        onClick={onHeaderClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onHeaderClick?.()
+          }
         }}
       >
         <div className="flex items-center gap-2">
@@ -205,18 +236,108 @@ type GridItem = {
 }
 
 const INITIAL_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 6, h: 5, minW: 6, minH: 5 }, // 5 rows, 6 cols
-  { id: 'timer', x: 6, y: 0, w: 6, h: 5, minW: 4, minH: 5 }, // 5 rows, 6 cols
-  { id: 'brain', x: 0, y: 5, w: 6, h: 6, minW: 4, minH: 4 }, // Min 4x4
-  { id: 'breaker', x: 6, y: 5, w: 6, h: 6, minW: 4, minH: 5 }, // Min 5x4
-  { id: 'dopamine', x: 0, y: 11, w: 6, h: 6, minW: 4, minH: 4 }, // New Widget
+  // Left Column
+  { id: 'sonic', x: 0, y: 0, w: 5, h: 5, minW: 4, minH: 4 },
+  { id: 'breaker', x: 0, y: 5, w: 5, h: 6, minW: 4, minH: 4 },
+
+  // Middle Column (Tall)
+  { id: 'brain', x: 5, y: 0, w: 5, h: 11, minW: 4, minH: 6 },
+
+  // Right Column
+  { id: 'timer', x: 10, y: 0, w: 5, h: 5, minW: 4, minH: 4 },
+  { id: 'dopamine', x: 10, y: 5, w: 5, h: 6, minW: 4, minH: 4 },
 ]
 
-const GRID_COLS = 12
+const COL_WIDTH = 60
 const ROW_HEIGHT = 60
 const GAP = 24
 
-export const FocusLabGrid = () => {
+export const FocusLabDashboard = () => {
+  const [isFocusMode, setIsFocusMode] = useState(false)
+  const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
+
+  const toggleCardFocus = (id: string) => {
+    setFocusedCardIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  return (
+    <div className="relative">
+      {/* Focus Mode Backdrop - Covers everything including global header */}
+      <div
+        className={`fixed inset-0 bg-white/95 backdrop-blur-sm transition-all duration-500 dark:bg-gray-950/95 ${
+          isFocusMode ? 'z-[90] opacity-100' : 'pointer-events-none z-[-1] opacity-0'
+        }`}
+      />
+
+      {/* Focus Mode Toggle */}
+      <button
+        onClick={() => setIsFocusMode(!isFocusMode)}
+        className="fixed top-6 right-6 z-[100] rounded-full bg-white/80 p-3 shadow-lg backdrop-blur-md transition-all hover:scale-110 hover:bg-pink-50 dark:bg-gray-800/80 dark:hover:bg-pink-900/30"
+        title={isFocusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
+      >
+        {isFocusMode ? (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-6 w-6 text-pink-500"
+          >
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-6 w-6 text-gray-500 dark:text-gray-400"
+          >
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+          </svg>
+        )}
+      </button>
+
+      {/* Intro Section - Fades out and collapses in Focus Mode */}
+      <div
+        className={`overflow-hidden transition-all duration-700 ease-in-out ${
+          isFocusMode ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
+        }`}
+      >
+        <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 lg:px-8">
+          <FocusLabIntro />
+        </div>
+      </div>
+
+      {/* Grid Section - Stays in flow, elevates in Focus Mode */}
+      <div className={`transition-all duration-500 ${isFocusMode ? 'relative z-[95]' : 'mt-10'}`}>
+        <FocusLabGrid
+          isFocusMode={isFocusMode}
+          focusedCardIds={focusedCardIds}
+          onToggleFocus={toggleCardFocus}
+        />
+      </div>
+    </div>
+  )
+}
+
+export const FocusLabGrid = ({
+  isFocusMode = false,
+  focusedCardIds = new Set(),
+  onToggleFocus = () => {},
+}: {
+  isFocusMode?: boolean
+  focusedCardIds?: Set<string>
+  onToggleFocus?: (id: string) => void
+}) => {
   const [layout, setLayout] = useState<GridItem[]>(INITIAL_LAYOUT)
   const [activeId, setActiveId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -233,11 +354,39 @@ export const FocusLabGrid = () => {
     }
 
     updateWidth()
+    updateWidth()
     window.addEventListener('resize', updateWidth)
     return () => window.removeEventListener('resize', updateWidth)
   }, [])
 
-  const colWidth = (containerWidth - (GRID_COLS - 1) * GAP) / GRID_COLS
+  // Auto-center layout on first load
+  const hasCentered = useRef(false)
+  useEffect(() => {
+    if (containerWidth > 0 && !hasCentered.current) {
+      const contentWidth = 15 * (COL_WIDTH + GAP) - GAP // 15 columns used in INITIAL_LAYOUT
+      const availableSpace = containerWidth - contentWidth
+
+      if (availableSpace > 0) {
+        // Calculate centered shift, but bias left by 1 column as per user preference
+        const shiftCols = Math.max(0, Math.floor(availableSpace / 2 / (COL_WIDTH + GAP)) - 1)
+        if (shiftCols > 0) {
+          setLayout((prev) =>
+            prev.map((item) => ({
+              ...item,
+              x: item.x + shiftCols,
+            }))
+          )
+        }
+      }
+      hasCentered.current = true
+    }
+  }, [containerWidth])
+
+  const colWidth = COL_WIDTH
+
+  // Calculate Grid Offset to center the 15-column layout
+  const contentWidth = 15 * (COL_WIDTH + GAP) - GAP
+  const gridOffset = Math.max(0, (containerWidth - contentWidth) / 2)
 
   // Helper to snap to grid
   const snapToGrid = (value: number, unitSize: number) => {
@@ -256,27 +405,73 @@ export const FocusLabGrid = () => {
         height: Math.max(...layout.map((i) => (i.y + i.h) * (ROW_HEIGHT + GAP))) + 100,
       }}
     >
-      {/* Visible Grid Background */}
+      {/* Centered Grid Container */}
+      <div
+        className="absolute top-0 h-full transition-all duration-500 ease-out"
+        style={{
+          left: gridOffset,
+          width: contentWidth, // Optional, but helps debug
+        }}
+      >
+        {/* Visible Grid Background - Simple Lines */}
+        <div className="pointer-events-none absolute inset-0 z-0">
+          <div
+            className="w-full"
+            style={{
+              position: 'absolute',
+              // Shift left by a large multiple of the grid unit (84px) to ensure phase alignment
+              // 84 * 50 = 4200px. This ensures the grid lines at x=0 align perfectly with the cards.
+              left: -4200,
+              // Extend upwards to cover hero area. 840px is 10 * 84px (Row + Gap), preserving vertical phase.
+              top: -840,
+              height: 'calc(100% + 840px)',
+              width: '10000px', // Large enough to cover any screen
+              backgroundImage: `
+                linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
+              `,
+              backgroundSize: `${COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
+              backgroundPosition: `-${GAP / 2}px -${GAP / 2}px`,
+            }}
+          />
+        </div>
 
-      {containerWidth > 0 &&
-        layout.map((item) => (
-          <DraggableResizableItem
-            key={item.id}
-            item={item}
-            colWidth={colWidth}
-            onUpdate={(newProps) => updateLayout(item.id, newProps)}
-            isActive={activeId === item.id}
-            onActivate={() => setActiveId(item.id)}
-            onInteractionStart={() => setIsDraggingOrResizing(true)}
-            onInteractionEnd={() => setIsDraggingOrResizing(false)}
-          >
-            {item.id === 'sonic' && <SonicShieldCard />}
-            {item.id === 'timer' && <TimerCard />}
-            {item.id === 'brain' && <BrainDumpCard />}
-            {item.id === 'breaker' && <TaskBreakerCard />}
-            {item.id === 'dopamine' && <DopamineMenuCard cols={item.w} />}
-          </DraggableResizableItem>
-        ))}
+        {containerWidth > 0 &&
+          layout.map((item) => (
+            <DraggableResizableItem
+              key={item.id}
+              item={item}
+              colWidth={colWidth}
+              onUpdate={(newProps) => updateLayout(item.id, newProps)}
+              isActive={activeId === item.id}
+              onActivate={() => setActiveId(item.id)}
+              onInteractionStart={() => setIsDraggingOrResizing(true)}
+              onInteractionEnd={() => setIsDraggingOrResizing(false)}
+              isFocusMode={isFocusMode}
+              isFocused={focusedCardIds.has(item.id)}
+              hasFocusedCards={focusedCardIds.size > 0}
+            >
+              {item.id === 'sonic' && (
+                <SonicShieldCard onToggleFocus={() => isFocusMode && onToggleFocus(item.id)} />
+              )}
+              {item.id === 'timer' && (
+                <TimerCard onToggleFocus={() => isFocusMode && onToggleFocus(item.id)} />
+              )}
+              {item.id === 'brain' && (
+                <BrainDumpCard onToggleFocus={() => isFocusMode && onToggleFocus(item.id)} />
+              )}
+              {item.id === 'breaker' && (
+                <TaskBreakerCard onToggleFocus={() => isFocusMode && onToggleFocus(item.id)} />
+              )}
+              {item.id === 'dopamine' && (
+                <DopamineMenuCard
+                  cols={item.w}
+                  onToggleFocus={() => isFocusMode && onToggleFocus(item.id)}
+                />
+              )}
+            </DraggableResizableItem>
+          ))}
+      </div>
     </div>
   )
 }
@@ -290,6 +485,9 @@ const DraggableResizableItem = ({
   onActivate,
   onInteractionStart,
   onInteractionEnd,
+  isFocusMode,
+  isFocused,
+  hasFocusedCards,
 }: {
   item: GridItem
   colWidth: number
@@ -299,6 +497,9 @@ const DraggableResizableItem = ({
   onActivate: () => void
   onInteractionStart: () => void
   onInteractionEnd: () => void
+  isFocusMode?: boolean
+  isFocused?: boolean
+  hasFocusedCards?: boolean
 }) => {
   const [isResizing, setIsResizing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -347,28 +548,35 @@ const DraggableResizableItem = ({
   return (
     <motion.div
       drag={!isResizing}
-      dragListener={false}
       dragControls={dragControls}
+      dragListener={false}
       dragMomentum={false}
       onDragStart={() => {
-        if (isResizingRef.current) return
-        setIsDragging(true)
-        onActivate()
         onInteractionStart()
+        setIsDragging(true)
       }}
-      onDragEnd={(_, info) => {
-        if (!isDragging || isResizingRef.current) {
-          setIsDragging(false)
-          return
-        }
+      onDragEnd={(e, info) => {
         setIsDragging(false)
         onInteractionEnd()
-        const newX = Math.max(0, Math.round((x + info.offset.x) / (colWidth + GAP)))
-        const newY = Math.max(0, Math.round((y + info.offset.y) / (ROW_HEIGHT + GAP)))
-        onUpdate({ x: newX, y: newY })
+        const endX = x + info.offset.x
+        const endY = y + info.offset.y
+        const gridX = Math.round(endX / (colWidth + GAP)) // Allow negative X for centered grid
+        const gridY = Math.max(0, Math.round(endY / (ROW_HEIGHT + GAP)))
+        onUpdate({ x: gridX, y: gridY })
       }}
       initial={false}
-      animate={{ x, y, width, height, zIndex: isActive ? 50 : 10 }}
+      animate={{
+        x,
+        y,
+        width,
+        height,
+        zIndex: isActive ? 50 : 10,
+        filter:
+          isFocusMode && hasFocusedCards && !isFocused
+            ? 'blur(4px) grayscale(0.5)'
+            : 'blur(0px) grayscale(0)',
+        opacity: isFocusMode && hasFocusedCards && !isFocused ? 0.4 : 1,
+      }}
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
       onPointerDown={onActivate}
       className="absolute rounded-[32px] shadow-sm"
@@ -409,47 +617,67 @@ const DraggableResizableItem = ({
   )
 }
 
-export function SonicShieldCard() {
+export function SonicShieldCard({ onToggleFocus }: { onToggleFocus?: () => void }) {
   return (
     <WidgetCard
       title="Sonic Shield"
       subtitle="Layer brown, pink, or white noise without leaving this tab."
+      onHeaderClick={onToggleFocus}
     >
       <SonicShieldWidget />
     </WidgetCard>
   )
 }
 
-export function TimerCard() {
+export function TimerCard({ onToggleFocus }: { onToggleFocus?: () => void }) {
   return (
-    <WidgetCard title="Pomodoro Timer" subtitle="25-5-15 ADHD cycles with a calming progress ring.">
+    <WidgetCard
+      title="Pomodoro Timer"
+      subtitle="25-5-15 ADHD cycles with a calming progress ring."
+      onHeaderClick={onToggleFocus}
+    >
       <TimerWidget />
     </WidgetCard>
   )
 }
 
-export function TaskBreakerCard() {
+export function TaskBreakerCard({ onToggleFocus }: { onToggleFocus?: () => void }) {
   return (
-    <WidgetCard title="AI Task Breaker" subtitle="Shrink overwhelming tasks into tiny steps.">
+    <WidgetCard
+      title="AI Task Breaker"
+      subtitle="Shrink overwhelming tasks into tiny steps."
+      onHeaderClick={onToggleFocus}
+    >
       <TaskBreakerWidget />
     </WidgetCard>
   )
 }
 
-export function BrainDumpCard() {
+export function BrainDumpCard({ onToggleFocus }: { onToggleFocus?: () => void }) {
   return (
     <WidgetCard
       title="Brain Dump"
       subtitle="Capture distractions so your prefrontal cortex can relax."
+      onHeaderClick={onToggleFocus}
     >
       <BrainDumpWidget />
     </WidgetCard>
   )
 }
 
-export function DopamineMenuCard({ cols }: { cols?: number }) {
+export function DopamineMenuCard({
+  cols,
+  onToggleFocus,
+}: {
+  cols?: number
+  onToggleFocus?: () => void
+}) {
   return (
-    <WidgetCard title="Dopamine Menu" subtitle="Stuck? Spin the wheel for a quick dopamine hit.">
+    <WidgetCard
+      title="Dopamine Menu"
+      subtitle="Stuck? Spin the wheel for a quick dopamine hit."
+      onHeaderClick={onToggleFocus}
+    >
       <DopamineMenuWidget cols={cols} />
     </WidgetCard>
   )
@@ -851,7 +1079,10 @@ const TimerWidget = () => {
       <div className="flex w-full items-center justify-center gap-4">
         <button
           type="button"
-          onClick={handleReset}
+          onClick={() => {
+            playClickSound()
+            handleReset()
+          }}
           className="flex h-12 w-20 items-center justify-center rounded-full text-xs font-bold tracking-wider text-gray-400 uppercase transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100"
           aria-label="Reset Timer"
         >
@@ -859,8 +1090,11 @@ const TimerWidget = () => {
         </button>
         <button
           type="button"
-          onClick={handleStartPause}
-          className={`flex h-12 items-center gap-2 rounded-full px-8 text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${
+          onClick={() => {
+            playClickSound()
+            handleStartPause()
+          }}
+          className={`flex h-12 items-center justify-center gap-2 rounded-full px-8 text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${
             isRunning
               ? 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
               : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
@@ -876,7 +1110,7 @@ const TimerWidget = () => {
             </>
           )}
         </button>
-        <div className="w-10" /> {/* Spacer for balance */}
+        <div className="w-20" /> {/* Spacer for balance (matches Reset button width) */}
       </div>
     </div>
   )
@@ -1212,7 +1446,14 @@ const BrainDumpWidget = () => {
 
       <div className="p-3 pt-2">
         {item.image && (
-          <img src={item.image} alt="Brain dump" className="mb-2 w-full rounded-lg object-cover" />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.image}
+              alt="Brain dump"
+              className="mb-2 w-full rounded-lg object-cover"
+            />
+          </>
         )}
         {item.text && (
           <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap text-gray-800 dark:text-gray-200">
@@ -1303,6 +1544,7 @@ const BrainDumpWidget = () => {
               exit={{ opacity: 0, height: 0 }}
               className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={pendingImage} alt="Preview" className="h-20 w-auto object-cover p-1" />
               <button
                 onClick={() => setPendingImage(null)}
@@ -1501,13 +1743,13 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
       </div>
 
       <button
-        onClick={handleSpin}
+        type="button"
+        onClick={() => {
+          playClickSound()
+          handleSpin()
+        }}
         disabled={isSpinning || options.length === 0}
-        className={`flex h-12 w-full items-center justify-center rounded-xl text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${
-          isSpinning
-            ? 'cursor-not-allowed bg-gray-900 dark:bg-gray-700'
-            : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
-        }`}
+        className="mt-auto flex h-12 w-full items-center justify-center rounded-xl bg-pink-500 text-sm font-bold text-white shadow-lg shadow-pink-200 transition-all hover:bg-pink-600 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none dark:shadow-none"
       >
         {isSpinning ? (
           <div className="flex items-center gap-2">
