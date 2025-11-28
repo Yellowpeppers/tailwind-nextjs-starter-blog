@@ -1,7 +1,10 @@
 'use client'
 
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
+import { ReactNode, useEffect, useRef, useState, createContext, useContext } from 'react'
+
+// Context for passing drag controls to children
+const DragHandleContext = createContext<DragControls | null>(null)
 
 // --- Shared Components ---
 
@@ -128,12 +131,19 @@ const WidgetCard = ({ title, subtitle, children }: WidgetCardProps) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const dragControls = useContext(DragHandleContext)
+
   return (
     <motion.section
       layout
       className={`group flex h-full flex-col rounded-[32px] border border-gray-200/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-shadow duration-300 sm:p-6 dark:border-gray-800/80 dark:bg-gray-950/85`}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div
+        className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
+        onPointerDown={(e) => {
+          dragControls?.start(e)
+        }}
+      >
         <div className="flex items-center gap-2">
           {/* Drag Handle (only visible when not focused) */}
           {/* <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400">
@@ -196,9 +206,10 @@ type GridItem = {
 
 const INITIAL_LAYOUT: GridItem[] = [
   { id: 'sonic', x: 0, y: 0, w: 6, h: 5, minW: 6, minH: 5 }, // 5 rows, 6 cols
-  { id: 'timer', x: 6, y: 0, w: 4, h: 5, minW: 4, minH: 5 }, // 5 rows, 4 cols
+  { id: 'timer', x: 6, y: 0, w: 6, h: 5, minW: 4, minH: 5 }, // 5 rows, 6 cols
   { id: 'brain', x: 0, y: 5, w: 6, h: 6, minW: 4, minH: 4 }, // Min 4x4
-  { id: 'breaker', x: 6, y: 5, w: 4, h: 6, minW: 4, minH: 5 }, // Min 5x4
+  { id: 'breaker', x: 6, y: 5, w: 6, h: 6, minW: 4, minH: 5 }, // Min 5x4
+  { id: 'dopamine', x: 0, y: 11, w: 6, h: 6, minW: 4, minH: 4 }, // New Widget
 ]
 
 const GRID_COLS = 12
@@ -209,7 +220,7 @@ export const FocusLabGrid = () => {
   const [layout, setLayout] = useState<GridItem[]>(INITIAL_LAYOUT)
   const [activeId, setActiveId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [containerWidth, setContainerWidth] = useState(1200) // Default width
+  const [containerWidth, setContainerWidth] = useState(0) // Start at 0 to prevent FOUC
 
   const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false)
 
@@ -240,30 +251,32 @@ export const FocusLabGrid = () => {
   return (
     <div
       ref={containerRef}
-      className="relative w-full transition-all"
+      className={`relative w-full transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
       style={{
         height: Math.max(...layout.map((i) => (i.y + i.h) * (ROW_HEIGHT + GAP))) + 100,
       }}
     >
       {/* Visible Grid Background */}
 
-      {layout.map((item) => (
-        <DraggableResizableItem
-          key={item.id}
-          item={item}
-          colWidth={colWidth}
-          onUpdate={(newProps) => updateLayout(item.id, newProps)}
-          isActive={activeId === item.id}
-          onActivate={() => setActiveId(item.id)}
-          onInteractionStart={() => setIsDraggingOrResizing(true)}
-          onInteractionEnd={() => setIsDraggingOrResizing(false)}
-        >
-          {item.id === 'sonic' && <SonicShieldCard />}
-          {item.id === 'timer' && <TimerCard />}
-          {item.id === 'brain' && <BrainDumpCard />}
-          {item.id === 'breaker' && <TaskBreakerCard />}
-        </DraggableResizableItem>
-      ))}
+      {containerWidth > 0 &&
+        layout.map((item) => (
+          <DraggableResizableItem
+            key={item.id}
+            item={item}
+            colWidth={colWidth}
+            onUpdate={(newProps) => updateLayout(item.id, newProps)}
+            isActive={activeId === item.id}
+            onActivate={() => setActiveId(item.id)}
+            onInteractionStart={() => setIsDraggingOrResizing(true)}
+            onInteractionEnd={() => setIsDraggingOrResizing(false)}
+          >
+            {item.id === 'sonic' && <SonicShieldCard />}
+            {item.id === 'timer' && <TimerCard />}
+            {item.id === 'brain' && <BrainDumpCard />}
+            {item.id === 'breaker' && <TaskBreakerCard />}
+            {item.id === 'dopamine' && <DopamineMenuCard cols={item.w} />}
+          </DraggableResizableItem>
+        ))}
     </div>
   )
 }
@@ -329,9 +342,13 @@ const DraggableResizableItem = ({
   const startPosRef = useRef({ x: 0, y: 0 })
   const startSizeRef = useRef({ w: 0, h: 0 })
 
+  const dragControls = useDragControls()
+
   return (
     <motion.div
       drag={!isResizing}
+      dragListener={false}
+      dragControls={dragControls}
       dragMomentum={false}
       onDragStart={() => {
         if (isResizingRef.current) return
@@ -357,7 +374,7 @@ const DraggableResizableItem = ({
       className="absolute rounded-[32px] shadow-sm"
     >
       <div className="relative h-full w-full">
-        {children}
+        <DragHandleContext.Provider value={dragControls}>{children}</DragHandleContext.Provider>
 
         {/* Resize Handle (Diagonal Arrow) */}
         <div
@@ -426,6 +443,14 @@ export function BrainDumpCard() {
       subtitle="Capture distractions so your prefrontal cortex can relax."
     >
       <BrainDumpWidget />
+    </WidgetCard>
+  )
+}
+
+export function DopamineMenuCard({ cols }: { cols?: number }) {
+  return (
+    <WidgetCard title="Dopamine Menu" subtitle="Stuck? Spin the wheel for a quick dopamine hit.">
+      <DopamineMenuWidget cols={cols} />
     </WidgetCard>
   )
 }
@@ -570,7 +595,7 @@ const SonicShieldWidget = () => {
       </div>
 
       {/* Sound Grid */}
-      <div className="scrollbar-hide flex-1 overflow-y-auto pr-1">
+      <div className="scrollbar-none flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {allSounds.map((sound) => {
             const isActive = !!activeTracks[sound.id]
@@ -623,7 +648,11 @@ const SonicShieldWidget = () => {
                     src={sound.path}
                     className="hidden"
                   >
-                    <track kind="captions" src="" label="English" />
+                    <track
+                      kind="captions"
+                      src="data:text/vtt;base64,V0VCVlRVCg=="
+                      label="English"
+                    />
                   </audio>
                 )}
               </div>
@@ -1405,3 +1434,134 @@ const InfoIcon = ({ className }: { className?: string }) => (
     <line x1="12" y1="8" x2="12.01" y2="8" />
   </svg>
 )
+
+const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
+  const [options, setOptions] = useState([
+    'Drink Water 💧',
+    'Stretch 🧘',
+    '5 Jumping Jacks 🏃',
+    'Check 1 Email 📧',
+    'Deep Breath 🌬️',
+    'Pet a Cat/Dog 🐶',
+  ])
+  const [newOption, setNewOption] = useState('')
+  const [selected, setSelected] = useState<string | null>(null)
+  const [isSpinning, setIsSpinning] = useState(false)
+
+  const handleSpin = () => {
+    if (options.length === 0) return
+    setIsSpinning(true)
+    setSelected(null)
+
+    // Simulate spinning effect
+    let count = 0
+    const maxCount = 20
+    const interval = setInterval(() => {
+      setSelected(options[Math.floor(Math.random() * options.length)])
+      count++
+      if (count > maxCount) {
+        clearInterval(interval)
+        setIsSpinning(false)
+        // Final selection
+        const final = options[Math.floor(Math.random() * options.length)]
+        setSelected(final)
+      }
+    }, 100)
+  }
+
+  const addOption = () => {
+    if (newOption.trim()) {
+      setOptions([...options, newOption.trim()])
+      setNewOption('')
+    }
+  }
+
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-4">
+      {/* Result Area */}
+      <div className="flex min-h-[120px] flex-col items-center justify-center rounded-2xl bg-pink-50 p-6 text-center shadow-sm ring-1 ring-pink-100 dark:bg-pink-900/20 dark:ring-pink-900/30">
+        {selected ? (
+          <motion.div
+            key={selected}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-2xl font-black tracking-tight text-gray-900 dark:text-white"
+          >
+            {selected}
+          </motion.div>
+        ) : (
+          <p className="text-sm font-bold tracking-wider text-pink-400/70 uppercase">
+            {isSpinning ? 'Spinning...' : 'Ready to Spin'}
+          </p>
+        )}
+      </div>
+
+      <button
+        onClick={handleSpin}
+        disabled={isSpinning || options.length === 0}
+        className={`flex h-12 w-full items-center justify-center rounded-xl text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${
+          isSpinning
+            ? 'cursor-not-allowed bg-gray-900 dark:bg-gray-700'
+            : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
+        }`}
+      >
+        {isSpinning ? (
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <span>SPINNING...</span>
+          </div>
+        ) : (
+          'GIVE ME DOPAMINE'
+        )}
+      </button>
+
+      {/* Options List */}
+      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+        <div className="mb-2 flex gap-2 p-1">
+          <input
+            type="text"
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addOption()}
+            placeholder="Add option..."
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+          />
+          <button
+            onClick={addOption}
+            className="rounded-lg bg-pink-50 px-3 py-2 text-xs font-bold text-pink-600 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400 dark:hover:bg-pink-900/40"
+          >
+            Add
+          </button>
+        </div>
+        <div className={`grid gap-2 px-1 ${cols >= 5 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {options.map((opt, idx) => (
+            <div
+              key={idx}
+              className="group flex items-center justify-between rounded-lg border border-transparent bg-white px-3 py-2 shadow-sm transition-all hover:border-pink-100 hover:shadow-md dark:bg-gray-800 dark:hover:border-pink-900/30"
+            >
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{opt}</span>
+              <button
+                onClick={() => removeOption(idx)}
+                className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

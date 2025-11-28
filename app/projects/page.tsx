@@ -5,12 +5,12 @@ export const metadata = genPageMetadata({ title: 'Focus Lab' })
 
 export default function Projects() {
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 lg:px-8">
-      <div className="space-y-10">
+    <div className="min-h-screen py-12">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
         <FocusLabIntro />
-        <div className="min-h-screen">
-          <FocusLabGrid />
-        </div>
+      </div>
+      <div className="mt-10 px-4 sm:px-6 lg:px-8">
+        <FocusLabGrid />
       </div>
     </div>
   )
