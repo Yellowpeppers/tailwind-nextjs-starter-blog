@@ -1,7 +1,43 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { ReactNode, useEffect, useRef, useState } from 'react'
+
+// --- Shared Components ---
+
+const SegmentedControl = <T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
+}) => {
+  return (
+    <div className="flex h-8 w-full min-w-max rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+      {options.map((option) => {
+        const isActive = value === option.value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`relative flex-1 rounded-md px-3 text-xs font-bold tracking-wider whitespace-nowrap uppercase transition-all ${
+              isActive
+                ? 'bg-white text-pink-600 shadow-sm dark:bg-gray-700 dark:text-pink-400'
+                : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+            }`}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// --- Data & Types ---
 
 type SoundOption = {
   id: string
@@ -10,63 +46,43 @@ type SoundOption = {
   detail: string
 }
 
-const SOUND_LIBRARY: SoundOption[] = [
-  {
-    id: 'brown',
-    name: 'Brown',
-    path: '/static/sounds/brown.mp3',
-    detail: 'Low rumble to calm intrusive thoughts',
-  },
-  {
-    id: 'white',
-    name: 'White',
-    path: '/static/sounds/white.mp3',
-    detail: 'Bright static for masking office chatter',
-  },
-  {
-    id: 'pink',
-    name: 'Pink',
-    path: '/static/sounds/pink.mp3',
-    detail: 'Balanced rainfall profile for gentle focus',
-  },
-]
+const SOUND_LIBRARY: SoundOption[] = []
 
-const SoundVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
-  if (!isPlaying) {
+const SoundVisualizer = ({ activeCount }: { activeCount: number }) => {
+  if (activeCount === 0) {
     return (
-      <span
-        className="h-0.5 w-8 rounded-full bg-gray-300 dark:bg-gray-600"
-        aria-hidden="true"
-      />
+      <div className="flex h-12 items-center justify-center gap-1 opacity-30" aria-hidden="true">
+        <div className="h-1 w-12 rounded-full bg-gray-300 dark:bg-gray-600" />
+      </div>
     )
   }
 
   return (
-    <div className="flex h-6 items-end gap-1" aria-hidden="true">
-      {[0, 1, 2, 3].map((index) => (
-        <motion.span
+    <div className="flex h-12 items-center justify-center gap-1" aria-hidden="true">
+      {Array.from({ length: 8 + activeCount * 2 }).map((_, index) => (
+        <motion.div
           key={index}
-          className="w-1 rounded-full bg-pink-500"
-          animate={{ scaleY: [0.3, 1, 0.4] }}
+          className="w-1.5 rounded-full bg-pink-500/80"
+          animate={{
+            height: [12, 32 + Math.random() * 16, 12],
+            opacity: [0.5, 1, 0.5],
+          }}
           transition={{
             repeat: Infinity,
-            duration: 0.9,
-            delay: index * 0.15,
+            duration: 0.8 + Math.random() * 0.5,
+            delay: index * 0.05,
             ease: 'easeInOut',
           }}
-          style={{ transformOrigin: 'bottom center' }}
         />
       ))}
     </div>
   )
 }
 
-type TimerPreset = 'focus' | 'short' | 'long'
-
-const timerPresets: Record<TimerPreset, { label: string; duration: number }> = {
-  focus: { label: 'Focus · 25m', duration: 25 * 60 },
-  short: { label: 'Short Break · 5m', duration: 5 * 60 },
-  long: { label: 'Long Break · 15m', duration: 15 * 60 },
+type ActiveTrack = {
+  id: string
+  volume: number
+  isPlaying: boolean
 }
 
 export function FocusLabIntro() {
@@ -90,21 +106,291 @@ export function FocusLabIntro() {
   )
 }
 
+// --- Widget Card Component ---
+
 type WidgetCardProps = {
   title: string
   subtitle: string
   children: ReactNode
 }
 
-const WidgetCard = ({ title, subtitle, children }: WidgetCardProps) => (
-  <section className="flex h-full flex-col rounded-[32px] border border-gray-200/80 bg-white/95 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition duration-300 sm:p-8 dark:border-gray-800/80 dark:bg-gray-950/85">
-    <div className="space-y-1">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h2>
-      <p className="text-sm text-gray-600 dark:text-gray-400">{subtitle}</p>
+const WidgetCard = ({ title, subtitle, children }: WidgetCardProps) => {
+  const [showInfo, setShowInfo] = useState(false)
+  const infoRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (infoRef.current && !infoRef.current.contains(event.target as Node)) {
+        setShowInfo(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <motion.section
+      layout
+      className={`group flex h-full flex-col rounded-[32px] border border-gray-200/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-shadow duration-300 sm:p-6 dark:border-gray-800/80 dark:bg-gray-950/85`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {/* Drag Handle (only visible when not focused) */}
+          {/* <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
+            </svg>
+          </div> */}
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+          <div className="relative" ref={infoRef}>
+            <button
+              type="button"
+              onClick={() => setShowInfo(!showInfo)}
+              className={`transition-colors ${
+                showInfo
+                  ? 'text-pink-500 dark:text-pink-400'
+                  : 'text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'
+              }`}
+              aria-label="Toggle description"
+            >
+              <InfoIcon className="h-4 w-4" />
+            </button>
+            <AnimatePresence>
+              {showInfo && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 z-50 mt-2 w-56 origin-top-left"
+                >
+                  <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
+                    <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+                      {subtitle}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Focus Toggle Removed for now */}
+      </div>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
+    </motion.section>
+  )
+}
+
+// --- Grid System ---
+
+type GridItem = {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  minW?: number
+  minH?: number
+}
+
+const INITIAL_LAYOUT: GridItem[] = [
+  { id: 'sonic', x: 0, y: 0, w: 6, h: 5, minW: 6, minH: 5 }, // 5 rows, 6 cols
+  { id: 'timer', x: 6, y: 0, w: 4, h: 5, minW: 4, minH: 5 }, // 5 rows, 4 cols
+  { id: 'brain', x: 0, y: 5, w: 6, h: 6, minW: 4, minH: 4 }, // Min 4x4
+  { id: 'breaker', x: 6, y: 5, w: 4, h: 6, minW: 4, minH: 5 }, // Min 5x4
+]
+
+const GRID_COLS = 12
+const ROW_HEIGHT = 60
+const GAP = 24
+
+export const FocusLabGrid = () => {
+  const [layout, setLayout] = useState<GridItem[]>(INITIAL_LAYOUT)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(1200) // Default width
+
+  const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false)
+
+  // Update container width on resize
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth)
+      }
+    }
+
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
+
+  const colWidth = (containerWidth - (GRID_COLS - 1) * GAP) / GRID_COLS
+
+  // Helper to snap to grid
+  const snapToGrid = (value: number, unitSize: number) => {
+    return Math.round(value / unitSize) * unitSize
+  }
+
+  const updateLayout = (id: string, newProps: Partial<GridItem>) => {
+    setLayout((prev) => prev.map((item) => (item.id === id ? { ...item, ...newProps } : item)))
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full transition-all"
+      style={{
+        height: Math.max(...layout.map((i) => (i.y + i.h) * (ROW_HEIGHT + GAP))) + 100,
+      }}
+    >
+      {/* Visible Grid Background */}
+
+      {layout.map((item) => (
+        <DraggableResizableItem
+          key={item.id}
+          item={item}
+          colWidth={colWidth}
+          onUpdate={(newProps) => updateLayout(item.id, newProps)}
+          isActive={activeId === item.id}
+          onActivate={() => setActiveId(item.id)}
+          onInteractionStart={() => setIsDraggingOrResizing(true)}
+          onInteractionEnd={() => setIsDraggingOrResizing(false)}
+        >
+          {item.id === 'sonic' && <SonicShieldCard />}
+          {item.id === 'timer' && <TimerCard />}
+          {item.id === 'brain' && <BrainDumpCard />}
+          {item.id === 'breaker' && <TaskBreakerCard />}
+        </DraggableResizableItem>
+      ))}
     </div>
-    <div className="mt-6 flex-1">{children}</div>
-  </section>
-)
+  )
+}
+
+const DraggableResizableItem = ({
+  item,
+  colWidth,
+  onUpdate,
+  children,
+  isActive,
+  onActivate,
+  onInteractionStart,
+  onInteractionEnd,
+}: {
+  item: GridItem
+  colWidth: number
+  onUpdate: (props: Partial<GridItem>) => void
+  children: ReactNode
+  isActive: boolean
+  onActivate: () => void
+  onInteractionStart: () => void
+  onInteractionEnd: () => void
+}) => {
+  const [isResizing, setIsResizing] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const isResizingRef = useRef(false)
+
+  // Calculate pixel positions
+  const x = item.x * (colWidth + GAP)
+  const y = item.y * (ROW_HEIGHT + GAP)
+  const width = item.w * colWidth + (item.w - 1) * GAP
+  const height = item.h * ROW_HEIGHT + (item.h - 1) * GAP
+
+  // Manual Resize Logic
+  useEffect(() => {
+    if (!isResizing) return
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const newWidth = startSizeRef.current.w + (e.clientX - startPosRef.current.x)
+      const newHeight = startSizeRef.current.h + (e.clientY - startPosRef.current.y)
+
+      const gridW = Math.max(item.minW || 3, Math.round(newWidth / (colWidth + GAP)))
+      const gridH = Math.max(item.minH || 3, Math.round(newHeight / (ROW_HEIGHT + GAP)))
+
+      onUpdate({ w: gridW, h: gridH })
+    }
+
+    const handlePointerUp = () => {
+      setIsResizing(false)
+      isResizingRef.current = false
+      onInteractionEnd()
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+    }
+  }, [isResizing, colWidth, onUpdate, onInteractionEnd, item.minW, item.minH])
+
+  const startPosRef = useRef({ x: 0, y: 0 })
+  const startSizeRef = useRef({ w: 0, h: 0 })
+
+  return (
+    <motion.div
+      drag={!isResizing}
+      dragMomentum={false}
+      onDragStart={() => {
+        if (isResizingRef.current) return
+        setIsDragging(true)
+        onActivate()
+        onInteractionStart()
+      }}
+      onDragEnd={(_, info) => {
+        if (!isDragging || isResizingRef.current) {
+          setIsDragging(false)
+          return
+        }
+        setIsDragging(false)
+        onInteractionEnd()
+        const newX = Math.max(0, Math.round((x + info.offset.x) / (colWidth + GAP)))
+        const newY = Math.max(0, Math.round((y + info.offset.y) / (ROW_HEIGHT + GAP)))
+        onUpdate({ x: newX, y: newY })
+      }}
+      initial={false}
+      animate={{ x, y, width, height, zIndex: isActive ? 50 : 10 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      onPointerDown={onActivate}
+      className="absolute rounded-[32px] shadow-sm"
+    >
+      <div className="relative h-full w-full">
+        {children}
+
+        {/* Resize Handle (Diagonal Arrow) */}
+        <div
+          className="absolute right-2 bottom-2 z-50 cursor-nwse-resize p-1.5 opacity-50 transition-opacity hover:opacity-100"
+          onPointerDown={(e) => {
+            e.stopPropagation() // Prevent drag start on the item
+            e.preventDefault()
+            setIsResizing(true)
+            isResizingRef.current = true
+            onInteractionStart()
+            startPosRef.current = { x: e.clientX, y: e.clientY }
+            startSizeRef.current = { w: width, h: height }
+          }}
+        >
+          <div className="rounded-full bg-white/90 p-1 shadow-sm ring-1 ring-black/5 backdrop-blur-md dark:bg-gray-800/90 dark:ring-white/10">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400"
+            >
+              <path d="M15 9l6 6" />
+              <path d="M9 15l6 6" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
 
 export function SonicShieldCard() {
   return (
@@ -144,131 +430,207 @@ export function BrainDumpCard() {
   )
 }
 
+type TimerPreset = 'focus' | 'short' | 'long'
+
+const timerPresets: Record<TimerPreset, { label: string; duration: number }> = {
+  focus: { label: 'Focus · 25m', duration: 25 * 60 },
+  short: { label: 'Short Break · 5m', duration: 5 * 60 },
+  long: { label: 'Long Break · 15m', duration: 15 * 60 },
+}
+
 const SonicShieldWidget = () => {
-  const [activeSound, setActiveSound] = useState<string>(SOUND_LIBRARY[0].id)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [volume, setVolume] = useState(0.7)
-  const audioRef = useRef<HTMLAudioElement>(null)
-
-  const soundMeta = SOUND_LIBRARY.find((sound) => sound.id === activeSound) ?? SOUND_LIBRARY[0]
+  const [customSounds, setCustomSounds] = useState<SoundOption[]>([])
+  const [activeTracks, setActiveTracks] = useState<Record<string, ActiveTrack>>({})
+  const [masterVolume, setMasterVolume] = useState(0.8)
+  const audioRefs = useRef<Record<string, HTMLAudioElement>>({})
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume
+    const fetchCustomSounds = async () => {
+      try {
+        const response = await fetch('/api/sounds')
+        if (response.ok) {
+          const data = await response.json()
+          const newSounds = data.sounds.map((file: string) => ({
+            id: `custom-${file}`,
+            name: file.replace(/\.[^/.]+$/, ''),
+            path: `/static/sounds/custom/${file}`,
+            detail: 'Custom sound',
+          }))
+          setCustomSounds(newSounds)
+        }
+      } catch (error) {
+        console.error('Failed to fetch custom sounds:', error)
+      }
     }
-  }, [volume])
+    fetchCustomSounds()
+  }, [])
 
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
+  const allSounds = [...SOUND_LIBRARY, ...customSounds]
 
-    audio.pause()
-    audio.src = soundMeta.path
-    audio.load()
-    if (isPlaying) {
-      audio.play().catch(() => setIsPlaying(false))
-    }
-  }, [activeSound, isPlaying, soundMeta.path])
-
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (isPlaying) {
-      audio.play().catch(() => setIsPlaying(false))
-    } else {
-      audio.pause()
-    }
-  }, [isPlaying])
-
-  const togglePlayback = () => {
-    setIsPlaying((prev) => !prev)
+  const toggleTrack = (soundId: string) => {
+    setActiveTracks((prev) => {
+      if (prev[soundId]) {
+        const next = { ...prev }
+        delete next[soundId]
+        return next
+      }
+      return {
+        ...prev,
+        [soundId]: { id: soundId, volume: 0.5, isPlaying: true },
+      }
+    })
   }
 
-  const handleVolumeChange = (value: string) => {
-    const nextVolume = parseFloat(value)
-    setVolume(nextVolume)
-    if (audioRef.current) {
-      audioRef.current.volume = nextVolume
-    }
+  const updateTrackVolume = (soundId: string, volume: number) => {
+    setActiveTracks((prev) => ({
+      ...prev,
+      [soundId]: { ...prev[soundId], volume },
+    }))
   }
+
+  const toggleMasterPlayback = () => {
+    const isAnyPlaying = Object.values(activeTracks).some((t) => t.isPlaying)
+    setActiveTracks((prev) => {
+      const next = { ...prev }
+      Object.keys(next).forEach((key) => {
+        next[key] = { ...next[key], isPlaying: !isAnyPlaying }
+      })
+      return next
+    })
+  }
+
+  // Sync Audio Elements
+  useEffect(() => {
+    Object.values(activeTracks).forEach((track) => {
+      const audio = audioRefs.current[track.id]
+      if (audio) {
+        audio.volume = track.volume * masterVolume
+        if (track.isPlaying) {
+          audio.play().catch(() => {})
+        } else {
+          audio.pause()
+        }
+      }
+    })
+  }, [activeTracks, masterVolume])
+
+  const activeCount = Object.keys(activeTracks).length
+  const isGlobalPlaying = activeCount > 0 && Object.values(activeTracks).some((t) => t.isPlaying)
 
   return (
-    <div className="flex h-full flex-col justify-between gap-6">
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-gray-800">
-          {SOUND_LIBRARY.map((sound) => {
-            const isActive = activeSound === sound.id
+    <div className="flex h-full flex-col gap-4">
+      {/* Visualizer & Master Control */}
+      <div className="relative flex min-h-[100px] shrink-0 items-center justify-between rounded-2xl bg-white px-6 py-4 text-gray-900 shadow-sm ring-1 ring-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:ring-gray-800">
+        {/* Visualizer Area */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-2">
+          <SoundVisualizer activeCount={isGlobalPlaying ? activeCount : 0} />
+          <div className="text-xs font-medium opacity-60">
+            {activeCount === 0 ? 'Select sounds' : `${activeCount} active`}
+          </div>
+        </div>
+
+        {/* Vertical Master Volume */}
+        <div className="group flex h-full flex-col items-center justify-center gap-2 border-l border-gray-100 pl-4 dark:border-gray-800">
+          <div
+            className="relative h-16 w-1.5 cursor-pointer rounded-full bg-gray-100 py-1 transition-all hover:w-2 dark:bg-gray-800"
+            onPointerDown={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const handleMove = (moveEvent: PointerEvent) => {
+                const height = rect.height
+                const bottom = rect.bottom
+                const clientY = moveEvent.clientY
+                // Calculate percentage from bottom (0 to 1)
+                const percentage = Math.max(0, Math.min(1, (bottom - clientY) / height))
+                setMasterVolume(percentage)
+              }
+
+              handleMove(e.nativeEvent) // Set initial value on click
+
+              const handleUp = () => {
+                window.removeEventListener('pointermove', handleMove)
+                window.removeEventListener('pointerup', handleUp)
+              }
+
+              window.addEventListener('pointermove', handleMove)
+              window.addEventListener('pointerup', handleUp)
+            }}
+          >
+            <div
+              className="absolute bottom-0 w-full rounded-full bg-gray-300 transition-all group-hover:bg-pink-500 dark:bg-gray-600 dark:group-hover:bg-pink-400"
+              style={{ height: `${masterVolume * 100}%` }}
+            />
+            {/* Thumb indicator on hover */}
+            <div
+              className="absolute left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-gray-200"
+              style={{ bottom: `calc(${masterVolume * 100}% - 6px)` }}
+            />
+          </div>
+          <span className="text-[9px] font-bold tracking-widest uppercase opacity-40">Vol</span>
+        </div>
+      </div>
+
+      {/* Sound Grid */}
+      <div className="scrollbar-hide flex-1 overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {allSounds.map((sound) => {
+            const isActive = !!activeTracks[sound.id]
+            const track = activeTracks[sound.id]
+
             return (
-              <button
+              <div
                 key={sound.id}
-                type="button"
-                onClick={() => setActiveSound(sound.id)}
-                className={`flex-1 rounded-2xl px-3 py-2 text-sm font-semibold transition ${
+                className={`group relative flex flex-col justify-between rounded-xl border p-3 transition-all ${
                   isActive
-                    ? 'bg-pink-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                    ? 'border-pink-500 bg-pink-50 dark:border-pink-400 dark:bg-pink-900/20'
+                    : 'border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/40 dark:hover:border-pink-900'
                 }`}
               >
-                {sound.name}
-              </button>
+                <button
+                  onClick={() => toggleTrack(sound.id)}
+                  className="flex flex-1 flex-col items-start text-left"
+                >
+                  <span
+                    className={`text-sm font-bold ${isActive ? 'text-pink-700 dark:text-pink-300' : 'text-gray-700 dark:text-gray-300'}`}
+                  >
+                    {sound.name}
+                  </span>
+                </button>
+
+                {isActive && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 mt-3">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={track.volume}
+                      onChange={(e) => updateTrackVolume(sound.id, parseFloat(e.target.value))}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-1 w-full cursor-pointer rounded-full bg-pink-200 accent-pink-600 dark:bg-pink-900 dark:accent-pink-400"
+                    />
+                  </div>
+                )}
+
+                {/* Hidden Audio Element */}
+                {isActive && (
+                  <audio
+                    ref={(el) => {
+                      if (el) audioRefs.current[sound.id] = el
+                      else delete audioRefs.current[sound.id]
+                    }}
+                    loop
+                    preload="auto"
+                    src={sound.path}
+                    className="hidden"
+                  >
+                    <track kind="captions" src="" label="English" />
+                  </audio>
+                )}
+              </div>
             )
           })}
         </div>
-
-        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-900/60">
-          <p className="text-xs font-semibold tracking-[0.3em] text-gray-400 uppercase">
-            Now playing
-          </p>
-          <div className="mt-2 flex items-center gap-3">
-            <p className="text-3xl font-semibold text-gray-900 dark:text-gray-100">
-              {soundMeta.name}
-            </p>
-            <SoundVisualizer isPlaying={isPlaying} />
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{soundMeta.detail}</p>
-        </div>
       </div>
-
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={togglePlayback}
-          className={`shadow-primary-500/30 focus-visible:outline-primary-400 flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-            isPlaying ? 'bg-gray-900 dark:bg-gray-100 dark:text-gray-900' : 'bg-primary-500'
-          }`}
-          aria-label={isPlaying ? 'Pause noise' : 'Play noise'}
-        >
-          {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center justify-between text-xs font-semibold tracking-[0.3em] text-gray-400 uppercase">
-            <span>Volume</span>
-            <span>{Math.round(volume * 100)}%</span>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={(event) => handleVolumeChange(event.target.value)}
-            className="accent-primary-500 mt-3 w-full cursor-pointer rounded-full bg-gray-200 dark:bg-gray-700"
-            aria-label="Adjust volume"
-          />
-        </div>
-      </div>
-
-      <audio
-        ref={audioRef}
-        loop
-        preload="auto"
-        src={soundMeta.path}
-        className="hidden"
-        aria-label="Sonic Shield noise player"
-      >
-        <track kind="captions" src="/static/captions/blank.vtt" label="Audio track" />
-      </audio>
     </div>
   )
 }
@@ -357,8 +719,9 @@ const TimerWidget = () => {
   const dashOffset = circumference * (1 - progress)
 
   return (
-    <div className="flex h-full flex-col items-center py-2">
-      <div className="my-4 flex w-full flex-col items-center gap-4">
+    <div className="flex h-full flex-col items-center justify-between py-2">
+      {/* Top Controls */}
+      <div className="flex w-full flex-col items-center gap-2">
         <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1">
           {(['countdown', 'target'] as const).map((mode) => (
             <button
@@ -367,7 +730,7 @@ const TimerWidget = () => {
               onClick={() => setTimerMode(mode)}
               className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-all ${
                 timerMode === mode
-                  ? 'bg-white shadow-sm text-pink-600'
+                  ? 'bg-white text-pink-600 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -376,29 +739,32 @@ const TimerWidget = () => {
           ))}
         </div>
 
-        <div className="flex w-full justify-center gap-2">
+        {/* Presets or Target Input */}
+        <div className="flex h-8 w-full items-center justify-center">
           {timerMode === 'countdown' ? (
-            (['focus', 'short', 'long'] as TimerPreset[]).map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setActivePreset(preset)}
-                className={`rounded-lg border border-gray-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                  activePreset === preset
-                    ? 'border-pink-200 bg-pink-50 text-pink-600'
-                    : 'text-gray-600 hover:border-pink-200 hover:text-pink-600'
-                }`}
-              >
-                {preset === 'focus' ? 'Focus' : preset === 'short' ? 'Short' : 'Long'}
-              </button>
-            ))
+            <div className="flex justify-center gap-2">
+              {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setActivePreset(preset)}
+                  className={`rounded-md border px-3 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors ${
+                    activePreset === preset
+                      ? 'border-pink-200 bg-pink-50 text-pink-600 dark:border-pink-900/30 dark:bg-pink-900/20 dark:text-pink-400'
+                      : 'border-transparent text-gray-400 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {preset === 'focus' ? '25m' : preset === 'short' ? '5m' : '15m'}
+                </button>
+              ))}
+            </div>
           ) : (
-            <div className="flex w-full max-w-[240px] flex-col items-center gap-2">
+            <div className="flex justify-center gap-2">
               <input
                 type="time"
                 value={targetTime}
                 onChange={(event) => setTargetTime(event.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-200"
+                className="h-8 rounded-md border border-gray-200 bg-transparent px-2 text-xs font-semibold text-gray-800 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 focus:outline-none dark:border-gray-700 dark:text-gray-200"
               />
               <button
                 type="button"
@@ -409,53 +775,79 @@ const TimerWidget = () => {
                   setTimeLeft(diff)
                   setIsRunning(false)
                 }}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors hover:border-pink-200 hover:text-pink-600"
+                className="rounded-md bg-pink-50 px-3 py-1 text-[10px] font-bold tracking-wider text-pink-600 uppercase hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400"
               >
-                Sync Target
+                Set
               </button>
-              <p className="text-[10px] uppercase tracking-widest text-gray-500">
-                Hit a specific clock time
-              </p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="relative my-6 flex h-48 w-48 items-center justify-center">
-        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r={radius} fill="none" stroke="#f3f4f6" strokeWidth="8" />
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke="#ec4899"
-            strokeWidth="8"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="relative z-10 text-4xl font-mono font-bold text-gray-900 tabular-nums">
-          {display}
+      {/* Progress Ring */}
+      <div className="relative flex flex-1 items-center justify-center">
+        <div className="relative h-44 w-44">
+          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 128 128">
+            <circle
+              cx="64"
+              cy="64"
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="5"
+              className="text-gray-100 dark:text-gray-800"
+            />
+            <circle
+              cx="64"
+              cy="64"
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              className="text-pink-500 transition-all duration-500 ease-in-out"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl font-bold tracking-tight text-gray-900 tabular-nums dark:text-gray-100">
+              {display}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mt-auto pt-4 w-full justify-center border-t border-gray-50">
-        <button
-          type="button"
-          onClick={handleStartPause}
-          className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-2 rounded-full font-bold shadow-lg shadow-pink-200 transition-transform active:scale-95"
-        >
-          {isRunning ? 'PAUSE' : 'START'}
-        </button>
+      {/* Bottom Actions */}
+      <div className="flex w-full items-center justify-center gap-4">
         <button
           type="button"
           onClick={handleReset}
-          className="text-gray-400 hover:text-gray-600 text-xs font-medium uppercase tracking-widest px-4"
+          className="flex h-12 w-20 items-center justify-center rounded-full text-xs font-bold tracking-wider text-gray-400 uppercase transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+          aria-label="Reset Timer"
         >
-          RESET
+          Reset
         </button>
+        <button
+          type="button"
+          onClick={handleStartPause}
+          className={`flex h-12 items-center gap-2 rounded-full px-8 text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${
+            isRunning
+              ? 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
+              : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
+          }`}
+        >
+          {isRunning ? (
+            <>
+              <PauseIcon className="h-4 w-4" /> PAUSE
+            </>
+          ) : (
+            <>
+              <PlayIcon className="h-4 w-4" /> START
+            </>
+          )}
+        </button>
+        <div className="w-10" /> {/* Spacer for balance */}
       </div>
     </div>
   )
@@ -478,6 +870,8 @@ const TaskBreakerWidget = () => {
   const [task, setTask] = useState('')
   const [visibleSteps, setVisibleSteps] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isResultView, setIsResultView] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const clearTimers = () => {
@@ -489,109 +883,448 @@ const TaskBreakerWidget = () => {
     return () => clearTimers()
   }, [])
 
-  const handleBreakDown = () => {
+  const handleBreakDown = async () => {
     if (!task.trim()) return
     clearTimers()
     setIsLoading(true)
+    setIsResultView(true)
     setVisibleSteps([])
-    const loadingTimer = setTimeout(() => {
-      const generated = mockTaskBreakdown(task)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch steps')
+      }
+
+      const data = await response.json()
+      const steps = data.steps || []
+
       setIsLoading(false)
-      generated.forEach((step, index) => {
+      steps.forEach((step: string, index: number) => {
         const timer = setTimeout(() => {
           setVisibleSteps((prev) => [...prev, step])
         }, index * 500)
         timeoutsRef.current.push(timer)
       })
-    }, 1500)
-    timeoutsRef.current.push(loadingTimer)
+    } catch (err) {
+      setIsLoading(false)
+      setError('Failed to summon goblins. Please try again.')
+      // Fallback to mock data if API fails (optional, but good for demo)
+      const fallbackSteps = mockTaskBreakdown(task)
+      fallbackSteps.forEach((step, index) => {
+        const timer = setTimeout(() => {
+          setVisibleSteps((prev) => [...prev, step])
+        }, index * 500)
+        timeoutsRef.current.push(timer)
+      })
+    }
+  }
+
+  const handleReset = () => {
+    clearTimers()
+    setTask('')
+    setVisibleSteps([])
+    setIsResultView(false)
+    setIsLoading(false)
+    setError(null)
+  }
+
+  if (isResultView) {
+    return (
+      <div className="flex h-full flex-col gap-4">
+        <div className="flex items-start justify-between gap-4 rounded-2xl bg-pink-50 p-4 dark:bg-pink-900/20">
+          <div>
+            <p className="text-[10px] font-bold tracking-wider text-pink-600/70 uppercase dark:text-pink-400/70">
+              Current Mission
+            </p>
+            <p className="line-clamp-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+              {task}
+            </p>
+          </div>
+          <button
+            onClick={handleReset}
+            className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm hover:text-pink-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-pink-400"
+          >
+            New Task
+          </button>
+        </div>
+
+        <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+          {isLoading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-pink-200 border-t-pink-500" />
+              <p className="text-xs font-medium">Summoning goblins...</p>
+            </div>
+          ) : (
+            <ul className="space-y-2 p-2">
+              {visibleSteps.map((step, index) => (
+                <TaskStepItem key={`${step}-${index}`} step={step} />
+              ))}
+              {error && <p className="p-2 text-xs text-red-500">{error}</p>}
+            </ul>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex h-full min-h-[420px] flex-col gap-4">
+    <div className="flex h-full flex-col justify-center gap-4">
+      <div className="space-y-2 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400">
+          <MagicIcon className="h-6 w-6" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Overwhelmed?</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Type your big scary task below, and I'll break it into tiny, non-scary steps.
+        </p>
+      </div>
+
       <textarea
         value={task}
         onChange={(event) => setTask(event.target.value)}
-        placeholder="What are you trying to do?"
-        className="focus:border-primary-400 min-h-[110px] flex-1 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 placeholder:text-gray-400 focus:bg-white focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        placeholder="e.g. Clean my entire apartment..."
+        className="min-h-[100px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-pink-500 focus:bg-white focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
       />
+
       <button
         type="button"
         onClick={handleBreakDown}
-        className="from-primary-500 shadow-primary-500/30 hover:from-primary-600 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r to-pink-500 px-4 py-3 text-sm font-semibold tracking-wide text-white uppercase shadow-lg transition hover:to-pink-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pink-400"
+        disabled={!task.trim()}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-3.5 font-bold text-white transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:bg-gray-100 dark:text-gray-900"
       >
-        <MagicIcon className="h-4 w-4" /> Break it down for me
+        Break it down
       </button>
-
-      <div className="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
-        {isLoading ? (
-          <p className="animate-pulse text-sm font-semibold text-gray-500 dark:text-gray-300">
-            Thinking...
-          </p>
-        ) : visibleSteps.length > 0 ? (
-          <ul className="space-y-3">
-            {visibleSteps.map((step, index) => (
-              <motion.li
-                key={step}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-200"
-              >
-                <input
-                  type="checkbox"
-                  className="text-primary-500 focus:ring-primary-400 mt-1 h-4 w-4 rounded border-gray-300"
-                />
-                <div>
-                  <p className="font-semibold">Step {index + 1}</p>
-                  <p className="text-gray-600 dark:text-gray-300">{step}</p>
-                </div>
-              </motion.li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Your checklist will appear here once the goblin breaks it down.
-          </p>
-        )}
-      </div>
     </div>
   )
 }
 
-const BrainDumpWidget = () => {
-  const [notes, setNotes] = useState('')
+const TaskStepItem = ({ step }: { step: string }) => {
+  const [isChecked, setIsChecked] = useState(false)
 
+  return (
+    <motion.li
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3 }}
+      onClick={() => setIsChecked(!isChecked)}
+      className="group flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+    >
+      <input
+        type="checkbox"
+        checked={isChecked}
+        onChange={() => {}} // Handled by parent onClick
+        className="pointer-events-none h-5 w-5 rounded border-gray-300 text-pink-500 focus:ring-pink-500 dark:border-gray-600 dark:bg-gray-800"
+      />
+      <span
+        className={`text-sm transition-all ${
+          isChecked
+            ? 'text-gray-400 line-through dark:text-gray-600'
+            : 'text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100'
+        }`}
+      >
+        {step}
+      </span>
+    </motion.li>
+  )
+}
+
+type BrainDumpItem = {
+  id: string
+  text: string
+  image?: string
+}
+
+const BrainDumpWidget = () => {
+  const [leftItems, setLeftItems] = useState<BrainDumpItem[]>([])
+  const [rightItems, setRightItems] = useState<BrainDumpItem[]>([])
+  const [inputValue, setInputValue] = useState('')
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
+
+  // Load and migrate data
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem('focus-lab-brain-dump')
-      if (stored) {
-        setNotes(stored)
+      const storedLeft = window.localStorage.getItem('focus-lab-brain-dump-left')
+      const storedRight = window.localStorage.getItem('focus-lab-brain-dump-right')
+
+      if (storedLeft || storedRight) {
+        if (storedLeft) setLeftItems(JSON.parse(storedLeft))
+        if (storedRight) setRightItems(JSON.parse(storedRight))
+      } else {
+        // Migration from v2 (single list)
+        const storedV2 = window.localStorage.getItem('focus-lab-brain-dump-list-v2')
+        if (storedV2) {
+          const items: BrainDumpItem[] = JSON.parse(storedV2)
+          const mid = Math.ceil(items.length / 2)
+          setLeftItems(items.slice(0, mid))
+          setRightItems(items.slice(mid))
+        } else {
+          // Migration from v1 (string array)
+          const storedV1 = window.localStorage.getItem('focus-lab-brain-dump-list')
+          if (storedV1) {
+            const oldItems: string[] = JSON.parse(storedV1)
+            const migrated = oldItems.map((item) => {
+              const isImage = item.startsWith('data:image')
+              return {
+                id: Math.random().toString(36).substring(7),
+                text: isImage ? '' : item,
+                image: isImage ? item : undefined,
+              }
+            })
+            const mid = Math.ceil(migrated.length / 2)
+            setLeftItems(migrated.slice(0, mid))
+            setRightItems(migrated.slice(mid))
+          }
+        }
       }
     } catch (error) {
       // ignore persistence errors
     }
   }, [])
 
+  // Persist data
   useEffect(() => {
     try {
-      window.localStorage.setItem('focus-lab-brain-dump', notes)
+      window.localStorage.setItem('focus-lab-brain-dump-left', JSON.stringify(leftItems))
+      window.localStorage.setItem('focus-lab-brain-dump-right', JSON.stringify(rightItems))
     } catch (error) {
       // ignore persistence errors
     }
-  }, [notes])
+  }, [leftItems, rightItems])
+
+  const handleAdd = () => {
+    if (!inputValue.trim() && !pendingImage) return
+
+    const newItem: BrainDumpItem = {
+      id: Math.random().toString(36).substring(7),
+      text: inputValue.trim(),
+      image: pendingImage || undefined,
+    }
+
+    // Add to the shorter column
+    if (leftItems.length <= rightItems.length) {
+      setLeftItems((prev) => [newItem, ...prev])
+    } else {
+      setRightItems((prev) => [newItem, ...prev])
+    }
+
+    setInputValue('')
+    setPendingImage(null)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleAdd()
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items
+    for (const item of items) {
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault()
+        const blob = item.getAsFile()
+        if (blob) {
+          const reader = new FileReader()
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string
+            if (base64) {
+              setPendingImage(base64)
+            }
+          }
+          reader.readAsDataURL(blob)
+        }
+        return
+      }
+    }
+  }
+
+  const handleDelete = (id: string, column: 'left' | 'right') => {
+    if (column === 'left') {
+      setLeftItems((prev) => prev.filter((item) => item.id !== id))
+    } else {
+      setRightItems((prev) => prev.filter((item) => item.id !== id))
+    }
+  }
+
+  const handleMoveToOtherColumn = (item: BrainDumpItem, fromColumn: 'left' | 'right') => {
+    if (fromColumn === 'left') {
+      setLeftItems((prev) => prev.filter((i) => i.id !== item.id))
+      setRightItems((prev) => [item, ...prev])
+    } else {
+      setRightItems((prev) => prev.filter((i) => i.id !== item.id))
+      setLeftItems((prev) => [item, ...prev])
+    }
+  }
+
+  const renderCard = (item: BrainDumpItem, column: 'left' | 'right') => (
+    <Reorder.Item
+      key={item.id}
+      value={item}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`group relative mb-3 break-inside-avoid overflow-hidden rounded-xl shadow-sm transition-all hover:rotate-1 hover:shadow-md ${
+        item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
+      }`}
+    >
+      {/* Header Bar (Tape/Tag look) */}
+      <div
+        className={`h-3 w-full ${
+          item.image ? 'bg-gray-100 dark:bg-gray-700' : 'bg-yellow-200/50 dark:bg-yellow-900/50'
+        }`}
+      />
+
+      <div className="p-3 pt-2">
+        {item.image && (
+          <img src={item.image} alt="Brain dump" className="mb-2 w-full rounded-lg object-cover" />
+        )}
+        {item.text && (
+          <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+            {item.text}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="mt-2 flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={() => handleMoveToOtherColumn(item, column)}
+            className="text-gray-400 hover:text-pink-500 dark:text-gray-500 dark:hover:text-pink-400"
+            title="Move to other column"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleDelete(item.id, column)}
+            className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
+            title="Delete note"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M18 6L6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </Reorder.Item>
+  )
 
   return (
-    <div className="flex h-full flex-col">
-      <textarea
-        value={notes}
-        onChange={(event) => setNotes(event.target.value)}
-        placeholder="Distracting thought? Type it here and let it go..."
-        className="focus:border-primary-300 min-h-[220px] flex-1 rounded-3xl border border-dashed border-gray-200 bg-white/80 p-5 text-base text-gray-800 shadow-inner focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-      />
-      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-        This pad saves automatically in your browser.
-      </p>
+    <div className="flex h-full flex-col gap-4 overflow-hidden">
+      {/* Input Area */}
+      <div className="relative shrink-0 space-y-2">
+        <div className="relative">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder="Catch a thought (or paste an image)..."
+            className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!inputValue.trim() && !pendingImage}
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 text-pink-500 transition-colors hover:bg-pink-50 disabled:text-gray-300 dark:hover:bg-pink-900/20 dark:disabled:text-gray-600"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Pending Image Preview */}
+        <AnimatePresence>
+          {pendingImage && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
+            >
+              <img src={pendingImage} alt="Preview" className="h-20 w-auto object-cover p-1" />
+              <button
+                onClick={() => setPendingImage(null)}
+                className="absolute top-1 right-1 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-3 w-3"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Two-Column Masonry Grid */}
+      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-2 dark:border-gray-800 dark:bg-gray-900/20 [&::-webkit-scrollbar]:hidden">
+        {leftItems.length === 0 && rightItems.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center text-gray-400">
+            <p className="text-sm">Your mind is clear.</p>
+            <p className="text-xs opacity-60">Type above to offload distractions.</p>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3">
+            {/* Left Column */}
+            <Reorder.Group
+              axis="y"
+              values={leftItems}
+              onReorder={setLeftItems}
+              className="min-w-0 flex-1"
+            >
+              {leftItems.map((item) => renderCard(item, 'left'))}
+            </Reorder.Group>
+
+            {/* Right Column */}
+            <Reorder.Group
+              axis="y"
+              values={rightItems}
+              onReorder={setRightItems}
+              className="min-w-0 flex-1"
+            >
+              {rightItems.map((item) => renderCard(item, 'right'))}
+            </Reorder.Group>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -600,19 +1333,10 @@ const mockTaskBreakdown = (task: string) => {
   const normalized = task.trim().toLowerCase()
   if (!normalized) return []
   if (normalized.includes('clean') && normalized.includes('room')) {
-    return ['Pick up clothes', 'Take out trash', 'Make the bed', 'Wipe surfaces']
+    const verbs = ['Plan', 'Break down', 'Do the messy first step', 'Review', 'Celebrate']
+    return verbs.map((verb) => `${verb} ${task.toLowerCase()}`)
   }
-  if (normalized.includes('email')) {
-    return [
-      'Clarify the goal of the email',
-      'List key bullet points',
-      'Draft a friendly intro',
-      'Add any attachments',
-      'Send or schedule the email',
-    ]
-  }
-  const verbs = ['Plan', 'Break down', 'Do the messy first step', 'Review', 'Celebrate']
-  return verbs.map((verb) => `${verb} ${task.toLowerCase()}`)
+  return ['Start timer (5m)', 'Do first step', 'Take a breath', 'Keep going']
 }
 
 const MagicIcon = ({ className }: { className?: string }) => (
@@ -663,5 +1387,21 @@ const PauseIcon = ({ className }: { className?: string }) => (
   >
     <line x1="6" y1="4" x2="6" y2="20" />
     <line x1="18" y1="4" x2="18" y2="20" />
+  </svg>
+)
+
+const InfoIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
   </svg>
 )
