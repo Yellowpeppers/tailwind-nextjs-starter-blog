@@ -22,7 +22,7 @@ export default function Footer() {
 
   return (
     <footer className="mt-16 border-t border-gray-200 pt-10 dark:border-gray-800">
-      <div className="grid gap-10 md:grid-cols-3">
+      <div className="grid gap-10 md:grid-cols-2">
         <div className="space-y-4">
           <div>
             <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -68,7 +68,7 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-        <div>
+        {/* <div>
           <p className="text-sm font-semibold tracking-[0.2em] text-gray-500 uppercase dark:text-gray-400">
             Topics
           </p>
@@ -81,7 +81,7 @@ export default function Footer() {
               </li>
             ))}
           </ul>
-        </div>
+        </div> */}
       </div>
       <div className="mt-10 border-t border-gray-100 pt-6 text-sm text-gray-500 dark:border-gray-800 dark:text-gray-400">
         <p>© 2025 NeuroHacks Lab</p>

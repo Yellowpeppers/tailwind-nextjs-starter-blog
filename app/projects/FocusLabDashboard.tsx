@@ -124,7 +124,7 @@ export function FocusLabIntro() {
       </p>
       <div className="space-y-3">
         <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100">{t.title}</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300">{t.description}</p>
+        <p className="max-w-2xl text-lg text-gray-600 dark:text-gray-300">{t.description}</p>
       </div>
     </header>
   )
@@ -250,8 +250,8 @@ const INITIAL_LAYOUT: GridItem[] = [
   { id: 'brain', x: 4.5, y: 0, w: 6, h: 10, minW: 4, minH: 6 },
 
   // Right Column
-  { id: 'timer', x: 10.5, y: 0, w: 4, h: 5, minW: 3, minH: 4 },
-  { id: 'dopamine', x: 10.5, y: 5, w: 4, h: 5, minW: 3, minH: 4 },
+  { id: 'timer', x: 10.5, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'dopamine', x: 10.5, y: 5, w: 4, h: 5, minW: 3, minH: 5 },
 ]
 
 const FocusLabMobileGrid = () => {
@@ -391,6 +391,48 @@ export const FocusLabDashboard = () => {
               )}
             </button>
 
+            {/* Global Reset Button */}
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    lang === 'en'
+                      ? 'Reset all settings and data? This cannot be undone.'
+                      : '重置所有设置和数据？此操作无法撤销。'
+                  )
+                ) {
+                  // Clear all focus-lab related keys
+                  const keys = [
+                    'focus-lab-layout-v1',
+                    'focus-lab-dopamine-options',
+                    'focus-lab-sonic-tracks',
+                    'focus-lab-sonic-volume',
+                    'focus-lab-brain-dump-left',
+                    'focus-lab-brain-dump-right',
+                    'focus-lab-brain-dump-list-v2', // cleanup old keys
+                    'focus-lab-brain-dump-list', // cleanup old keys
+                  ]
+                  keys.forEach((key) => window.localStorage.removeItem(key))
+                  window.location.reload()
+                }
+              }}
+              className="fixed top-6 right-36 z-[100] flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-md transition-all hover:scale-110 hover:bg-red-50 hover:text-red-500 dark:bg-gray-800/80 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+              title={lang === 'en' ? 'Reset All Settings' : '重置所有设置'}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5 text-gray-500 transition-colors group-hover:text-red-500 dark:text-gray-400"
+              >
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </button>
+
             {/* Intro Section - Fades out and collapses in Focus Mode */}
             <div
               className={`overflow-hidden transition-all duration-700 ease-in-out ${
@@ -437,7 +479,41 @@ export const FocusLabGrid = ({
 }) => {
   const [layout, setLayout] = useState<GridItem[]>(INITIAL_LAYOUT)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
   // containerRef removed as width is passed down
+
+  // Load layout from localStorage
+  useEffect(() => {
+    try {
+      const savedLayout = window.localStorage.getItem('focus-lab-layout-v1')
+      if (savedLayout) {
+        const parsed = JSON.parse(savedLayout)
+        // Enforce new minimums for existing layouts
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const updated = parsed.map((item: any) => {
+          if (item.id === 'timer' || item.id === 'dopamine') {
+            return { ...item, minH: 5, h: Math.max(item.h, 5) }
+          }
+          return item
+        })
+        setLayout(updated)
+      }
+    } catch (error) {
+      console.error('Failed to load layout:', error)
+    } finally {
+      setIsLoaded(true)
+    }
+  }, [])
+
+  // Save layout to localStorage
+  useEffect(() => {
+    if (!isLoaded) return
+    try {
+      window.localStorage.setItem('focus-lab-layout-v1', JSON.stringify(layout))
+    } catch (error) {
+      console.error('Failed to save layout:', error)
+    }
+  }, [layout, isLoaded])
 
   const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false)
 
@@ -796,6 +872,37 @@ const SonicShieldWidget = () => {
   const [activeTracks, setActiveTracks] = useState<Record<string, ActiveTrack>>({})
   const [masterVolume, setMasterVolume] = useState(0.8)
   const audioRefs = useRef<Record<string, HTMLAudioElement>>({})
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load settings from localStorage
+  useEffect(() => {
+    try {
+      const savedTracks = window.localStorage.getItem('focus-lab-sonic-tracks')
+      const savedVolume = window.localStorage.getItem('focus-lab-sonic-volume')
+
+      if (savedTracks) {
+        setActiveTracks(JSON.parse(savedTracks))
+      }
+      if (savedVolume) {
+        setMasterVolume(parseFloat(savedVolume))
+      }
+    } catch (error) {
+      console.error('Failed to load sonic settings:', error)
+    } finally {
+      setIsLoaded(true)
+    }
+  }, [])
+
+  // Save settings to localStorage
+  useEffect(() => {
+    if (!isLoaded) return
+    try {
+      window.localStorage.setItem('focus-lab-sonic-tracks', JSON.stringify(activeTracks))
+      window.localStorage.setItem('focus-lab-sonic-volume', masterVolume.toString())
+    } catch (error) {
+      console.error('Failed to save sonic settings:', error)
+    }
+  }, [activeTracks, masterVolume, isLoaded])
 
   useEffect(() => {
     const fetchCustomSounds = async () => {
@@ -1416,6 +1523,8 @@ const BrainDumpWidget = () => {
   const [inputValue, setInputValue] = useState('')
   const [pendingImage, setPendingImage] = useState<string | null>(null)
 
+  const [isLoaded, setIsLoaded] = useState(false)
+
   // Load and migrate data
   useEffect(() => {
     try {
@@ -1454,18 +1563,32 @@ const BrainDumpWidget = () => {
       }
     } catch (error) {
       // ignore persistence errors
+    } finally {
+      setIsLoaded(true)
     }
   }, [])
 
   // Persist data
   useEffect(() => {
+    if (!isLoaded) return
     try {
       window.localStorage.setItem('focus-lab-brain-dump-left', JSON.stringify(leftItems))
       window.localStorage.setItem('focus-lab-brain-dump-right', JSON.stringify(rightItems))
     } catch (error) {
       // ignore persistence errors
     }
-  }, [leftItems, rightItems])
+  }, [leftItems, rightItems, isLoaded])
+
+  const handleClearAll = () => {
+    if (
+      window.confirm(
+        lang === 'en' ? 'Clear all notes? This cannot be undone.' : '清空所有便签？此操作无法撤销。'
+      )
+    ) {
+      setLeftItems([])
+      setRightItems([])
+    }
+  }
 
   const handleAdd = () => {
     if (!inputValue.trim() && !pendingImage) return
@@ -1611,32 +1734,54 @@ const BrainDumpWidget = () => {
     <div className="flex h-full flex-col gap-4 overflow-hidden">
       {/* Input Area */}
       <div className="relative shrink-0 space-y-2">
-        <div className="relative">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={t.placeholder}
-            className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={t.placeholder}
+              className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={!inputValue.trim() && !pendingImage}
+              className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 text-pink-500 transition-colors hover:bg-pink-50 disabled:text-gray-300 dark:hover:bg-pink-900/20 dark:disabled:text-gray-600"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
           <button
-            onClick={handleAdd}
-            disabled={!inputValue.trim() && !pendingImage}
-            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 text-pink-500 transition-colors hover:bg-pink-50 disabled:text-gray-300 dark:hover:bg-pink-900/20 dark:disabled:text-gray-600"
+            onClick={handleClearAll}
+            disabled={leftItems.length === 0 && rightItems.length === 0}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:bg-gray-100 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            title={lang === 'en' ? 'Clear All' : '清空所有'}
           >
             <svg
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.5"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
               className="h-5 w-5"
             >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
             </svg>
           </button>
         </div>
@@ -1780,6 +1925,31 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
   const [newOption, setNewOption] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [isSpinning, setIsSpinning] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load options from localStorage
+  useEffect(() => {
+    try {
+      const savedOptions = window.localStorage.getItem('focus-lab-dopamine-options')
+      if (savedOptions) {
+        setOptions(JSON.parse(savedOptions))
+      }
+    } catch (error) {
+      console.error('Failed to load dopamine options:', error)
+    } finally {
+      setIsLoaded(true)
+    }
+  }, [])
+
+  // Save options to localStorage
+  useEffect(() => {
+    if (!isLoaded) return
+    try {
+      window.localStorage.setItem('focus-lab-dopamine-options', JSON.stringify(options))
+    } catch (error) {
+      console.error('Failed to save dopamine options:', error)
+    }
+  }, [options, isLoaded])
 
   const handleSpin = () => {
     if (options.length === 0) return
