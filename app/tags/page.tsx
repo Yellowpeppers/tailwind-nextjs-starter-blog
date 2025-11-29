@@ -16,7 +16,9 @@ const formatTag = (tag: string) =>
 
 export default async function Page() {
   const tagCounts = tagData as Record<string, number>
-  const sortedTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a])
+  const sortedTags = Object.keys(tagCounts)
+    .sort((a, b) => tagCounts[b] - tagCounts[a])
+    .filter((tag) => tagCounts[tag] >= 2)
 
   return (
     <div className="space-y-10">

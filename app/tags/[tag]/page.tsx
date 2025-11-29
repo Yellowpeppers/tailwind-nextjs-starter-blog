@@ -14,6 +14,10 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const params = await props.params
   const tag = decodeURI(params.tag)
+  const tagCounts = tagData as Record<string, number>
+  const postCount = tagCounts[tag]
+  const noIndex = postCount < 2
+
   return genPageMetadata({
     title: tag,
     description: `${siteMetadata.title} ${tag} tagged content`,
@@ -22,6 +26,10 @@ export async function generateMetadata(props: {
       types: {
         'application/rss+xml': `${siteMetadata.siteUrl}/tags/${tag}/feed.xml`,
       },
+    },
+    robots: {
+      index: !noIndex,
+      follow: true,
     },
   })
 }
