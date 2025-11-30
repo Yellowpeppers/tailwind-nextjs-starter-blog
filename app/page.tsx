@@ -10,7 +10,7 @@ import { allBlogs } from 'contentlayer/generated'
 export const metadata = {
   title: 'Free Adult ADHD Test Online (ASRS v1.1) - NeuroHacks Lab',
   description:
-    'Take our free, private ADHD test online. Based on the WHO ASRS v1.1 checklist for adults. No email required, instant scoring, and focus tools included.',
+    'Take our free, private ADHD test online. Based on the WHO ASRS v1.1 checklist for adults. No email required, instant scoring, and the Focus Lab productivity dashboard.',
 }
 
 const MAX_DISPLAY = 5
@@ -74,9 +74,10 @@ const trustFeatures = [
 
 const exploreLinks = [
   {
-    title: 'Tools',
-    description: 'Interactive screenings and sensory tools.',
-    href: '/test',
+    title: 'Focus Lab',
+    description:
+      'Your personal mission control. Brown noise, task breaker, and timers in one distraction-free space.',
+    href: '/projects',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -86,11 +87,12 @@ const exploreLinks = [
         stroke="currentColor"
         strokeWidth="1.8"
       >
-        <path d="M8 3h8l3 4v12a2 2 0 01-2 2H7a2 2 0 01-2-2V7z" strokeLinejoin="round" />
-        <path d="M9 12h6M9 16h4" strokeLinecap="round" />
-        <path d="M12 3v4h4" strokeLinejoin="round" />
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeLinejoin="round" />
+        <path d="M3 9h18" strokeLinejoin="round" />
+        <path d="M9 21V9" strokeLinejoin="round" />
       </svg>
     ),
+    linkText: 'Enter Focus Lab',
   },
   {
     title: 'Guides',
@@ -109,25 +111,25 @@ const exploreLinks = [
       </svg>
     ),
   },
-  {
-    title: 'Topics',
-    description: 'Browse by category: Focus, Sleep, Anxiety.',
-    href: '/tags',
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        className="h-7 w-7"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
-        <path d="M3 7l9-4 9 4-9 4z" strokeLinejoin="round" />
-        <path d="M5 9v6l7 4 7-4V9" strokeLinejoin="round" />
-        <path d="M12 13v6" strokeLinecap="round" />
-      </svg>
-    ),
-  },
+  // {
+  //   title: 'Topics',
+  //   description: 'Browse by category: Focus, Sleep, Anxiety.',
+  //   href: '/tags',
+  //   icon: (
+  //     <svg
+  //       viewBox="0 0 24 24"
+  //       aria-hidden="true"
+  //       className="h-7 w-7"
+  //       fill="none"
+  //       stroke="currentColor"
+  //       strokeWidth="1.8"
+  //     >
+  //       <path d="M3 7l9-4 9 4-9 4z" strokeLinejoin="round" />
+  //       <path d="M5 9v6l7 4 7-4V9" strokeLinejoin="round" />
+  //       <path d="M12 13v6" strokeLinecap="round" />
+  //     </svg>
+  //   ),
+  // },
 ]
 
 const faqItems = [
@@ -169,7 +171,7 @@ const faqItems = [
           href="/projects"
           className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-semibold"
         >
-          Tools
+          Focus Lab
         </Link>{' '}
         and{' '}
         <Link
@@ -188,53 +190,56 @@ export default async function Page() {
   const sortedPosts = sortPosts(allBlogs)
   const posts = allCoreContent(sortedPosts)
   return (
-    <div className="space-y-16 py-6 md:space-y-20 md:py-10">
-      <section className="from-primary-50 shadow-primary-200/40 dark:to-primary-900/20 overflow-hidden rounded-3xl border border-gray-200 bg-gradient-to-br via-white to-rose-50 px-8 py-12 shadow-2xl dark:border-gray-800 dark:from-gray-900 dark:via-gray-900">
-        <p className="text-primary-500 text-sm font-semibold tracking-[0.2em] uppercase">
-          Adult ADHD Test · WHO ASRS v1.1
-        </p>
-        <h1 className="mt-4 text-4xl leading-tight font-black text-gray-900 sm:text-5xl dark:text-gray-100">
-          Free Adult <span className="text-primary-500">ADHD Test Online</span> &amp; Productivity
-          Toolkit
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 dark:text-gray-300">
-          Is it ADHD or just modern life? Take the{' '}
-          <strong>World Health Organization (WHO) ASRS v1.1</strong> screening. No email
-          required—just clarity, science, and neurodivergent-friendly tools.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-4">
-          <Link
-            href="/test"
-            className="bg-primary-500 shadow-primary-500/40 hover:bg-primary-600 focus-visible:ring-primary-500 inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-semibold text-white shadow-lg transition focus:outline-none focus-visible:ring-2"
-          >
-            Start Free Assessment →
-          </Link>
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            2-minute ASRS v1.1 · Clinically inspired · 100% client-side
-          </span>
+    <div className="space-y-0">
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="text-left">
+          <p className="text-primary-500 text-sm font-semibold tracking-[0.2em] uppercase">
+            Adult ADHD Test · WHO ASRS v1.1
+          </p>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-gray-900 sm:text-6xl dark:text-gray-100">
+            Free Adult <span className="text-primary-500">ADHD Test Online</span>{' '}
+            <span className="block text-3xl font-medium text-gray-400 sm:text-4xl">
+              &amp; Productivity Toolkit
+            </span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 dark:text-gray-300">
+            Is it ADHD or just modern life? Take the{' '}
+            <strong>World Health Organization (WHO) ASRS v1.1</strong> self-screening. No email
+            required—just clarity, science, and neurodivergent-friendly tools.
+          </p>
+          <div className="mt-8 flex flex-col items-start gap-4">
+            <Link
+              href="/test"
+              className="bg-primary-500 shadow-primary-500/40 hover:bg-primary-600 focus-visible:ring-primary-500 inline-flex items-center justify-center rounded-2xl px-8 py-4 text-xl font-bold text-white shadow-lg transition hover:-translate-y-1 focus:outline-none focus-visible:ring-2"
+            >
+              Start Free Assessment →
+            </Link>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              2-minute ASRS v1.1 · 100% Private
+            </span>
+          </div>
+          <div className="mt-20 grid gap-8 border-t border-gray-100 pt-12 md:grid-cols-3 dark:border-gray-800">
+            {trustFeatures.map((feature) => (
+              <div key={feature.title} className="space-y-4">
+                <div className="bg-primary-50 text-primary-600 dark:bg-primary-500/10 flex h-12 w-12 items-center justify-center rounded-2xl dark:text-white">
+                  {feature.icon}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {feature.title}
+                  </h3>
+                  <p className="text-base text-gray-600 dark:text-gray-300">
+                    {feature.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="shadow-primary-500/10 rounded-3xl border border-gray-200 bg-white/70 p-8 shadow-lg dark:border-gray-800 dark:bg-gray-950/70">
-        <div className="grid gap-8 md:grid-cols-3">
-          {trustFeatures.map((feature) => (
-            <div key={feature.title} className="space-y-4">
-              <div className="bg-primary-50 text-primary-600 dark:bg-primary-500/10 flex h-12 w-12 items-center justify-center rounded-2xl dark:text-white">
-                {feature.icon}
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {feature.title}
-                </h3>
-                <p className="text-base text-gray-600 dark:text-gray-300">{feature.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-3xl border-y border-gray-100 bg-gray-50 py-16 dark:border-gray-800 dark:bg-gray-900/50">
-        <div className="px-6">
+      <section className="bg-gray-50 py-24 dark:bg-gray-900/50">
+        <div className="mx-auto max-w-6xl px-6">
           <div className="space-y-3 text-center md:text-left">
             <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
               Explore NeuroHacks
@@ -245,26 +250,27 @@ export default async function Page() {
               or dive into research-backed topics.
             </p>
           </div>
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
+          <div className="mx-auto mt-12 grid max-w-4xl gap-8 md:grid-cols-2">
             {exploreLinks.map((item) => (
               <Link key={item.title} href={item.href} className="group block h-full">
-                <div className="flex h-full flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/10 dark:border-gray-800 dark:bg-gray-900">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-500/10 dark:text-white">
+                <div className="flex h-full flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/10 dark:border-gray-800 dark:bg-gray-900">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-500/10 dark:text-white">
                     {item.icon}
                   </div>
                   <div className="flex flex-1 flex-col gap-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-xl font-semibold text-gray-900 transition group-hover:text-pink-600 dark:text-gray-100 dark:group-hover:text-pink-400">
+                      <h3 className="text-2xl font-bold text-gray-900 transition group-hover:text-pink-600 dark:text-gray-100 dark:group-hover:text-pink-400">
                         {item.title}
                       </h3>
                       <span className="inline-flex items-center text-sm font-semibold text-pink-600 dark:text-pink-400">
-                        Explore {item.title}
+                        {/* @ts-ignore */}
+                        {item.linkText || `Explore ${item.title}`}
                         <span className="ml-1 inline-block transition-transform duration-300 group-hover:translate-x-1">
                           →
                         </span>
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{item.description}</p>
+                    <p className="text-base text-gray-600 dark:text-gray-300">{item.description}</p>
                   </div>
                 </div>
               </Link>
@@ -273,9 +279,9 @@ export default async function Page() {
         </div>
       </section>
 
-      <section className="py-16">
-        <div className="rounded-3xl border border-gray-100 bg-white/80 px-8 py-16 shadow-xl dark:border-gray-800 dark:bg-gray-950/70">
-          <div className="mx-auto max-w-3xl space-y-4 text-center">
+      <section className="bg-white py-24 dark:bg-gray-950">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="space-y-4 text-center">
             <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
               FAQs
             </p>
@@ -283,33 +289,50 @@ export default async function Page() {
               ADHD Test Online: Frequently Asked Questions
             </h2>
             <p className="text-base text-gray-600 dark:text-gray-300">
-              Get confident about how this adult ADHD screening works, why it&apos;s free, and what
-              to do next once you have your score.
+              Get confident about how this adult ADHD self-screening works, why it&apos;s free, and
+              what to do next once you have your score.
             </p>
           </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="mx-auto mt-10 max-w-2xl space-y-4">
             {faqItems.map((faq) => (
-              <div
+              <details
                 key={faq.question}
-                className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/80 p-6 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/60"
+                className="group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900/60"
               >
-                <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{faq.question}</p>
-                <p className="text-base text-gray-600 dark:text-gray-300">{faq.answer}</p>
-              </div>
+                <summary className="flex cursor-pointer items-center justify-between font-bold text-gray-900 dark:text-gray-100">
+                  {faq.question}
+                  <span className="ml-4 transition-transform group-open:rotate-180">
+                    <svg
+                      className="h-5 w-5 text-gray-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </span>
+                </summary>
+                <div className="mt-4 text-base text-gray-600 dark:text-gray-300">{faq.answer}</div>
+              </details>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="space-y-10">
-        <div className="space-y-4">
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mb-12 space-y-4 text-left">
           <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
             Neurodivergent Tools
           </p>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             Latest Guides &amp; Reviews
           </h2>
-          <p className="max-w-2xl text-base text-gray-600 dark:text-gray-300">
+          <p className="max-w-3xl text-base text-gray-600 dark:text-gray-300">
             Deep dives into quiet sensory gear, focus rituals, and ADHD-friendly planning systems to
             pair with your ASRS v1.1 results.
           </p>

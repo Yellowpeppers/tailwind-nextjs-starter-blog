@@ -254,10 +254,10 @@ const getResultBucket = (score: number): ResultBucket => {
     return {
       label: 'Unlikely to have ADHD',
       description: 'Your symptoms are within the typical range.',
-      toneClass: 'text-emerald-600 dark:text-emerald-400',
-      badgeBg: 'bg-emerald-50 dark:bg-emerald-500/10',
-      badgeText: 'text-emerald-700 dark:text-emerald-300',
-      borderClass: 'border-emerald-100 dark:border-emerald-500/40',
+      toneClass: 'text-slate-600 dark:text-slate-400',
+      badgeBg: 'bg-slate-100 dark:bg-slate-500/10',
+      badgeText: 'text-slate-700 dark:text-slate-300',
+      borderClass: 'border-slate-200 dark:border-slate-500/40',
     }
   }
   if (score <= 23) {
@@ -291,6 +291,7 @@ export default function TestPage() {
   const analyzeTimeoutRef = useRef<number | null>(null)
   const analyzeIntervalRef = useRef<number | null>(null)
   const [muted, setMuted] = useState(false)
+  const [showHints, setShowHints] = useState(true)
   const [playPop] = useSound('/static/sounds/pop.mp3', {
     volume: 0.4,
     soundEnabled: !muted,
@@ -373,13 +374,17 @@ export default function TestPage() {
         <span>
           Question {currentStep} of {QUESTIONS.length}
         </span>
-        <button
-          type="button"
-          onClick={() => setMuted((prev) => !prev)}
-          className="hover:text-primary-500 flex items-center gap-2 text-xs font-normal text-gray-500 transition"
-        >
-          {muted ? 'Sound off' : 'Sound on'}
-          {muted ? (
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setShowHints((prev) => !prev)}
+            className={`flex items-center gap-2 text-xs font-medium transition ${
+              showHints
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+            }`}
+          >
+            <span>{showHints ? 'Hide Hints' : 'Show Hints'}</span>
             <svg
               viewBox="0 0 24 24"
               className="h-4 w-4"
@@ -387,23 +392,45 @@ export default function TestPage() {
               stroke="currentColor"
               strokeWidth={2}
             >
-              <path d="M9 9l6 6M15 9l-6 6" strokeLinecap="round" />
-              <path d="M4 9h4l4-4v14l-4-4H4z" strokeLinejoin="round" />
+              <path
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
-          ) : (
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path d="M4 9h4l4-4v14l-4-4H4z" strokeLinejoin="round" />
-              <path d="M16 9a4 4 0 010 6" strokeLinecap="round" />
-              <path d="M19 7a7 7 0 010 10" strokeLinecap="round" />
-            </svg>
-          )}
-        </button>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMuted((prev) => !prev)}
+            className="hover:text-primary-500 flex items-center gap-2 text-xs font-normal text-gray-500 transition"
+          >
+            {muted ? 'Sound off' : 'Sound on'}
+            {muted ? (
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path d="M9 9l6 6M15 9l-6 6" strokeLinecap="round" />
+                <path d="M4 9h4l4-4v14l-4-4H4z" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path d="M4 9h4l4-4v14l-4-4H4z" strokeLinejoin="round" />
+                <path d="M16 9a4 4 0 010 6" strokeLinecap="round" />
+                <path d="M19 7a7 7 0 010 10" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
       <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
         <motion.div
@@ -439,9 +466,11 @@ export default function TestPage() {
                 className="hover:border-primary-500 hover:text-primary-600 focus-visible:ring-primary-500 rounded-2xl border border-gray-200 bg-white px-4 py-5 text-left text-base font-medium text-gray-900 transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
               >
                 <div className="text-lg font-semibold">{label}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {currentQuestion.options[index]}
-                </div>
+                {showHints && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {currentQuestion.options[index]}
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -489,31 +518,62 @@ export default function TestPage() {
   )
 
   const IntroView = () => (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
-          ASRS-v1.1
-        </p>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-          Free Adult ADHD Screening
-        </h1>
-        <p className="text-base text-gray-600 dark:text-gray-300">
-          Answer 18 research-backed questions to understand how closely your experiences align with
-          adult ADHD patterns.
-        </p>
+    <div className="grid gap-12 md:grid-cols-2 md:items-center">
+      <div className="space-y-8 text-left">
+        <div className="space-y-4">
+          <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
+            ASRS-v1.1
+          </p>
+          <h1 className="text-4xl font-black text-gray-900 sm:text-5xl dark:text-gray-100">
+            Free Adult ADHD Self-Screening
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300">
+            Answer 18 research-backed questions to understand how closely your experiences align
+            with adult ADHD patterns.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setQuizStarted(true)}
+          className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 inline-flex w-full items-center justify-center rounded-2xl px-8 py-4 text-xl font-semibold text-white shadow-lg transition sm:w-auto"
+        >
+          Start Assessment →
+        </button>
+        <div className="flex items-center gap-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            2 minutes
+          </span>
+          <span>·</span>
+          <span>No email required</span>
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={() => setQuizStarted(true)}
-        className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 inline-flex items-center justify-center rounded-2xl px-6 py-3 text-lg font-semibold text-white shadow-lg transition"
-      >
-        Start Assessment
-      </button>
+      <div className="relative hidden aspect-square overflow-hidden rounded-3xl shadow-2xl md:block">
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-100 to-teal-100 opacity-50 dark:from-rose-900/20 dark:to-teal-900/20" />
+        <Image
+          src="/static/images/result-brain.png"
+          alt="ADHD Assessment Illustration"
+          fill
+          className="object-cover"
+          priority
+        />
+      </div>
     </div>
   )
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-10 py-10">
+    <div
+      className={`mx-auto flex flex-col gap-10 py-10 transition-all duration-500 ${
+        !quizStarted ? 'max-w-6xl' : 'max-w-3xl'
+      }`}
+    >
       <div className="shadow-primary-500/5 rounded-3xl border border-gray-200 bg-white/80 p-8 shadow-xl backdrop-blur dark:border-gray-800 dark:bg-gray-900/80">
         {!quizStarted ? (
           <IntroView />
@@ -566,15 +626,29 @@ export default function TestPage() {
             </div>
 
             <div className="space-y-4 text-center">
-              <Link
-                href="/blog/best-quiet-fidget-toys"
-                className="from-primary-500 to-primary-500 shadow-primary-500/40 inline-flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r via-rose-500 px-8 py-4 text-lg font-semibold text-white shadow-xl transition hover:translate-y-0.5 hover:opacity-90"
-              >
-                <span role="img" aria-label="Sparkles">
-                  ✨
-                </span>
-                <span>See Tools That Help (Read Guide) →</span>
-              </Link>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Ready to get in the zone? Access your personal focus dashboard.
+                </p>
+                <Link
+                  href="/projects"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-pink-500 to-rose-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-pink-500/30 transition hover:translate-y-0.5 hover:opacity-90"
+                >
+                  <span role="img" aria-label="Target">
+                    🎯
+                  </span>
+                  <span>Enter Focus Lab Dashboard →</span>
+                </Link>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href="/blog/best-quiet-fidget-toys"
+                  className="hover:text-primary-600 dark:hover:text-primary-400 text-sm font-semibold text-gray-500 transition hover:underline dark:text-gray-400"
+                >
+                  Or read our guide on Quiet Fidget Toys
+                </Link>
+              </div>
               <Link
                 href="/"
                 className="hover:text-primary-500 text-base font-semibold text-gray-700 underline underline-offset-4 transition dark:text-gray-200"
@@ -591,8 +665,8 @@ export default function TestPage() {
       </div>
 
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Based on the Adult ADHD Self-Report Scale (ASRS-v1.1) Symptom Checklist. This screening is
-        for educational purposes only and is not a medical diagnosis. Material adapted from World
+        Based on the Adult ADHD Self-Report Scale (ASRS-v1.1) Symptom Checklist. This self-screening
+        is for educational purposes only and is not a medical diagnosis. Material adapted from World
         Health Organization standards.
       </p>
       <p className="text-xs text-gray-400 dark:text-gray-500">

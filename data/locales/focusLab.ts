@@ -1,10 +1,10 @@
 export const focusLabTranslations = {
   en: {
     header: {
-      eyebrow: 'Focus Lab',
-      title: 'Your External Executive Function System',
+      eyebrow: 'Productivity Dashboard',
+      title: 'Focus Lab',
       description:
-        'Designed for ADHD brains to regulate dopamine without context switching. This is your personal mission control: layer soundscapes to block distractions, break down overwhelming tasks, and manage time with visual timers—all in one place to keep your nervous system in calm momentum.',
+        'Your external executive function system. Mix and match widgets to find your flow.',
     },
     widgets: {
       sonicShield: {
