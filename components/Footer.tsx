@@ -1,24 +1,22 @@
+'use client'
+
 import Link from './Link'
 import siteMetadata from '@/data/siteMetadata'
 import SocialIcon from '@/components/social-icons'
 import { Mail } from '@/components/social-icons/icons'
-
-const quickLinks = [
-  { label: 'Home', href: '/' },
-  { label: 'Blog', href: '/blog' },
-  { label: 'About', href: '/about' },
-  { label: 'Privacy Policy', href: '/privacy' },
-]
-
-const topics = [
-  { label: 'Focus', href: '/tags/focus' },
-  { label: 'Sleep', href: '/tags/sleep' },
-  { label: 'Anxiety', href: '/tags/anxiety' },
-  { label: 'Gear', href: '/tags/gear' },
-]
+import { useTranslation } from '@/context/LanguageContext'
 
 export default function Footer() {
+  const { t } = useTranslation()
   const contactEmail = siteMetadata.email || 'contact@neurohackslab.com'
+
+  const quickLinks = [
+    { label: t.nav.focusLab, href: '/focuslab' },
+    { label: t.nav.home, href: '/' },
+    { label: t.nav.guides, href: '/guides' },
+    { label: t.nav.about, href: '/about' },
+    { label: t.nav.privacy, href: '/privacy' },
+  ]
 
   return (
     <footer className="mt-16 border-t border-gray-200 pt-10 dark:border-gray-800">
@@ -26,11 +24,9 @@ export default function Footer() {
         <div className="space-y-4">
           <div>
             <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
-              NeuroHacks Lab
+              {t.home.heroTitle}
             </p>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Quiet ADHD systems &amp; sensory-friendly tools.
-            </p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{t.home.heroDesc}</p>
           </div>
           <a
             href={`mailto:${contactEmail}`}
@@ -56,7 +52,7 @@ export default function Footer() {
         </div>
         <div>
           <p className="text-sm font-semibold tracking-[0.2em] text-gray-500 uppercase dark:text-gray-400">
-            Quick Links
+            {t.footer.quickLinks}
           </p>
           <ul className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
             {quickLinks.map((link) => (
@@ -68,23 +64,11 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-        {/* <div>
-          <p className="text-sm font-semibold tracking-[0.2em] text-gray-500 uppercase dark:text-gray-400">
-            Topics
-          </p>
-          <ul className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
-            {topics.map((topic) => (
-              <li key={topic.label}>
-                <Link className="hover:text-primary-500 transition" href={topic.href}>
-                  {topic.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div> */}
       </div>
       <div className="mt-10 border-t border-gray-100 pt-6 text-sm text-gray-500 dark:border-gray-800 dark:text-gray-400">
-        <p>© 2025 NeuroHacks Lab</p>
+        <p>
+          © 2025 {t.home.heroTitle}. {t.footer.rights}
+        </p>
       </div>
     </footer>
   )

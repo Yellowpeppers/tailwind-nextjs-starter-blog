@@ -2,12 +2,10 @@
 
 import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
 import { ReactNode, useEffect, useRef, useState, createContext, useContext } from 'react'
-import { focusLabTranslations } from '@/data/locales/focusLab'
+import { useTranslation } from '@/context/LanguageContext'
 
 // Context for passing drag controls to children
 const DragHandleContext = createContext<DragControls | null>(null)
-const LanguageContext = createContext<'en' | 'zh'>('en')
-const useLanguage = () => useContext(LanguageContext)
 
 // --- Helper Functions ---
 
@@ -114,17 +112,20 @@ type ActiveTrack = {
 }
 
 export function FocusLabIntro() {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].header
+  const { t } = useTranslation()
 
   return (
     <header className="space-y-4 text-center lg:text-left">
       <p className="text-primary-500 text-xs font-semibold tracking-[0.4em] uppercase">
-        {t.eyebrow}
+        {t.focusLab.header.eyebrow}
       </p>
       <div className="space-y-3">
-        <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100">{t.title}</h1>
-        <p className="max-w-2xl text-lg text-gray-600 dark:text-gray-300">{t.description}</p>
+        <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100">
+          {t.focusLab.header.title}
+        </h1>
+        <p className="max-w-2xl text-lg text-gray-600 dark:text-gray-300">
+          {t.focusLab.header.description}
+        </p>
       </div>
     </header>
   )
@@ -162,6 +163,8 @@ const WidgetCard = ({
 
   const dragControls = useContext(DragHandleContext)
 
+  const dragStartPosition = useRef({ x: 0, y: 0 })
+
   return (
     <motion.section
       layout
@@ -170,9 +173,18 @@ const WidgetCard = ({
       <div
         className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
         onPointerDown={(e) => {
+          dragStartPosition.current = { x: e.clientX, y: e.clientY }
           dragControls?.start(e)
         }}
-        onClick={onHeaderClick}
+        onClick={(e) => {
+          const dist = Math.sqrt(
+            Math.pow(e.clientX - dragStartPosition.current.x, 2) +
+              Math.pow(e.clientY - dragStartPosition.current.y, 2)
+          )
+          if (dist < 5) {
+            onHeaderClick?.()
+          }
+        }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -283,10 +295,16 @@ const GAP = 32
 export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
-  const [lang, setLang] = useState<'en' | 'zh'>('en')
+  const { t, language: lang, setLanguage } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
+
+  // Calculate dynamic padding to align with grid (x=0.5)
+  const totalGapsWidth = (15 - 1) * GAP
+  const availableWidth = containerWidth - totalGapsWidth
+  const colWidth = containerWidth > 0 ? availableWidth / 15 : COL_WIDTH
+  const headerPadding = isMobile ? 0 : 0.5 * (colWidth + GAP)
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -319,7 +337,7 @@ export const FocusLabDashboard = () => {
   }
 
   return (
-    <LanguageContext.Provider value={lang}>
+    <>
       <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
         {/* Global Grid Background - Only visible on Desktop */}
         {!isMobile && (
@@ -351,87 +369,12 @@ export const FocusLabDashboard = () => {
               }`}
             />
 
-            {/* Language Toggle */}
-            <button
-              onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
-              className="fixed top-6 right-20 z-[100] flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-md transition-all hover:scale-110 hover:bg-pink-50 dark:bg-gray-800/80 dark:hover:bg-pink-900/30"
-              title={lang === 'en' ? 'Switch to Chinese' : 'Switch to English'}
-            >
-              <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                {lang === 'en' ? 'EN' : '中'}
-              </span>
-            </button>
-
-            {/* Focus Mode Toggle */}
-            <button
-              onClick={() => setIsFocusMode(!isFocusMode)}
-              className="fixed top-6 right-6 z-[100] rounded-full bg-white/80 p-3 shadow-lg backdrop-blur-md transition-all hover:scale-110 hover:bg-pink-50 dark:bg-gray-800/80 dark:hover:bg-pink-900/30"
-              title={isFocusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
-            >
-              {isFocusMode ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-6 w-6 text-pink-500"
-                >
-                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-                </svg>
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-6 w-6 text-gray-500 dark:text-gray-400"
-                >
-                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                </svg>
-              )}
-            </button>
-
-            {/* Global Reset Button */}
-            <button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    lang === 'en'
-                      ? 'Reset all settings and data? This cannot be undone.'
-                      : '重置所有设置和数据？此操作无法撤销。'
-                  )
-                ) {
-                  // Clear all focus-lab related keys
-                  const keys = [
-                    'focus-lab-layout-v1',
-                    'focus-lab-dopamine-options',
-                    'focus-lab-sonic-tracks',
-                    'focus-lab-sonic-volume',
-                    'focus-lab-brain-dump-left',
-                    'focus-lab-brain-dump-right',
-                    'focus-lab-brain-dump-list-v2', // cleanup old keys
-                    'focus-lab-brain-dump-list', // cleanup old keys
-                  ]
-                  keys.forEach((key) => window.localStorage.removeItem(key))
-                  window.location.reload()
-                }
-              }}
-              className="fixed top-6 right-36 z-[100] flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-md transition-all hover:scale-110 hover:bg-red-50 hover:text-red-500 dark:bg-gray-800/80 dark:hover:bg-red-900/30 dark:hover:text-red-400"
-              title={lang === 'en' ? 'Reset All Settings' : '重置所有设置'}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5 text-gray-500 transition-colors group-hover:text-red-500 dark:text-gray-400"
-              >
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
-            </button>
+            {/* Focus Mode Backdrop - Covers everything including global header */}
+            <div
+              className={`fixed inset-0 bg-white/95 backdrop-blur-sm transition-all duration-500 dark:bg-gray-950/95 ${
+                isFocusMode ? 'z-[90] opacity-100' : 'pointer-events-none z-[-1] opacity-0'
+              }`}
+            />
 
             {/* Intro Section - Fades out and collapses in Focus Mode */}
             <div
@@ -439,8 +382,119 @@ export const FocusLabDashboard = () => {
                 isFocusMode ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
               }`}
             >
-              <div className="mx-auto max-w-[1800px] px-4 py-12 sm:px-6 lg:px-8">
+              <div className="py-12" style={{ paddingLeft: headerPadding }}>
                 <FocusLabIntro />
+              </div>
+            </div>
+
+            {/* Dashboard Controls Header */}
+            <div
+              className={`relative z-[100] flex items-center gap-4 transition-all duration-500 ${isFocusMode ? '-mt-24 mb-12 pt-6' : 'mb-8 pt-0'}`}
+              style={{ paddingLeft: headerPadding }}
+            >
+              <AnimatePresence mode="popLayout">
+                {isFocusMode && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex items-center gap-3 border-r border-gray-200 pr-4 dark:border-gray-800"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500 text-white">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        className="h-5 w-5"
+                      >
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                      </svg>
+                    </div>
+                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      Focus Lab
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsFocusMode(!isFocusMode)}
+                  className={`group flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition-all ${
+                    isFocusMode
+                      ? 'border-pink-200 bg-pink-50 text-pink-600 hover:bg-pink-100 dark:border-pink-900/30 dark:bg-pink-900/20 dark:text-pink-400'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200 hover:text-pink-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-pink-400'
+                  }`}
+                >
+                  {isFocusMode ? (
+                    <>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="h-4 w-4"
+                      >
+                        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                      </svg>
+                      {t.focusLab.controls.exitFocus}
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="h-4 w-4"
+                      >
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                      </svg>
+                      {t.focusLab.controls.focusMode}
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        lang === 'en'
+                          ? 'Reset all settings and data? This cannot be undone.'
+                          : '重置所有设置和数据？此操作无法撤销。'
+                      )
+                    ) {
+                      const keys = [
+                        'focus-lab-layout-v1',
+                        'focus-lab-dopamine-options',
+                        'focus-lab-sonic-tracks',
+                        'focus-lab-sonic-volume',
+                        'focus-lab-brain-dump-left',
+                        'focus-lab-brain-dump-right',
+                        'focus-lab-brain-dump-list-v2',
+                        'focus-lab-brain-dump-list',
+                      ]
+                      keys.forEach((key) => window.localStorage.removeItem(key))
+                      window.location.reload()
+                    }
+                  }}
+                  className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4 transition-transform group-hover:-rotate-180"
+                  >
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  {t.focusLab.controls.resetLayout}
+                </button>
               </div>
             </div>
 
@@ -462,7 +516,7 @@ export const FocusLabDashboard = () => {
           </div>
         </div>
       </div>
-    </LanguageContext.Provider>
+    </>
   )
 }
 
@@ -756,12 +810,11 @@ export function SonicShieldCard({
   onToggleFocus?: () => void
   className?: string
 }) {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.sonicShield
+  const { t } = useTranslation()
   return (
     <WidgetCard
-      title={t.title}
-      subtitle={t.subtitle}
+      title={t.focusLab.widgets.sonicShield.title}
+      subtitle={t.focusLab.widgets.sonicShield.subtitle}
       onHeaderClick={onToggleFocus}
       className={className}
     >
@@ -777,12 +830,11 @@ export function TimerCard({
   onToggleFocus?: () => void
   className?: string
 }) {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.timer
+  const { t } = useTranslation()
   return (
     <WidgetCard
-      title={t.title}
-      subtitle={t.subtitle}
+      title={t.focusLab.widgets.timer.title}
+      subtitle={t.focusLab.widgets.timer.subtitle}
       onHeaderClick={onToggleFocus}
       className={className}
     >
@@ -798,12 +850,11 @@ export function TaskBreakerCard({
   onToggleFocus?: () => void
   className?: string
 }) {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.taskBreaker
+  const { t } = useTranslation()
   return (
     <WidgetCard
-      title={t.title}
-      subtitle={t.subtitle}
+      title={t.focusLab.widgets.taskBreaker.title}
+      subtitle={t.focusLab.widgets.taskBreaker.subtitle}
       onHeaderClick={onToggleFocus}
       className={className}
     >
@@ -819,12 +870,11 @@ export function BrainDumpCard({
   onToggleFocus?: () => void
   className?: string
 }) {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.brainDump
+  const { t } = useTranslation()
   return (
     <WidgetCard
-      title={t.title}
-      subtitle={t.subtitle}
+      title={t.focusLab.widgets.brainDump.title}
+      subtitle={t.focusLab.widgets.brainDump.subtitle}
       onHeaderClick={onToggleFocus}
       className={className}
     >
@@ -842,12 +892,11 @@ export function DopamineMenuCard({
   onToggleFocus?: () => void
   className?: string
 }) {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.dopamineMenu
+  const { t } = useTranslation()
   return (
     <WidgetCard
-      title={t.title}
-      subtitle={t.subtitle}
+      title={t.focusLab.widgets.dopamineMenu.title}
+      subtitle={t.focusLab.widgets.dopamineMenu.subtitle}
       onHeaderClick={onToggleFocus}
       className={className}
     >
@@ -865,9 +914,8 @@ const timerPresets: Record<TimerPreset, { label: string; duration: number }> = {
 }
 
 const SonicShieldWidget = () => {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.sonicShield
-  const tSounds = focusLabTranslations[lang].sounds
+  const { t } = useTranslation()
+  const tSounds = t.focusLab.sounds
   const [customSounds, setCustomSounds] = useState<SoundOption[]>([])
   const [activeTracks, setActiveTracks] = useState<Record<string, ActiveTrack>>({})
   const [masterVolume, setMasterVolume] = useState(0.8)
@@ -985,7 +1033,9 @@ const SonicShieldWidget = () => {
         <div className="flex flex-1 flex-col items-center justify-center gap-2">
           <SoundVisualizer activeCount={isGlobalPlaying ? activeCount : 0} />
           <div className="text-xs font-medium opacity-60">
-            {activeCount === 0 ? t.selectSounds : `${activeCount} ${t.active}`}
+            {activeCount === 0
+              ? t.focusLab.widgets.sonicShield.selectSounds
+              : `${activeCount} ${t.focusLab.widgets.sonicShield.active}`}
           </div>
         </div>
 
@@ -1026,7 +1076,7 @@ const SonicShieldWidget = () => {
             />
           </div>
           <span className="text-[9px] font-bold tracking-widest uppercase opacity-40">
-            {t.volume}
+            {t.focusLab.widgets.sonicShield.volume}
           </span>
         </div>
       </div>
@@ -1102,8 +1152,7 @@ const SonicShieldWidget = () => {
 }
 
 const TimerWidget = () => {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.timer
+  const { t } = useTranslation()
   const [activePreset, setActivePreset] = useState<TimerPreset>('focus')
   const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration)
   const [isRunning, setIsRunning] = useState(false)
@@ -1202,7 +1251,9 @@ const TimerWidget = () => {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {mode === 'countdown' ? t.countdown : t.targetTime}
+              {mode === 'countdown'
+                ? t.focusLab.widgets.timer.countdown
+                : t.focusLab.widgets.timer.targetTime}
             </button>
           ))}
         </div>
@@ -1245,7 +1296,7 @@ const TimerWidget = () => {
                 }}
                 className="rounded-md bg-pink-50 px-3 py-1 text-[10px] font-bold tracking-wider text-pink-600 uppercase hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400"
               >
-                {t.set}
+                {t.focusLab.widgets.timer.set}
               </button>
             </div>
           )}
@@ -1297,7 +1348,7 @@ const TimerWidget = () => {
           className="flex h-12 w-20 items-center justify-center rounded-full text-xs font-bold tracking-wider text-gray-400 uppercase transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100"
           aria-label="Reset Timer"
         >
-          {t.reset}
+          {t.focusLab.widgets.timer.reset}
         </button>
         <button
           type="button"
@@ -1305,7 +1356,7 @@ const TimerWidget = () => {
             playClickSound()
             handleStartPause()
           }}
-          className={`flex h-12 items-center justify-center gap-2 rounded-full px-8 text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${
+          className={`flex h-12 items-center justify-center gap-2 rounded-full px-8 text-sm font-bold whitespace-nowrap text-white shadow-lg transition-all active:scale-95 ${
             isRunning
               ? 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
               : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
@@ -1313,11 +1364,11 @@ const TimerWidget = () => {
         >
           {isRunning ? (
             <>
-              <PauseIcon className="h-4 w-4" /> {t.pause}
+              <PauseIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.pause}
             </>
           ) : (
             <>
-              <PlayIcon className="h-4 w-4" /> {t.start}
+              <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.start}
             </>
           )}
         </button>
@@ -1341,8 +1392,7 @@ const getSecondsUntilTarget = (timeStr: string) => {
 }
 
 const TaskBreakerWidget = () => {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.taskBreaker
+  const { t } = useTranslation()
   const [task, setTask] = useState('')
   const [visibleSteps, setVisibleSteps] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -1390,9 +1440,9 @@ const TaskBreakerWidget = () => {
       })
     } catch (err) {
       setIsLoading(false)
-      setError(t.failed)
+      setError(t.focusLab.widgets.taskBreaker.failed)
       // Fallback to mock data if API fails (optional, but good for demo)
-      const fallbackSteps = t.mockSteps
+      const fallbackSteps = t.focusLab.widgets.taskBreaker.mockSteps
       fallbackSteps.forEach((step, index) => {
         const timer = setTimeout(() => {
           setVisibleSteps((prev) => [...prev, step])
@@ -1417,7 +1467,7 @@ const TaskBreakerWidget = () => {
         <div className="flex items-start justify-between gap-4 rounded-2xl bg-pink-50 p-4 dark:bg-pink-900/20">
           <div>
             <p className="text-[10px] font-bold tracking-wider text-pink-600/70 uppercase dark:text-pink-400/70">
-              {t.currentMission}
+              {t.focusLab.widgets.taskBreaker.currentMission}
             </p>
             <p className="line-clamp-2 text-sm font-bold text-gray-900 dark:text-gray-100">
               {task}
@@ -1427,7 +1477,7 @@ const TaskBreakerWidget = () => {
             onClick={handleReset}
             className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm hover:text-pink-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-pink-400"
           >
-            {t.newTask}
+            {t.focusLab.widgets.taskBreaker.newTask}
           </button>
         </div>
 
@@ -1435,7 +1485,7 @@ const TaskBreakerWidget = () => {
           {isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-pink-200 border-t-pink-500" />
-              <p className="text-xs font-medium">{t.summoning}</p>
+              <p className="text-xs font-medium">{t.focusLab.widgets.taskBreaker.summoning}</p>
             </div>
           ) : (
             <ul className="space-y-2 p-2">
@@ -1456,14 +1506,18 @@ const TaskBreakerWidget = () => {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400">
           <MagicIcon className="h-6 w-6" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t.overwhelmed}</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t.description}</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          {t.focusLab.widgets.taskBreaker.overwhelmed}
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {t.focusLab.widgets.taskBreaker.description}
+        </p>
       </div>
 
       <textarea
         value={task}
         onChange={(event) => setTask(event.target.value)}
-        placeholder={t.placeholder}
+        placeholder={t.focusLab.widgets.taskBreaker.placeholder}
         className="min-h-[100px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-pink-500 focus:bg-white focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
       />
 
@@ -1473,7 +1527,7 @@ const TaskBreakerWidget = () => {
         disabled={!task.trim()}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-3.5 font-bold text-white transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:bg-gray-100 dark:text-gray-900"
       >
-        {t.button}
+        {t.focusLab.widgets.taskBreaker.button}
       </button>
     </div>
   )
@@ -1516,8 +1570,7 @@ type BrainDumpItem = {
 }
 
 const BrainDumpWidget = () => {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.brainDump
+  const { t, language: lang } = useTranslation()
   const [leftItems, setLeftItems] = useState<BrainDumpItem[]>([])
   const [rightItems, setRightItems] = useState<BrainDumpItem[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -1742,7 +1795,7 @@ const BrainDumpWidget = () => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={t.placeholder}
+              placeholder={t.focusLab.widgets.brainDump.placeholder}
               className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             />
             <button
@@ -1820,8 +1873,8 @@ const BrainDumpWidget = () => {
       <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-2 dark:border-gray-800 dark:bg-gray-900/20 [&::-webkit-scrollbar]:hidden">
         {leftItems.length === 0 && rightItems.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-gray-400">
-            <p className="text-sm">{t.emptyTitle}</p>
-            <p className="text-xs opacity-60">{t.emptySubtitle}</p>
+            <p className="text-sm">{t.focusLab.widgets.brainDump.emptyTitle}</p>
+            <p className="text-xs opacity-60">{t.focusLab.widgets.brainDump.emptySubtitle}</p>
           </div>
         ) : (
           <div className="flex items-start gap-3">
@@ -1919,9 +1972,8 @@ const InfoIcon = ({ className }: { className?: string }) => (
 )
 
 const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
-  const lang = useLanguage()
-  const t = focusLabTranslations[lang].widgets.dopamineMenu
-  const [options, setOptions] = useState(t.defaultOptions)
+  const { t } = useTranslation()
+  const [options, setOptions] = useState(t.focusLab.widgets.dopamineMenu.defaultOptions)
   const [newOption, setNewOption] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [isSpinning, setIsSpinning] = useState(false)
@@ -1998,7 +2050,9 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
           </motion.div>
         ) : (
           <p className="text-sm font-bold tracking-wider text-pink-400/70 uppercase">
-            {isSpinning ? t.spinning : t.ready}
+            {isSpinning
+              ? t.focusLab.widgets.dopamineMenu.spinning
+              : t.focusLab.widgets.dopamineMenu.ready}
           </p>
         )}
       </div>
@@ -2015,10 +2069,10 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
         {isSpinning ? (
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            <span>{t.spinning.toUpperCase()}</span>
+            <span>{t.focusLab.widgets.dopamineMenu.spinning.toUpperCase()}</span>
           </div>
         ) : (
-          t.button
+          t.focusLab.widgets.dopamineMenu.button
         )}
       </button>
 
@@ -2030,14 +2084,14 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
             value={newOption}
             onChange={(e) => setNewOption(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addOption()}
-            placeholder={t.addPlaceholder}
+            placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
             className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
           <button
             onClick={addOption}
             className="rounded-lg bg-pink-50 px-3 py-2 text-xs font-bold text-pink-600 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400 dark:hover:bg-pink-900/40"
           >
-            {t.add}
+            {t.focusLab.widgets.dopamineMenu.add}
           </button>
         </div>
         <div className={`grid gap-2 px-1 ${cols >= 4 ? 'grid-cols-2' : 'grid-cols-1'}`}>

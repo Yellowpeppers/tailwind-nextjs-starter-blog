@@ -5,255 +5,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from '@/components/Link'
 import { AnimatePresence, motion } from 'framer-motion'
 import useSound from 'use-sound'
+import { useTranslation } from '@/context/LanguageContext'
+import { dictionary } from '@/data/locale/dictionary'
 
-type Question = {
-  id: number
-  text: string
-  isPartA: boolean
-  options: string[]
-}
-
-const QUESTIONS: Question[] = [
-  {
-    id: 1,
-    text: 'How often do you have trouble <strong>wrapping up the final details</strong> of a project, once the <strong>challenging parts</strong> have been done?',
-    isPartA: true,
-    options: [
-      'My work is usually buttoned up.',
-      'Only if I’m exhausted or stressed.',
-      'Occasionally a loose end slips by.',
-      'I often need reminders to finish the last bits.',
-      'I rarely feel a project is truly finished.',
-    ],
-  },
-  {
-    id: 2,
-    text: 'How often do you have difficulty <strong>getting things in order</strong> when you have to do a task that requires <strong>organization</strong>?',
-    isPartA: true,
-    options: [
-      'Lists and systems come naturally.',
-      'Only complex projects throw me off.',
-      'I have to pause to figure out the plan.',
-      'Most tasks feel scattered without help.',
-      'I feel overwhelmed just thinking about organizing.',
-    ],
-  },
-  {
-    id: 3,
-    text: 'How often do you have problems <strong>remembering appointments or obligations</strong>?',
-    isPartA: true,
-    options: [
-      'My calendar is always up to date.',
-      'Rarely—I might forget a recurring task.',
-      'I need frequent reminders to stay on track.',
-      'Missed appointments happen a lot.',
-      'I forget commitments almost as soon as I make them.',
-    ],
-  },
-  {
-    id: 4,
-    text: 'When you have a task that requires <strong>a lot of thought</strong>, how often do you <strong>avoid or delay getting started</strong>?',
-    isPartA: true,
-    options: [
-      'I dive right in.',
-      'Only when the task is unclear.',
-      'I procrastinate unless there’s pressure.',
-      'The start line feels like a wall most days.',
-      'I routinely miss deadlines because I avoid the task.',
-    ],
-  },
-  {
-    id: 5,
-    text: 'How often do you <strong>fidget or squirm</strong> with your hands or feet when you have to sit down for a long time?',
-    isPartA: true,
-    options: [
-      'Sitting still isn’t a problem.',
-      'Only during very long meetings.',
-      'I shift around after a short while.',
-      'I’m constantly tapping or bouncing.',
-      'I can’t stay seated without moving.',
-    ],
-  },
-  {
-    id: 6,
-    text: 'How often do you feel <strong>overly active</strong> and compelled to do things, like you were <strong>driven by a motor</strong>?',
-    isPartA: true,
-    options: [
-      'My energy is steady and manageable.',
-      'I get revved up only on high-pressure days.',
-      'I feel “on” more often than not.',
-      'It’s hard to slow down even when I try.',
-      'I feel like I’m constantly running inside.',
-    ],
-  },
-  {
-    id: 7,
-    text: 'How often do you make <strong>careless mistakes</strong> when you have to work on a <strong>boring or difficult project</strong>?',
-    isPartA: false,
-    options: [
-      'My work is usually error-free.',
-      'Only when I’m extremely tired.',
-      'I occasionally miss small details.',
-      'I often have to double-check my work.',
-      'I make mistakes no matter how hard I try.',
-    ],
-  },
-  {
-    id: 8,
-    text: 'How often do you have difficulty <strong>keeping your attention</strong> when you are doing <strong>boring or repetitive work</strong>?',
-    isPartA: false,
-    options: [
-      'I stay focused regardless of the task.',
-      'Only mind-numbing tasks lose me.',
-      'I drift off unless I refocus often.',
-      'I struggle to finish repetitive work.',
-      'I can barely stick with repetitive tasks at all.',
-    ],
-  },
-  {
-    id: 9,
-    text: 'How often do you have difficulty <strong>concentrating on what people say</strong> to you, even when they are speaking to you directly?',
-    isPartA: false,
-    options: [
-      'I stay engaged when someone speaks.',
-      'Only in very noisy environments.',
-      'My mind wanders in longer conversations.',
-      'I miss key points unless I take notes.',
-      'It feels impossible to stay tuned in.',
-    ],
-  },
-  {
-    id: 10,
-    text: 'How often do you <strong>misplace or have difficulty finding things</strong> at home or at work?',
-    isPartA: false,
-    options: [
-      'Everything has a place and stays there.',
-      'Only occasional slip-ups.',
-      'I lose track unless I tidy constantly.',
-      'I’m always searching for essentials.',
-      'Items vanish the moment I set them down.',
-    ],
-  },
-  {
-    id: 11,
-    text: 'How often are you <strong>distracted by activity or noise</strong> around you?',
-    isPartA: false,
-    options: [
-      'Background noise rarely fazes me.',
-      'Only sudden or loud sounds derail me.',
-      'I need headphones to stay on task.',
-      'Most environments pull my focus away.',
-      'Every little sound feels disruptive.',
-    ],
-  },
-  {
-    id: 12,
-    text: 'How often do you <strong>leave your seat</strong> in meetings or other situations in which you are expected to remain seated?',
-    isPartA: false,
-    options: [
-      'I stay seated as expected.',
-      'Only in extra-long sessions.',
-      'I excuse myself once in a while.',
-      'I frequently need to stand or walk.',
-      'Sitting through a meeting feels impossible.',
-    ],
-  },
-  {
-    id: 13,
-    text: 'How often do you feel <strong>restless or fidgety</strong>?',
-    isPartA: false,
-    options: [
-      'I feel calm most of the time.',
-      'Only during stressful weeks.',
-      'There’s a mild buzz in my body.',
-      'Restlessness is my default state.',
-      'I rarely feel physically settled.',
-    ],
-  },
-  {
-    id: 14,
-    text: 'How often do you have difficulty <strong>unwinding and relaxing</strong> when you have time to yourself?',
-    isPartA: false,
-    options: [
-      'Downtime actually relaxes me.',
-      'It takes a few minutes to settle.',
-      'I need rituals to shut my brain off.',
-      'Relaxing feels like another task.',
-      'I can’t switch off, even alone.',
-    ],
-  },
-  {
-    id: 15,
-    text: 'How often do you find yourself <strong>talking too much</strong> when you are in social situations?',
-    isPartA: false,
-    options: [
-      'I match the pacing of the room.',
-      'Only when I’m extra excited.',
-      'Sometimes I realize I’m rambling.',
-      'Friends gently ask me to slow down.',
-      'I dominate conversations without meaning to.',
-    ],
-  },
-  {
-    id: 16,
-    text: "When you're in a conversation, how often do you find yourself <strong>finishing the sentences</strong> of the people you are talking to, before they can finish them themselves?",
-    isPartA: false,
-    options: [
-      'I rarely jump in prematurely.',
-      'Only with close friends or family.',
-      'Sometimes I blurt the ending for others.',
-      'I do it enough that people notice.',
-      'I constantly finish people’s sentences.',
-    ],
-  },
-  {
-    id: 17,
-    text: 'How often do you have difficulty <strong>waiting your turn</strong> in situations when turn taking is required?',
-    isPartA: false,
-    options: [
-      'Lines and queues don’t bother me.',
-      'Only when I’m in a major rush.',
-      'I get antsy unless I’m distracted.',
-      'Waiting my turn feels uncomfortable.',
-      'I have to move ahead or tap out somehow.',
-    ],
-  },
-  {
-    id: 18,
-    text: 'How often do you <strong>interrupt others</strong> when they are busy?',
-    isPartA: false,
-    options: [
-      'I respect people’s space and focus.',
-      'Only if I urgently need something.',
-      'Sometimes I pop in mid-task.',
-      'Interrupting happens most days.',
-      'I constantly cut people off without meaning to.',
-    ],
-  },
-]
-
-const OPTION_LABELS = ['Never', 'Rarely', 'Sometimes', 'Often', 'Very Often']
-const ANALYZING_MESSAGES = [
-  'Analyzing responses...',
-  'Mapping neuro-profile...',
-  'Finalizing score...',
-]
-const ANALYZING_DURATION = 2500
-
-type ResultBucket = {
-  label: string
-  description: string
-  toneClass: string
-  badgeBg: string
-  badgeText: string
-  borderClass: string
-}
-
-const getResultBucket = (score: number): ResultBucket => {
+// Helper to get result bucket based on score and translation
+const getResultBucket = (score: number, t: typeof dictionary.en) => {
+  const buckets = t.test.results.buckets
   if (score <= 16) {
     return {
-      label: 'Unlikely to have ADHD',
-      description: 'Your symptoms are within the typical range.',
+      ...buckets.low,
       toneClass: 'text-slate-600 dark:text-slate-400',
       badgeBg: 'bg-slate-100 dark:bg-slate-500/10',
       badgeText: 'text-slate-700 dark:text-slate-300',
@@ -262,8 +22,7 @@ const getResultBucket = (score: number): ResultBucket => {
   }
   if (score <= 23) {
     return {
-      label: 'Likely to have ADHD',
-      description: 'You are showing signs that may impact your daily life.',
+      ...buckets.medium,
       toneClass: 'text-amber-600 dark:text-amber-400',
       badgeBg: 'bg-amber-50 dark:bg-amber-500/10',
       badgeText: 'text-amber-700 dark:text-amber-200',
@@ -271,8 +30,7 @@ const getResultBucket = (score: number): ResultBucket => {
     }
   }
   return {
-    label: 'Highly Consistent with ADHD',
-    description: 'Your symptoms are significant. We recommend consulting a professional.',
+    ...buckets.high,
     toneClass: 'text-rose-600 dark:text-rose-400',
     badgeBg: 'bg-rose-50 dark:bg-rose-500/10',
     badgeText: 'text-rose-700 dark:text-rose-200',
@@ -281,6 +39,12 @@ const getResultBucket = (score: number): ResultBucket => {
 }
 
 export default function TestPage() {
+  const { t, language } = useTranslation()
+  const QUESTIONS = t.test.questions
+  const OPTION_LABELS = t.test.options
+  const ANALYZING_MESSAGES = t.test.analyzing.messages
+  const ANALYZING_DURATION = 2500
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<(number | null)[]>(Array(QUESTIONS.length).fill(null))
   const [completed, setCompleted] = useState(false)
@@ -322,7 +86,7 @@ export default function TestPage() {
         analyzeIntervalRef.current = null
       }
     }
-  }, [isAnalyzing])
+  }, [isAnalyzing, ANALYZING_MESSAGES.length])
 
   const totalScore = useMemo(() => {
     return answers.reduce<number>((sum, value) => {
@@ -332,7 +96,7 @@ export default function TestPage() {
   const currentStep = completed ? QUESTIONS.length : currentIndex + 1
   const progress = (currentStep / QUESTIONS.length) * 100
 
-  const resultBucket = useMemo(() => getResultBucket(totalScore), [totalScore])
+  const resultBucket = useMemo(() => getResultBucket(totalScore, t), [totalScore, t])
 
   const triggerAnalyzingPhase = () => {
     setIsAnalyzing(true)
@@ -366,13 +130,30 @@ export default function TestPage() {
     }
   }
 
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1)
+      if (isBreak) setIsBreak(false)
+    }
+  }
+
+  const handleRetake = () => {
+    setAnswers(Array(QUESTIONS.length).fill(null))
+    setCurrentIndex(0)
+    setCompleted(false)
+    setIsBreak(false)
+    setIsAnalyzing(false)
+    setAnalyzingMessageIndex(0)
+    // We keep quizStarted as true so they don't have to see the intro again
+  }
+
   const currentQuestion = QUESTIONS[currentIndex]
 
   const QuestionView = () => (
     <>
       <div className="flex items-center justify-between text-sm font-semibold tracking-wide text-gray-600 uppercase dark:text-gray-300">
         <span>
-          Question {currentStep} of {QUESTIONS.length}
+          {t.test.common.question} {currentStep} {t.test.common.of} {QUESTIONS.length}
         </span>
         <div className="flex items-center gap-4">
           <button
@@ -384,7 +165,7 @@ export default function TestPage() {
                 : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
             }`}
           >
-            <span>{showHints ? 'Hide Hints' : 'Show Hints'}</span>
+            <span>{showHints ? t.test.common.hideHints : t.test.common.showHints}</span>
             <svg
               viewBox="0 0 24 24"
               className="h-4 w-4"
@@ -404,7 +185,7 @@ export default function TestPage() {
             onClick={() => setMuted((prev) => !prev)}
             className="hover:text-primary-500 flex items-center gap-2 text-xs font-normal text-gray-500 transition"
           >
-            {muted ? 'Sound off' : 'Sound on'}
+            {muted ? t.test.common.soundOff : t.test.common.soundOn}
             {muted ? (
               <svg
                 viewBox="0 0 24 24"
@@ -451,14 +232,15 @@ export default function TestPage() {
           className="mt-8 space-y-6"
         >
           <p className="text-primary-500 text-sm font-medium">
-            {currentQuestion.isPartA ? 'Part A' : 'Part B'} · Question {currentStep}
+            {currentQuestion.isPartA ? t.test.common.partA : t.test.common.partB} ·{' '}
+            {t.test.common.question} {currentStep}
           </p>
           <h1
             className="text-2xl font-semibold text-gray-900 dark:text-gray-100"
             dangerouslySetInnerHTML={{ __html: currentQuestion.text }}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            {OPTION_LABELS.map((label, index) => (
+            {OPTION_LABELS.map((label: string, index: number) => (
               <button
                 key={label}
                 type="button"
@@ -468,11 +250,25 @@ export default function TestPage() {
                 <div className="text-lg font-semibold">{label}</div>
                 {showHints && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {currentQuestion.options[index]}
+                    {currentQuestion.hints[index]}
                   </div>
                 )}
               </button>
             ))}
+          </div>
+          <div className="mt-8 flex justify-start">
+            <button
+              type="button"
+              onClick={handlePrevious}
+              disabled={currentIndex === 0}
+              className={`text-sm font-medium transition-colors ${
+                currentIndex === 0
+                  ? 'cursor-not-allowed text-gray-300 dark:text-gray-600'
+                  : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
+              }`}
+            >
+              {currentIndex > 0 ? `← ${t.test.common.previous}` : ''}
+            </button>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -481,10 +277,11 @@ export default function TestPage() {
 
   const BreakView = () => (
     <div className="flex flex-col items-center gap-6 py-8 text-center">
-      <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">🧠 Part A Complete!</div>
+      <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+        {t.test.break.title}
+      </div>
       <p className="max-w-md text-base text-gray-600 dark:text-gray-300">
-        Great job. You've finished the core screening questions. Take a deep breath before the final
-        stretch.
+        {t.test.break.description}
       </p>
       <motion.div
         className="border-primary-200 bg-primary-100 dark:border-primary-500/30 dark:bg-primary-500/20 h-16 w-16 rounded-full border-4"
@@ -496,7 +293,7 @@ export default function TestPage() {
         onClick={() => setIsBreak(false)}
         className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-2xl px-6 py-3 text-base font-semibold text-white shadow-lg transition"
       >
-        Continue to Part B →
+        {t.test.break.button}
       </button>
     </div>
   )
@@ -511,9 +308,7 @@ export default function TestPage() {
       <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
         {ANALYZING_MESSAGES[analyzingMessageIndex]}
       </p>
-      <p className="text-sm text-gray-600 dark:text-gray-300">
-        We’ll surface your ASRS insights in just a moment.
-      </p>
+      <p className="text-sm text-gray-600 dark:text-gray-300">{t.test.analyzing.subtitle}</p>
     </div>
   )
 
@@ -522,22 +317,19 @@ export default function TestPage() {
       <div className="space-y-8 text-left">
         <div className="space-y-4">
           <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
-            ASRS-v1.1
+            {t.test.subtitle}
           </p>
           <h1 className="text-4xl font-black text-gray-900 sm:text-5xl dark:text-gray-100">
-            Free Adult ADHD Self-Screening
+            {t.test.title}
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
-            Answer 18 research-backed questions to understand how closely your experiences align
-            with adult ADHD patterns.
-          </p>
+          <p className="text-lg text-gray-600 dark:text-gray-300">{t.test.description}</p>
         </div>
         <button
           type="button"
           onClick={() => setQuizStarted(true)}
           className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 inline-flex w-full items-center justify-center rounded-2xl px-8 py-4 text-xl font-semibold text-white shadow-lg transition sm:w-auto"
         >
-          Start Assessment →
+          {t.test.start}
         </button>
         <div className="flex items-center gap-4 text-sm font-medium text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
@@ -549,10 +341,8 @@ export default function TestPage() {
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            2 minutes
+            {t.test.meta}
           </span>
-          <span>·</span>
-          <span>No email required</span>
         </div>
       </div>
       <div className="relative hidden aspect-square overflow-hidden rounded-3xl shadow-2xl md:block">
@@ -599,18 +389,20 @@ export default function TestPage() {
                   <div
                     className={`inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold ${resultBucket.badgeBg} ${resultBucket.badgeText}`}
                   >
-                    <span>Status</span>
+                    <span>{t.test.results.status}</span>
                     <span className="tracking-wide uppercase">{resultBucket.label}</span>
                   </div>
                   <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                        Total Score
+                        {t.test.results.totalScore}
                       </p>
                       <p className={`text-6xl font-black ${resultBucket.toneClass}`}>
                         {totalScore}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">out of 72</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t.test.results.outOf}
+                      </p>
                     </div>
                     <div className="text-left md:text-right">
                       <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -628,32 +420,40 @@ export default function TestPage() {
             <div className="space-y-4 text-center">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Ready to get in the zone? Access your personal focus dashboard.
+                  {t.test.results.cta.title}
                 </p>
                 <Link
-                  href="/projects"
+                  href="/focuslab"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-pink-500 to-rose-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-pink-500/30 transition hover:translate-y-0.5 hover:opacity-90"
                 >
                   <span role="img" aria-label="Target">
                     🎯
                   </span>
-                  <span>Enter Focus Lab Dashboard →</span>
+                  <span>{t.test.results.cta.button}</span>
                 </Link>
               </div>
 
-              <div className="pt-2">
+              <div className="flex flex-col items-center gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={handleRetake}
+                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 text-sm font-medium transition-colors"
+                >
+                  {t.test.results.cta.retake}
+                </button>
+
                 <Link
-                  href="/blog/best-quiet-fidget-toys"
+                  href="/guides/best-quiet-fidget-toys"
                   className="hover:text-primary-600 dark:hover:text-primary-400 text-sm font-semibold text-gray-500 transition hover:underline dark:text-gray-400"
                 >
-                  Or read our guide on Quiet Fidget Toys
+                  {t.test.results.cta.guide}
                 </Link>
               </div>
               <Link
                 href="/"
                 className="hover:text-primary-500 text-base font-semibold text-gray-700 underline underline-offset-4 transition dark:text-gray-200"
               >
-                Back to Home
+                {t.test.results.cta.home}
               </Link>
             </div>
           </div>
@@ -664,15 +464,8 @@ export default function TestPage() {
         )}
       </div>
 
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        Based on the Adult ADHD Self-Report Scale (ASRS-v1.1) Symptom Checklist. This self-screening
-        is for educational purposes only and is not a medical diagnosis. Material adapted from World
-        Health Organization standards.
-      </p>
-      <p className="text-xs text-gray-400 dark:text-gray-500">
-        ASRS-v1.1 Copyright © New York University and Ronald C. Kessler, PhD. All rights reserved.
-        Used with permission.
-      </p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t.test.disclaimer}</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500">{t.test.copyright}</p>
     </div>
   )
 }

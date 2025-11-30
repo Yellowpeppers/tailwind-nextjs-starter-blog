@@ -1,3 +1,5 @@
+'use client'
+
 import Image from 'next/image'
 import siteMetadata from '@/data/siteMetadata'
 import headerNavLinks from '@/data/headerNavLinks'
@@ -5,8 +7,12 @@ import Link from './Link'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
 import SearchButton from './SearchButton'
+import LanguageSwitch from './LanguageSwitch'
+
+import { useTranslation } from '@/context/LanguageContext'
 
 const Header = () => {
+  const { t } = useTranslation()
   let headerClass = 'flex items-center w-full bg-white dark:bg-gray-950 justify-between py-10'
   if (siteMetadata.stickyNav) {
     headerClass += ' sticky top-0 z-50'
@@ -45,12 +51,13 @@ const Header = () => {
                 href={link.href}
                 className="hover:text-primary-500 dark:hover:text-primary-400 m-1 font-medium text-gray-900 dark:text-gray-100"
               >
-                {link.title}
+                {t.nav[link.translationKey as keyof typeof t.nav]}
               </Link>
             ))}
         </div>
         <SearchButton />
         <ThemeSwitch />
+        <LanguageSwitch />
         <MobileNav />
       </div>
     </header>

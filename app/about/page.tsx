@@ -5,17 +5,22 @@ import { coreContent } from 'pliny/utils/contentlayer'
 import { genPageMetadata } from 'app/seo'
 import { components } from '@/components/MDXComponents'
 
+import AboutContent from '@/components/AboutContent'
+
 export const metadata = genPageMetadata({ title: 'About' })
 
 export default function Page() {
-  const author = allAuthors.find((p) => p.slug === 'default') as Authors
-  const mainContent = coreContent(author)
+  const authorEn = allAuthors.find((p) => p.slug === 'default') as Authors
+  const authorCn = allAuthors.find((p) => p.slug === 'default-cn') as Authors
+  const mainContentEn = coreContent(authorEn)
+  const mainContentCn = coreContent(authorCn)
 
   return (
-    <>
-      <AuthorLayout content={mainContent}>
-        <MDXLayoutRenderer code={author.body.code} components={components} />
-      </AuthorLayout>
-    </>
+    <AboutContent
+      authorEn={authorEn}
+      authorCn={authorCn}
+      mainContentEn={mainContentEn}
+      mainContentCn={mainContentCn}
+    />
   )
 }

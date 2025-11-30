@@ -12,6 +12,7 @@ import Footer from '@/components/Footer'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
+import { LanguageProvider } from '@/context/LanguageContext'
 import { Metadata } from 'next'
 
 const space_grotesk = Space_Grotesk({
@@ -135,17 +136,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <ThemeProviders>
-          <Suspense fallback={null}>
-            <GoogleAnalytics />
-          </Suspense>
-          <Analytics />
-          <SectionContainer>
-            <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
-              <Header />
-              <main className="mb-auto">{children}</main>
-            </SearchProvider>
-            <Footer />
-          </SectionContainer>
+          <LanguageProvider>
+            <Suspense fallback={null}>
+              <GoogleAnalytics />
+            </Suspense>
+            <Analytics />
+            <SectionContainer>
+              <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
+                <Header />
+                <main className="mb-auto">{children}</main>
+              </SearchProvider>
+              <Footer />
+            </SectionContainer>
+          </LanguageProvider>
         </ThemeProviders>
       </body>
     </html>
