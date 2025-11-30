@@ -147,6 +147,7 @@ export const dictionary = {
         focusMode: 'Focus Mode',
         exitFocus: 'Exit Focus',
         resetLayout: 'Reset Layout',
+        tip: 'Drag the title bar to change the layout. Click the title bar to hide or show this card.',
       },
       promo: {
         proTip: 'Pro Tip',
@@ -571,6 +572,7 @@ export const dictionary = {
         focusMode: '专注模式',
         exitFocus: '退出专注',
         resetLayout: '重置布局',
+        tip: '拖动标题行来改变布局。点击标题行来隐藏或者显示这个卡片。',
       },
       promo: {
         proTip: '专业建议',

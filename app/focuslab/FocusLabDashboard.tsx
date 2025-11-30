@@ -294,6 +294,7 @@ const GAP = 32
 
 export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
+  const [showTip, setShowTip] = useState(true)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
   const { t, language: lang, setLanguage } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -495,6 +496,33 @@ export const FocusLabDashboard = () => {
                   </svg>
                   {t.focusLab.controls.resetLayout}
                 </button>
+                {/* Focus Mode Tip */}
+                <AnimatePresence>
+                  {isFocusMode && showTip && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
+                    >
+                      <span>{t.focusLab.controls.tip}</span>
+                      <button
+                        onClick={() => setShowTip(false)}
+                        className="rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-3.5 w-3.5"
+                        >
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
