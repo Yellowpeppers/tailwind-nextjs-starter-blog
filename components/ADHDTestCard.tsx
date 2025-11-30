@@ -1,3 +1,5 @@
+'use client'
+
 import Link from './Link'
 import { useTranslation } from '@/context/LanguageContext'
 
