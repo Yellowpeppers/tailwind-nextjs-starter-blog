@@ -27,33 +27,31 @@ export default function Home({ posts }) {
             return (
               <li key={slug} className="py-12">
                 <article>
-                  <div className="space-y-2 xl:grid xl:grid-cols-5 xl:items-center xl:space-y-0">
-                    <dl>
-                      <dt className="sr-only">Published on</dt>
-                      <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
-                        <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
-                      </dd>
-                    </dl>
-                    <div className={`space-y-5 ${coverImage ? 'xl:col-span-3' : 'xl:col-span-4'}`}>
-                      <div className="space-y-6">
-                        <div>
-                          <h2 className="text-2xl leading-8 font-bold tracking-tight">
-                            <Link
-                              href={`/guides/${slug}`}
-                              className="text-gray-900 dark:text-gray-100"
-                            >
-                              {title}
-                            </Link>
-                          </h2>
-                          <div className="flex flex-wrap">
-                            {tags.map((tag) => (
-                              <Tag key={tag} text={tag} />
-                            ))}
-                          </div>
+                  <div className="flex flex-col gap-6 xl:flex-row xl:items-center">
+                    <div className="space-y-4">
+                      <div>
+                        <dl>
+                          <dt className="sr-only">Published on</dt>
+                          <dd className="text-sm font-medium tracking-[0.2em] text-gray-400 uppercase">
+                            <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
+                          </dd>
+                        </dl>
+                        <h2 className="mt-1 text-2xl leading-8 font-bold tracking-tight">
+                          <Link
+                            href={`/guides/${slug}`}
+                            className="text-gray-900 dark:text-gray-100"
+                          >
+                            {title}
+                          </Link>
+                        </h2>
+                        <div className="flex flex-wrap">
+                          {tags.map((tag) => (
+                            <Tag key={tag} text={tag} />
+                          ))}
                         </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
+                      </div>
+                      <div className="prose max-w-none text-gray-500 dark:text-gray-400">
+                        {summary}
                       </div>
                       <div className="text-base leading-6 font-medium">
                         <Link
@@ -66,16 +64,17 @@ export default function Home({ posts }) {
                       </div>
                     </div>
                     {coverImage && (
-                      <div className="mt-6 xl:mt-0 xl:pl-6">
-                        <div className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm dark:border-gray-800">
-                          <Image
-                            src={coverImage}
-                            alt={`Cover image for ${title}`}
-                            width={480}
-                            height={320}
-                            className="h-40 w-full object-cover"
-                          />
-                        </div>
+                      <div
+                        className="w-40 flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 shadow-sm sm:w-52 lg:w-60 dark:border-gray-800"
+                        style={{ aspectRatio: '16 / 9' }}
+                      >
+                        <Image
+                          src={coverImage}
+                          alt={`Cover image for ${title}`}
+                          width={320}
+                          height={180}
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                     )}
                   </div>
