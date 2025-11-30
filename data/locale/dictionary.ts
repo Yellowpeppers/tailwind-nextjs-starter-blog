@@ -77,9 +77,9 @@ export const dictionary = {
     focusLab: {
       header: {
         eyebrow: 'Focus Lab',
-        title: 'Your External Executive Function System',
+        title: 'Your Immersive ADHD Workspace',
         description:
-          'Designed for the ADHD brain to regulate dopamine without context switching. This is your personal mission control panel: layer soundscapes to block distractions, break down overwhelming tasks, and manage time with visual timers—all in one place to guide your nervous system into calm momentum.',
+          'A "focus sanctuary" designed for the hyperactive brain. No more switching between apps—white noise, Pomodoro timer, and task breakdown tools are all integrated here.\nThis is your personal mission control to block distractions and regain control.',
       },
       widgets: {
         sonicShield: {
@@ -564,9 +564,9 @@ export const dictionary = {
     focusLab: {
       header: {
         eyebrow: '专注实验室',
-        title: '你的外挂执行功能系统',
+        title: '你的 ADHD 沉浸式工作台',
         description:
-          '专为 ADHD 大脑设计，让你在不切换上下文的情况下调节多巴胺。这是你的个人任务控制面板：叠加声景阻挡干扰，拆解压倒性任务，并使用可视化计时器管理时间——所有功能集于一身，引导你的神经系统进入平静的动量。',
+          '专为多动大脑设计的“专注避难所”。无需在不同 App 间来回切换，这里集成了白噪音、番茄钟和任务拆解工具。这就是你的私人任务控制中心，帮你屏蔽干扰，找回掌控感。',
       },
       controls: {
         focusMode: '专注模式',

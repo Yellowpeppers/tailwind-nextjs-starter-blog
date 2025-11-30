@@ -123,7 +123,7 @@ export function FocusLabIntro() {
         <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100">
           {t.focusLab.header.title}
         </h1>
-        <p className="max-w-2xl text-lg text-gray-600 dark:text-gray-300">
+        <p className="max-w-2xl text-lg whitespace-pre-line text-gray-600 dark:text-gray-300">
           {t.focusLab.header.description}
         </p>
       </div>
