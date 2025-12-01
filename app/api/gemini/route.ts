@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
 
 // Configure proxy if available
-const proxyUrl = process.env.HTTP_PROXY || 'http://127.0.0.1:7890'
+const proxyUrl = process.env.HTTP_PROXY
 
 if (proxyUrl) {
   try {
