@@ -10,6 +10,7 @@ import Header from '@/components/Header'
 import SectionContainer from '@/components/SectionContainer'
 import Footer from '@/components/Footer'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
+import MicrosoftClarity from '@/components/MicrosoftClarity'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { LanguageProvider } from '@/context/LanguageContext'
@@ -144,6 +145,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <LanguageProvider>
             <Suspense fallback={null}>
               <GoogleAnalytics />
+              <MicrosoftClarity />
             </Suspense>
             <Analytics />
             <SectionContainer>
