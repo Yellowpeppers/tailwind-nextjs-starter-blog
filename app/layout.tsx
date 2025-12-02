@@ -59,6 +59,11 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: [siteMetadata.socialBanner],
   },
+  verification: {
+    other: {
+      'p:domain_verify': '54c950362caebcf5010f1b6fe1aa6e24',
+    },
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
