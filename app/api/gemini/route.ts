@@ -39,8 +39,9 @@ export async function POST(request: Request) {
     let result
     try {
       // First try the requested model
-      console.log('[Gemini API] Attempting with model: gemini-2.5-flash')
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+      const modelName = 'gemini-2.5-flash'
+      console.log(`[Gemini API] Attempting with model: ${modelName}`)
+      const model = genAI.getGenerativeModel({ model: modelName })
 
       const prompt = `
         You are an expert productivity coach specializing in ADHD-friendly task breakdown.
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       result = await model.generateContent(prompt)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error('[Gemini API] gemini-2.5-flash failed:', errorMessage)
+      console.error(`[Gemini API] Model generation failed:`, errorMessage)
       throw error
     }
 
