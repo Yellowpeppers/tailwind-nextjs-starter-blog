@@ -3,6 +3,8 @@
 import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
 import { ReactNode, useEffect, useRef, useState, createContext, useContext } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
+import { ToDoWidget } from '@/components/focus-lab/ToDoWidget'
+import { dictionary } from '@/data/locale/dictionary'
 
 // Context for passing drag controls to children
 const DragHandleContext = createContext<DragControls | null>(null)
@@ -85,7 +87,7 @@ const SoundVisualizer = ({ activeCount }: { activeCount: number }) => {
 
   return (
     <div className="flex h-12 items-center justify-center gap-1" aria-hidden="true">
-      {Array.from({ length: 8 + activeCount * 2 }).map((_, index) => (
+      {Array.from({ length: 10 }).map((_, index) => (
         <motion.div
           key={index}
           className="w-1.5 rounded-full bg-pink-500/80"
@@ -138,6 +140,7 @@ type WidgetCardProps = {
   subtitle: string
   children: ReactNode
   onHeaderClick?: () => void
+  onDelete?: () => void
   className?: string
 }
 
@@ -146,15 +149,22 @@ const WidgetCard = ({
   subtitle,
   children,
   onHeaderClick,
+  onDelete,
   className = '',
 }: WidgetCardProps) => {
   const [showInfo, setShowInfo] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const infoRef = useRef<HTMLDivElement>(null)
+  const deleteRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation()
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (infoRef.current && !infoRef.current.contains(event.target as Node)) {
         setShowInfo(false)
+      }
+      if (deleteRef.current && !deleteRef.current.contains(event.target as Node)) {
+        setShowDeleteConfirm(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -200,11 +210,15 @@ const WidgetCard = ({
               <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
             </svg>
           </div> */}
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+          {/* Info Button */}
           <div className="relative" ref={infoRef}>
             <button
               type="button"
-              onClick={() => setShowInfo(!showInfo)}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowInfo(!showInfo)
+              }}
               className={`transition-colors ${
                 showInfo
                   ? 'text-pink-500 dark:text-pink-400'
@@ -234,6 +248,78 @@ const WidgetCard = ({
           </div>
         </div>
 
+        {/* Delete Button - Moved to Right */}
+        {onDelete && (
+          <div className="relative" ref={deleteRef}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowDeleteConfirm(!showDeleteConfirm)
+              }}
+              className={`transition-colors ${
+                showDeleteConfirm
+                  ? 'text-red-500 dark:text-red-400'
+                  : 'text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400'
+              }`}
+              aria-label="Remove widget"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <AnimatePresence>
+              {showDeleteConfirm && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full right-0 z-50 mt-2 w-64 origin-top-right"
+                >
+                  <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
+                    <h4 className="mb-1 text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {t.focusLab.controls.delete.confirm}
+                    </h4>
+                    <p className="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      {t.focusLab.controls.delete.desc}
+                    </p>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDeleteConfirm(false)
+                        }}
+                        className="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                      >
+                        {t.focusLab.controls.delete.cancel}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDeleteConfirm(false)
+                          onDelete()
+                        }}
+                        className="rounded-lg bg-red-500 px-2 py-1 text-xs font-bold text-white hover:bg-red-600"
+                      >
+                        {t.focusLab.controls.delete.confirmBtn}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         {/* Focus Toggle Removed for now */}
       </div>
       <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
@@ -254,16 +340,19 @@ type GridItem = {
 }
 
 const INITIAL_LAYOUT: GridItem[] = [
-  // Left Column
-  { id: 'sonic', x: 0.5, y: 0, w: 4, h: 5, minW: 3, minH: 4 },
-  { id: 'breaker', x: 0.5, y: 5, w: 4, h: 5, minW: 3, minH: 4 },
+  // Left Column (3 units)
+  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 2, minH: 5 },
+  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 2, minH: 5 },
 
-  // Middle Column (Tall)
-  { id: 'brain', x: 4.5, y: 0, w: 6, h: 10, minW: 4, minH: 6 },
+  // Middle Left (ToDo - 3 units)
+  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 2, minH: 5 },
 
-  // Right Column
-  { id: 'timer', x: 10.5, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'dopamine', x: 10.5, y: 5, w: 4, h: 5, minW: 3, minH: 5 },
+  // Middle Right (Brain Dump - 5 units)
+  { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 4, minH: 5 },
+
+  // Right Column (3 units)
+  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 2, minH: 5 },
+  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 5 },
 ]
 
 const FocusLabMobileGrid = () => {
@@ -278,6 +367,9 @@ const FocusLabMobileGrid = () => {
       <div className="min-h-[400px]">
         <BrainDumpCard className="h-full" />
       </div>
+      <div className="min-h-[400px]">
+        <ToDoCard className="h-full" />
+      </div>
       <div className="min-h-[300px]">
         <TaskBreakerCard />
       </div>
@@ -288,9 +380,9 @@ const FocusLabMobileGrid = () => {
   )
 }
 
-const COL_WIDTH = 60
-const ROW_HEIGHT = 60
-const GAP = 32
+const COL_WIDTH = 54
+const ROW_HEIGHT = 54
+const GAP = 22
 
 export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
@@ -301,11 +393,11 @@ export const FocusLabDashboard = () => {
   const [containerWidth, setContainerWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Calculate dynamic padding to align with grid (x=0.5)
-  const totalGapsWidth = (15 - 1) * GAP
+  // Calculate dynamic padding to align with grid (x=0)
+  const totalGapsWidth = (14 - 1) * GAP
   const availableWidth = containerWidth - totalGapsWidth
-  const colWidth = containerWidth > 0 ? availableWidth / 15 : COL_WIDTH
-  const headerPadding = isMobile ? 0 : 0.5 * (colWidth + GAP)
+  const colWidth = containerWidth > 0 ? availableWidth / 14 : COL_WIDTH
+  const headerPadding = 0
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -319,6 +411,18 @@ export const FocusLabDashboard = () => {
     window.addEventListener('resize', updateDimensions)
     return () => window.removeEventListener('resize', updateDimensions)
   }, [])
+
+  // Lock scroll in Focus Mode
+  useEffect(() => {
+    if (isFocusMode) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isFocusMode])
 
   // Calculate Grid Offset for background alignment
   // For the wide layout, we want the grid to cover the container
@@ -339,7 +443,9 @@ export const FocusLabDashboard = () => {
 
   return (
     <>
-      <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
+      <div
+        className={`relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] w-screen ${isFocusMode ? 'min-h-0' : 'min-h-screen'}`}
+      >
         {/* Global Grid Background - Only visible on Desktop */}
         {!isMobile && (
           <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -353,7 +459,7 @@ export const FocusLabDashboard = () => {
                 linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
               `,
-                backgroundSize: `${containerWidth > 0 ? (containerWidth - (15 - 1) * GAP) / 15 + GAP : COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
+                backgroundSize: `${containerWidth > 0 ? (containerWidth - (14 - 1) * GAP) / 14 + GAP : COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
                 backgroundPosition: 'center -16px',
               }}
             />
@@ -462,20 +568,11 @@ export const FocusLabDashboard = () => {
                     if (
                       window.confirm(
                         lang === 'en'
-                          ? 'Reset all settings and data? This cannot be undone.'
-                          : '重置所有设置和数据？此操作无法撤销。'
+                          ? 'Reset dashboard layout? Your data (tasks, notes, etc.) will be preserved.'
+                          : '重置卡片布局？您的数据（任务、便签等）将被保留。'
                       )
                     ) {
-                      const keys = [
-                        'focus-lab-layout-v1',
-                        'focus-lab-dopamine-options',
-                        'focus-lab-sonic-tracks',
-                        'focus-lab-sonic-volume',
-                        'focus-lab-brain-dump-left',
-                        'focus-lab-brain-dump-right',
-                        'focus-lab-brain-dump-list-v2',
-                        'focus-lab-brain-dump-list',
-                      ]
+                      const keys = ['focus-lab-layout-v1']
                       keys.forEach((key) => window.localStorage.removeItem(key))
                       window.location.reload()
                     }
@@ -603,10 +700,10 @@ export const FocusLabGrid = ({
 
   // Auto-centering logic removed to ensure strict left alignment
 
-  // Calculate dynamic column width to fit container (15 columns)
-  const totalGapsWidth = (15 - 1) * GAP
+  // Calculate dynamic column width to fit container (14 columns)
+  const totalGapsWidth = (14 - 1) * GAP
   const availableWidth = containerWidth - totalGapsWidth
-  const calculatedColWidth = containerWidth > 0 ? availableWidth / 15 : COL_WIDTH
+  const calculatedColWidth = containerWidth > 0 ? availableWidth / 14 : COL_WIDTH
   const colWidth = Math.max(20, calculatedColWidth)
 
   // Grid is now full width of the container
@@ -622,11 +719,21 @@ export const FocusLabGrid = ({
     setLayout((prev) => prev.map((item) => (item.id === id ? { ...item, ...newProps } : item)))
   }
 
+  const handleRemoveWidget = (id: string) => {
+    setLayout((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const visibleItems =
+    isFocusMode && focusedCardIds.size > 0 ? layout.filter((i) => focusedCardIds.has(i.id)) : layout
+
   return (
     <div
       className={`relative w-full transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
       style={{
-        height: Math.max(...layout.map((i) => (i.y + i.h) * (ROW_HEIGHT + GAP))) + 100,
+        height:
+          (visibleItems.length > 0 ? Math.max(...visibleItems.map((i) => i.y + i.h)) : 0) *
+            (ROW_HEIGHT + GAP) +
+          (isFocusMode ? 20 : 100),
       }}
     >
       {/* Centered Grid Container */}
@@ -656,29 +763,46 @@ export const FocusLabGrid = ({
             >
               {item.id === 'sonic' && (
                 <SonicShieldCard
-                  onToggleFocus={() => isFocusMode && onToggleFocus(item.id)}
-                  className="min-h-[300px]"
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
               {item.id === 'timer' && (
                 <TimerCard
-                  onToggleFocus={() => isFocusMode && onToggleFocus(item.id)}
-                  className="min-h-[300px]"
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
               {item.id === 'brain' && (
                 <BrainDumpCard
-                  onToggleFocus={() => isFocusMode && onToggleFocus(item.id)}
-                  className="h-full"
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'todo' && (
+                <ToDoCard
+                  className="h-full w-full"
+                  cols={item.w}
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
               {item.id === 'breaker' && (
-                <TaskBreakerCard onToggleFocus={() => isFocusMode && onToggleFocus(item.id)} />
+                <TaskBreakerCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
               )}
               {item.id === 'dopamine' && (
                 <DopamineMenuCard
+                  className="h-full w-full"
                   cols={item.w}
-                  onToggleFocus={() => isFocusMode && onToggleFocus(item.id)}
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
             </DraggableResizableItem>
@@ -833,9 +957,11 @@ const DraggableResizableItem = ({
 
 export function SonicShieldCard({
   onToggleFocus,
+  onDelete,
   className,
 }: {
   onToggleFocus?: () => void
+  onDelete?: () => void
   className?: string
 }) {
   const { t } = useTranslation()
@@ -844,6 +970,7 @@ export function SonicShieldCard({
       title={t.focusLab.widgets.sonicShield.title}
       subtitle={t.focusLab.widgets.sonicShield.subtitle}
       onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
       className={className}
     >
       <SonicShieldWidget />
@@ -853,9 +980,11 @@ export function SonicShieldCard({
 
 export function TimerCard({
   onToggleFocus,
+  onDelete,
   className,
 }: {
   onToggleFocus?: () => void
+  onDelete?: () => void
   className?: string
 }) {
   const { t } = useTranslation()
@@ -864,6 +993,7 @@ export function TimerCard({
       title={t.focusLab.widgets.timer.title}
       subtitle={t.focusLab.widgets.timer.subtitle}
       onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
       className={className}
     >
       <TimerWidget />
@@ -873,9 +1003,11 @@ export function TimerCard({
 
 export function TaskBreakerCard({
   onToggleFocus,
+  onDelete,
   className,
 }: {
   onToggleFocus?: () => void
+  onDelete?: () => void
   className?: string
 }) {
   const { t } = useTranslation()
@@ -884,6 +1016,7 @@ export function TaskBreakerCard({
       title={t.focusLab.widgets.taskBreaker.title}
       subtitle={t.focusLab.widgets.taskBreaker.subtitle}
       onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
       className={className}
     >
       <TaskBreakerWidget />
@@ -893,9 +1026,11 @@ export function TaskBreakerCard({
 
 export function BrainDumpCard({
   onToggleFocus,
+  onDelete,
   className,
 }: {
   onToggleFocus?: () => void
+  onDelete?: () => void
   className?: string
 }) {
   const { t } = useTranslation()
@@ -904,6 +1039,7 @@ export function BrainDumpCard({
       title={t.focusLab.widgets.brainDump.title}
       subtitle={t.focusLab.widgets.brainDump.subtitle}
       onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
       className={className}
     >
       <BrainDumpWidget />
@@ -911,13 +1047,40 @@ export function BrainDumpCard({
   )
 }
 
-export function DopamineMenuCard({
+export function ToDoCard({
   cols,
   onToggleFocus,
+  onDelete,
   className,
 }: {
   cols?: number
   onToggleFocus?: () => void
+  onDelete?: () => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <WidgetCard
+      title={t.focusLab.widgets.todo.title}
+      subtitle={t.focusLab.widgets.todo.subtitle}
+      onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
+      className={className}
+    >
+      <ToDoWidget cols={cols} />
+    </WidgetCard>
+  )
+}
+
+export function DopamineMenuCard({
+  cols,
+  onToggleFocus,
+  onDelete,
+  className,
+}: {
+  cols?: number
+  onToggleFocus?: () => void
+  onDelete?: () => void
   className?: string
 }) {
   const { t } = useTranslation()
@@ -926,6 +1089,7 @@ export function DopamineMenuCard({
       title={t.focusLab.widgets.dopamineMenu.title}
       subtitle={t.focusLab.widgets.dopamineMenu.subtitle}
       onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
       className={className}
     >
       <DopamineMenuWidget cols={cols} />
@@ -986,12 +1150,41 @@ const SonicShieldWidget = () => {
         const response = await fetch('/api/sounds')
         if (response.ok) {
           const data = await response.json()
-          const newSounds = data.sounds.map((file: string) => ({
-            id: `custom-${file}`,
-            name: file.replace(/\.[^/.]+$/, ''),
-            path: `/static/sounds/custom/${file}`,
-            detail: 'Custom sound',
-          }))
+          const BRAINWAVE_SOUNDS = new Set(['alpha', 'beta', 'delta', 'gamma', 'theta'])
+          const NOISE_SOUNDS = ['white-noise', 'pink', 'brown']
+
+          const newSounds = data.sounds
+            .map((file: string) => ({
+              id: `custom-${file}`,
+              name: file.replace(/\.[^/.]+$/, ''),
+              path: `/static/sounds/custom/${file}`,
+              detail: 'Custom sound',
+            }))
+            .sort((a: { name: string }, b: { name: string }) => {
+              // 1. Brainwaves always last
+              const isABrainwave = BRAINWAVE_SOUNDS.has(a.name)
+              const isBBrainwave = BRAINWAVE_SOUNDS.has(b.name)
+              if (isABrainwave && !isBBrainwave) return 1
+              if (!isABrainwave && isBBrainwave) return -1
+              if (isABrainwave && isBBrainwave) return a.name.localeCompare(b.name)
+
+              // 2. Noises (White, Pink, Brown) come after Nature sounds
+              const aNoiseIndex = NOISE_SOUNDS.indexOf(a.name)
+              const bNoiseIndex = NOISE_SOUNDS.indexOf(b.name)
+
+              // If both are noises, sort by specific order
+              if (aNoiseIndex !== -1 && bNoiseIndex !== -1) {
+                return aNoiseIndex - bNoiseIndex
+              }
+
+              // If one is noise and other is nature, Noise comes last (after nature)
+              if (aNoiseIndex !== -1 && bNoiseIndex === -1) return 1
+              if (aNoiseIndex === -1 && bNoiseIndex !== -1) return -1
+
+              // 3. Nature sounds sorted alphabetically
+              return a.name.localeCompare(b.name)
+            })
+
           setCustomSounds(newSounds)
         }
       } catch (error) {
@@ -1056,7 +1249,7 @@ const SonicShieldWidget = () => {
   return (
     <div className="flex h-full flex-col gap-4">
       {/* Visualizer & Master Control */}
-      <div className="relative flex min-h-[100px] shrink-0 items-center justify-between rounded-2xl bg-white px-6 py-4 text-gray-900 shadow-sm ring-1 ring-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:ring-gray-800">
+      <div className="relative flex min-h-[80px] shrink-0 items-center justify-between rounded-2xl bg-white px-5 py-3 text-gray-900 shadow-sm ring-1 ring-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:ring-gray-800">
         {/* Visualizer Area */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2">
           <SoundVisualizer activeCount={isGlobalPlaying ? activeCount : 0} />
@@ -1070,7 +1263,7 @@ const SonicShieldWidget = () => {
         {/* Vertical Master Volume */}
         <div className="group flex h-full flex-col items-center justify-center gap-2 border-l border-gray-100 pl-4 dark:border-gray-800">
           <div
-            className="relative h-16 w-1.5 cursor-pointer rounded-full bg-gray-100 py-1 transition-all hover:w-2 dark:bg-gray-800"
+            className="relative h-14 w-1.5 cursor-pointer rounded-full bg-gray-100 py-1 transition-all hover:w-2 dark:bg-gray-800"
             onPointerDown={(e) => {
               const rect = e.currentTarget.getBoundingClientRect()
               const handleMove = (moveEvent: PointerEvent) => {
@@ -1111,7 +1304,7 @@ const SonicShieldWidget = () => {
 
       {/* Sound Grid */}
       <div className="scrollbar-none flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {allSounds.map((sound) => {
             const isActive = !!activeTracks[sound.id]
             const track = activeTracks[sound.id]
@@ -1119,7 +1312,7 @@ const SonicShieldWidget = () => {
             return (
               <div
                 key={sound.id}
-                className={`group relative flex flex-col justify-between rounded-xl border p-3 transition-all ${
+                className={`group relative flex flex-col justify-between rounded-xl border p-2.5 transition-all ${
                   isActive
                     ? 'border-pink-500 bg-pink-50 dark:border-pink-400 dark:bg-pink-900/20'
                     : 'border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/40 dark:hover:border-pink-900'
@@ -1130,7 +1323,7 @@ const SonicShieldWidget = () => {
                   className="flex flex-1 flex-col items-start text-left"
                 >
                   <span
-                    className={`text-sm font-bold ${isActive ? 'text-pink-700 dark:text-pink-300' : 'text-gray-700 dark:text-gray-300'}`}
+                    className={`text-xs font-bold ${isActive ? 'text-pink-700 dark:text-pink-300' : 'text-gray-700 dark:text-gray-300'}`}
                   >
                     {tSounds[sound.name as keyof typeof tSounds] || sound.name}
                   </span>
@@ -1259,14 +1452,14 @@ const TimerWidget = () => {
       ? timerPresets[activePreset].duration
       : targetDuration || Math.max(timeLeft, 1)
   const progress = Math.min(Math.max(timeLeft / fullDuration, 0), 1)
-  const radius = 45
+  const radius = 40
   const circumference = 2 * Math.PI * radius
   const dashOffset = circumference * (1 - progress)
 
   return (
-    <div className="flex h-full flex-col items-center justify-between py-2">
+    <div className="flex h-full flex-col items-center justify-between py-0.5">
       {/* Top Controls */}
-      <div className="flex w-full flex-col items-center gap-2">
+      <div className="flex w-full flex-col items-center gap-1">
         <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1">
           {(['countdown', 'target'] as const).map((mode) => (
             <button
@@ -1295,10 +1488,10 @@ const TimerWidget = () => {
                   key={preset}
                   type="button"
                   onClick={() => setActivePreset(preset)}
-                  className={`rounded-md border px-3 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors ${
+                  className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${
                     activePreset === preset
-                      ? 'border-pink-200 bg-pink-50 text-pink-600 dark:border-pink-900/30 dark:bg-pink-900/20 dark:text-pink-400'
-                      : 'border-transparent text-gray-400 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+                      ? 'bg-pink-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
                   }`}
                 >
                   {preset === 'focus' ? '25m' : preset === 'short' ? '5m' : '15m'}
@@ -1333,7 +1526,7 @@ const TimerWidget = () => {
 
       {/* Progress Ring */}
       <div className="relative flex flex-1 items-center justify-center">
-        <div className="relative h-44 w-44">
+        <div className="relative h-38 w-38">
           <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 128 128">
             <circle
               cx="64"
@@ -1341,7 +1534,7 @@ const TimerWidget = () => {
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth="5"
+              strokeWidth="4"
               className="text-gray-100 dark:text-gray-800"
             />
             <circle
@@ -1350,7 +1543,7 @@ const TimerWidget = () => {
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth="5"
+              strokeWidth="8"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
               strokeLinecap="round"
@@ -1358,7 +1551,7 @@ const TimerWidget = () => {
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-4xl font-bold tracking-tight text-gray-900 tabular-nums dark:text-gray-100">
+            <span className="font-mono text-3xl font-bold tracking-tighter text-gray-800 dark:text-white">
               {display}
             </span>
           </div>
@@ -1373,7 +1566,7 @@ const TimerWidget = () => {
             playClickSound()
             handleReset()
           }}
-          className="flex h-12 w-20 items-center justify-center rounded-full text-xs font-bold tracking-wider text-gray-400 uppercase transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+          className="flex h-10 w-20 items-center justify-center rounded-full text-xs font-bold tracking-wider text-gray-400 uppercase transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100"
           aria-label="Reset Timer"
         >
           {t.focusLab.widgets.timer.reset}
@@ -1384,7 +1577,7 @@ const TimerWidget = () => {
             playClickSound()
             handleStartPause()
           }}
-          className={`flex h-12 items-center justify-center gap-2 rounded-full px-8 text-sm font-bold whitespace-nowrap text-white shadow-lg transition-all active:scale-95 ${
+          className={`flex h-10 items-center justify-center gap-2 rounded-full px-6 text-xs font-bold whitespace-nowrap text-white shadow-lg transition-all active:scale-95 ${
             isRunning
               ? 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
               : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
@@ -1492,7 +1685,7 @@ const TaskBreakerWidget = () => {
   if (isResultView) {
     return (
       <div className="flex h-full flex-col gap-4">
-        <div className="flex items-start justify-between gap-4 rounded-2xl bg-pink-50 p-4 dark:bg-pink-900/20">
+        <div className="flex items-start justify-between gap-4 rounded-2xl bg-pink-50 p-3 dark:bg-pink-900/20">
           <div>
             <p className="text-[10px] font-bold tracking-wider text-pink-600/70 uppercase dark:text-pink-400/70">
               {t.focusLab.widgets.taskBreaker.currentMission}
@@ -1531,10 +1724,10 @@ const TaskBreakerWidget = () => {
   return (
     <div className="flex h-full flex-col justify-center gap-4">
       <div className="space-y-2 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400">
           <MagicIcon className="h-6 w-6" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
           {t.focusLab.widgets.taskBreaker.overwhelmed}
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1546,14 +1739,14 @@ const TaskBreakerWidget = () => {
         value={task}
         onChange={(event) => setTask(event.target.value)}
         placeholder={t.focusLab.widgets.taskBreaker.placeholder}
-        className="min-h-[100px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-pink-500 focus:bg-white focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        className="min-h-[80px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-pink-500 focus:bg-white focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
       />
 
       <button
         type="button"
         onClick={handleBreakDown}
         disabled={!task.trim()}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-3.5 font-bold text-white transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:bg-gray-100 dark:text-gray-900"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-2.5 font-bold text-white transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:bg-gray-100 dark:text-gray-900"
       >
         {t.focusLab.widgets.taskBreaker.button}
       </button>
@@ -1754,7 +1947,7 @@ const BrainDumpWidget = () => {
         }`}
       />
 
-      <div className="p-3 pt-2">
+      <div className="p-2.5 pt-2">
         {item.image && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1824,7 +2017,7 @@ const BrainDumpWidget = () => {
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={t.focusLab.widgets.brainDump.placeholder}
-              className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              className="w-full rounded-xl border border-gray-200 bg-white py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             />
             <button
               onClick={handleAdd}
@@ -1898,7 +2091,7 @@ const BrainDumpWidget = () => {
       </div>
 
       {/* Two-Column Masonry Grid */}
-      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-2 dark:border-gray-800 dark:bg-gray-900/20 [&::-webkit-scrollbar]:hidden">
+      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-1.5 dark:border-gray-800 dark:bg-gray-900/20 [&::-webkit-scrollbar]:hidden">
         {leftItems.length === 0 && rightItems.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-gray-400">
             <p className="text-sm">{t.focusLab.widgets.brainDump.emptyTitle}</p>
@@ -2031,6 +2224,26 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
     }
   }, [options, isLoaded])
 
+  // Handle language switch for default options
+  const { language: lang } = useTranslation()
+  useEffect(() => {
+    if (!isLoaded) return
+
+    const enDefaults = dictionary.en.focusLab.widgets.dopamineMenu.defaultOptions
+    const zhDefaults = dictionary.cn.focusLab.widgets.dopamineMenu.defaultOptions
+
+    const isEnDefaults =
+      options.length === enDefaults.length && options.every((o, i) => o === enDefaults[i])
+    const isZhDefaults =
+      options.length === zhDefaults.length && options.every((o, i) => o === zhDefaults[i])
+
+    if (lang === 'cn' && isEnDefaults) {
+      setOptions(zhDefaults)
+    } else if (lang === 'en' && isZhDefaults) {
+      setOptions(enDefaults)
+    }
+  }, [lang, isLoaded, options])
+
   const handleSpin = () => {
     if (options.length === 0) return
     setIsSpinning(true)
@@ -2065,44 +2278,57 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {/* Result Area */}
-      <div className="flex min-h-[120px] flex-col items-center justify-center rounded-2xl bg-pink-50 p-6 text-center shadow-sm ring-1 ring-pink-100 dark:bg-pink-900/20 dark:ring-pink-900/30">
-        {selected ? (
-          <motion.div
-            key={selected}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-2xl font-black tracking-tight text-gray-900 dark:text-white"
-          >
-            {selected}
-          </motion.div>
-        ) : (
-          <p className="text-sm font-bold tracking-wider text-pink-400/70 uppercase">
-            {isSpinning
-              ? t.focusLab.widgets.dopamineMenu.spinning
-              : t.focusLab.widgets.dopamineMenu.ready}
-          </p>
-        )}
-      </div>
+      <div className="flex gap-2">
+        {/* Result Area */}
+        <div className="flex min-h-[80px] flex-1 flex-col items-center justify-center rounded-2xl bg-pink-50 p-2 text-center shadow-sm ring-1 ring-pink-100 dark:bg-pink-900/20 dark:ring-pink-900/30">
+          {selected ? (
+            <motion.div
+              key={selected}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-xl font-black tracking-tight text-gray-900 dark:text-white"
+            >
+              {selected}
+            </motion.div>
+          ) : (
+            <p className="text-xs font-bold tracking-wider text-pink-400/70 uppercase">
+              {isSpinning
+                ? t.focusLab.widgets.dopamineMenu.spinning
+                : t.focusLab.widgets.dopamineMenu.ready}
+            </p>
+          )}
+        </div>
 
-      <button
-        type="button"
-        onClick={() => {
-          playClickSound()
-          handleSpin()
-        }}
-        disabled={isSpinning || options.length === 0}
-        className="mt-auto flex h-12 w-full items-center justify-center rounded-xl bg-pink-500 text-sm font-bold text-white shadow-lg shadow-pink-200 transition-all hover:bg-pink-600 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none dark:shadow-none"
-      >
-        {isSpinning ? (
-          <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            <span>{t.focusLab.widgets.dopamineMenu.spinning.toUpperCase()}</span>
-          </div>
-        ) : (
-          t.focusLab.widgets.dopamineMenu.button
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={() => {
+            playClickSound()
+            handleSpin()
+          }}
+          disabled={isSpinning || options.length === 0}
+          className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-pink-500 p-2 text-xs font-bold text-white shadow-lg shadow-pink-200 transition-all hover:bg-pink-600 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none dark:shadow-none"
+        >
+          {isSpinning ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          ) : (
+            <>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+              >
+                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+              </svg>
+              <span>{t.focusLab.widgets.dopamineMenu.button}</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Options List */}
       <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
@@ -2113,7 +2339,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
             onChange={(e) => setNewOption(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addOption()}
             placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
           <button
             onClick={addOption}
@@ -2122,11 +2348,11 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
             {t.focusLab.widgets.dopamineMenu.add}
           </button>
         </div>
-        <div className={`grid gap-2 px-1 ${cols >= 4 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <div className={`grid gap-2 px-1 ${cols >= 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {options.map((opt, idx) => (
             <div
               key={idx}
-              className="group flex items-center justify-between rounded-lg border border-transparent bg-white px-3 py-2 shadow-sm transition-all hover:border-pink-100 hover:shadow-md dark:bg-gray-800 dark:hover:border-pink-900/30"
+              className="group flex items-center justify-between rounded-lg border border-transparent bg-white px-2 py-1.5 shadow-sm transition-all hover:border-pink-100 hover:shadow-md dark:bg-gray-800 dark:hover:border-pink-900/30"
             >
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{opt}</span>
               <button
