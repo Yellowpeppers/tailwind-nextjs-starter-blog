@@ -116,8 +116,7 @@ export const dictionary = {
           title: 'AI Task Breaker',
           subtitle: 'Input a complex task and let AI break it down into actionable steps.',
           overwhelmed: 'Overwhelmed?',
-          description:
-            "Type your big scary task below, and I'll break it into tiny, non-scary steps.",
+          description: 'Type your big scary task below, break it into tiny, non-scary steps.',
           placeholder: 'e.g. Clean my entire apartment...',
           button: 'Break it down',
           currentMission: 'Current Mission',

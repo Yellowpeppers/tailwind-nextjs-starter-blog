@@ -6,10 +6,12 @@ const pageDescription =
   'Answer the 18 WHO ASRS v1.1 questions and instantly see whether your patterns align with adult ADHD. No email required and results stay on your device.'
 
 export const metadata = genPageMetadata({
-  title: 'Free Adult ADHD Test Online (ASRS v1.1)',
+  title: 'Free Adult ADHD Test Online(ASRS v1.1) | NeuroHacks Lab',
   description: pageDescription,
   path: '/test',
+  appendSiteName: false,
   keywords: [
+    'adhd test online',
     'adhd test',
     'adult adhd quiz',
     'asrs checklist',

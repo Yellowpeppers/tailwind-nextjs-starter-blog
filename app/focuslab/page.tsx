@@ -7,9 +7,10 @@ const focusLabDescription =
   'Overwhelmed? This free ADHD dashboard helps you hack executive dysfunction with AI task breakdowns, Brown Noise, Pomodoro timers, and body doubling rituals.'
 
 export const metadata = genPageMetadata({
-  title: 'Focus Lab: Free ADHD Dashboard, Brown Noise & AI Timer',
+  title: 'Focus Lab: ADHD Dashboard, Brown Noise & AI Timer',
   description: focusLabDescription,
   path: '/focuslab',
+  appendSiteName: false,
   keywords: [
     'adhd dashboard',
     'brown noise generator',
