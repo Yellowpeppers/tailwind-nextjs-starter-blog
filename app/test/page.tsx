@@ -424,7 +424,7 @@ export default function TestPage() {
                 </p>
                 <Link
                   href="/focuslab"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-pink-500 to-rose-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-pink-500/30 transition hover:translate-y-0.5 hover:opacity-90"
+                  className="bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 inline-flex w-full items-center justify-center gap-2 rounded-3xl px-8 py-4 text-lg font-semibold text-white shadow-lg transition hover:translate-y-0.5 hover:opacity-90"
                 >
                   <span role="img" aria-label="Target">
                     🎯
@@ -433,28 +433,33 @@ export default function TestPage() {
                 </Link>
               </div>
 
-              <div className="flex flex-col items-center gap-4 pt-2">
+              <div className="mt-6 flex items-center justify-center gap-6">
                 <button
                   type="button"
                   onClick={handleRetake}
-                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 text-sm font-medium transition-colors"
+                  className="text-sm font-medium text-gray-500 underline-offset-4 transition-colors hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100"
                 >
                   {t.test.results.cta.retake}
                 </button>
-
+                <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-700"></div>
                 <Link
-                  href="/guides/best-quiet-fidget-toys"
-                  className="hover:text-primary-600 dark:hover:text-primary-400 text-sm font-semibold text-gray-500 transition hover:underline dark:text-gray-400"
+                  href="/"
+                  className="text-sm font-medium text-gray-500 underline-offset-4 transition-colors hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100"
                 >
-                  {t.test.results.cta.guide}
+                  {t.test.results.cta.home}
                 </Link>
               </div>
-              <Link
-                href="/"
-                className="hover:text-primary-500 text-base font-semibold text-gray-700 underline underline-offset-4 transition dark:text-gray-200"
-              >
-                {t.test.results.cta.home}
-              </Link>
+
+              <div className="mt-6 flex w-full justify-center border-t border-gray-100 pt-6 dark:border-gray-800">
+                <Link
+                  href="/guides/best-quiet-fidget-toys"
+                  className="group flex items-center gap-2 rounded-full bg-gray-50 px-4 py-2 transition-colors hover:bg-pink-50 dark:bg-gray-800/50 dark:hover:bg-pink-900/10"
+                >
+                  <span className="text-xs text-gray-400 transition-colors group-hover:text-pink-500 dark:text-gray-500 dark:group-hover:text-pink-400">
+                    {t.test.results.cta.guide}
+                  </span>
+                </Link>
+              </div>
             </div>
           </div>
         ) : isBreak ? (
@@ -462,6 +467,40 @@ export default function TestPage() {
         ) : (
           <QuestionView />
         )}
+      </div>
+
+      <div className="mt-12 w-full space-y-4">
+        {[
+          { title: t.test.guide.accuracy.title, content: t.test.guide.accuracy.text },
+          { title: t.test.guide.scoring.title, content: t.test.guide.scoring.text },
+          { title: t.test.guide.nextSteps.title, content: t.test.guide.nextSteps.text },
+          { title: t.test.guide.privacy.title, content: t.test.guide.privacy.text },
+        ].map((item) => (
+          <details
+            key={item.title}
+            className="group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900/60"
+          >
+            <summary className="flex cursor-pointer items-center justify-between font-bold text-gray-900 dark:text-gray-100">
+              {item.title}
+              <span className="ml-4 transition-transform group-open:rotate-180">
+                <svg
+                  className="h-5 w-5 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </span>
+            </summary>
+            <div className="mt-4 text-base text-gray-600 dark:text-gray-300">{item.content}</div>
+          </details>
+        ))}
       </div>
 
       <p className="text-sm text-gray-500 dark:text-gray-400">{t.test.disclaimer}</p>

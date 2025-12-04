@@ -84,12 +84,12 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addTask()}
             placeholder={t.focusLab.widgets.todo.placeholder}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-pink-500 focus:bg-white focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
           />
           <button
             onClick={addTask}
             disabled={!inputValue.trim()}
-            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg bg-white p-1.5 text-gray-400 shadow-sm transition-colors hover:text-pink-500 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-500 dark:hover:text-pink-400"
+            className="hover:text-primary-500 dark:hover:text-primary-400 absolute top-1/2 right-2 -translate-y-1/2 rounded-lg bg-white p-1.5 text-gray-400 shadow-sm transition-colors disabled:opacity-50 dark:bg-gray-800 dark:text-gray-500"
           >
             <svg
               viewBox="0 0 24 24"
@@ -160,8 +160,8 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
                     }}
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
                       task.completed
-                        ? 'border-pink-500 bg-pink-500 text-white'
-                        : 'border-gray-300 bg-white hover:border-pink-400 dark:border-gray-600 dark:bg-gray-800'
+                        ? 'border-primary-500 bg-primary-500 text-white'
+                        : 'hover:border-primary-400 border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'
                     }`}
                     onPointerDown={(e) => e.stopPropagation()} // Prevent drag start on checkbox
                   >

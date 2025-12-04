@@ -3,6 +3,7 @@ export type Locale = 'en' | 'cn'
 export const dictionary = {
   en: {
     nav: {
+      test: 'ADHD Test',
       focusLab: 'Focus Lab',
       guides: 'Guides',
       about: 'About',
@@ -495,8 +496,26 @@ export const dictionary = {
           title: 'Ready to get in the zone? Access your personal focus dashboard.',
           button: 'Enter Focus Lab Dashboard →',
           retake: 'Retake Test',
-          guide: 'Or read our guide on Quiet Fidget Toys',
+          guide: '📚 Recommended: Quiet Fidget Toy Guide',
           home: 'Back to Home',
+        },
+      },
+      guide: {
+        accuracy: {
+          title: 'How to get accurate results?',
+          text: "Please answer based on your experiences over the past 6 months. Try to avoid answering based on how you 'wish' you were.",
+        },
+        scoring: {
+          title: 'Scoring Guide',
+          text: 'This test uses the ASRS v1.1 logic. Part A (first 6 questions) is the primary screener.',
+        },
+        nextSteps: {
+          title: 'What if the risk is high?',
+          text: 'This is not a diagnosis. We recommend printing your results and sharing them with a licensed professional.',
+        },
+        privacy: {
+          title: 'Data Privacy',
+          text: 'Your answers are processed locally in your browser. No personal data leaves your device.',
         },
       },
       disclaimer:
@@ -515,6 +534,7 @@ export const dictionary = {
   },
   cn: {
     nav: {
+      test: 'ADHD 自测',
       focusLab: '专注实验室',
       guides: '指南',
       about: '关于',
@@ -738,9 +758,10 @@ export const dictionary = {
     test: {
       title: '免费成人 ADHD 自测',
       subtitle: 'ASRS-v1.1',
-      description: '回答18个基于研究的问题，了解您的经历与成人 ADHD 模式的吻合程度。',
-      start: '开始评估 →',
-      meta: '2分钟 · 无需邮箱',
+      description:
+        '通过 18 道基于临床标准的问题，科学评估您的日常行为模式与成人 ADHD 典型症状的契合度。',
+      start: '开始自评 →',
+      meta: '2分钟 · 无需邮箱 · 无需注册',
       questions: [
         {
           id: 1,
@@ -987,23 +1008,41 @@ export const dictionary = {
         buckets: {
           low: {
             label: '不太可能有 ADHD',
-            description: '您的症状处于正常范围内',
+            description: '您的症状在典型范围内',
           },
           medium: {
-            label: '很可能有 ADHD',
-            description: '您的症状可能已对日常生活造成影响',
+            label: '可能有 ADHD',
+            description: '您表现出的迹象可能会影响您的日常生活',
           },
           high: {
-            label: '非常可能有 ADHD',
-            description: '您的症状非常显著，建议咨询专业人士',
+            label: '高度符合 ADHD 特征',
+            description: '您的症状很显著。我们建议咨询专业人士',
           },
         },
         cta: {
           title: '准备好进入状态了吗？访问您的个人专注仪表盘。',
-          button: '进入专注实验室实验室 →',
-          retake: '再测一次',
-          guide: '或者阅读我们的静音解压玩具指南',
+          button: '进入专注实验室 →',
+          retake: '重新测试',
+          guide: '📚 推荐阅读：静音解压玩具指南',
           home: '返回首页',
+        },
+      },
+      guide: {
+        accuracy: {
+          title: '如何获得最准确的结果？',
+          text: '请根据您过去 6 个月的经历回答。尽量避免根据您“希望”的样子来回答。',
+        },
+        scoring: {
+          title: '评分标准说明',
+          text: '本测试使用 ASRS v1.1 逻辑。A 部分（前 6 个问题）是主要的筛查工具。',
+        },
+        nextSteps: {
+          title: '如果结果显示高风险怎么办？',
+          text: '这不是诊断。我们建议打印您的结果并与持证专业人士分享。',
+        },
+        privacy: {
+          title: '数据隐私',
+          text: '您的答案在浏览器本地处理。没有任何个人数据会离开您的设备。',
         },
       },
       disclaimer:

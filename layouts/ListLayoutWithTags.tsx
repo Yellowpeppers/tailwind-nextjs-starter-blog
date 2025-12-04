@@ -142,13 +142,13 @@ export default function ListLayoutWithTags({
             aria-label="Filter posts by tag"
           >
             {pathname.startsWith('/blog') ? (
-              <span className="rounded-full border border-pink-200 bg-pink-50 px-4 py-2 text-sm font-semibold whitespace-nowrap text-pink-600">
+              <span className="border-primary-200 bg-primary-50 text-primary-600 rounded-full border px-4 py-2 text-sm font-semibold whitespace-nowrap">
                 All Posts
               </span>
             ) : (
               <Link
                 href="/blog"
-                className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold whitespace-nowrap text-gray-600 transition hover:border-pink-200 hover:text-pink-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300 dark:hover:border-pink-400"
+                className="hover:border-primary-200 hover:text-primary-600 dark:hover:border-primary-400 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold whitespace-nowrap text-gray-600 transition dark:border-gray-700 dark:bg-transparent dark:text-gray-300"
               >
                 All Posts
               </Link>
@@ -161,8 +161,8 @@ export default function ListLayoutWithTags({
                   href={`/tags/${slug(t)}`}
                   className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
                     isActive
-                      ? 'border border-pink-200 bg-pink-50 text-pink-600 shadow-sm dark:border-pink-400/60 dark:bg-pink-400/10 dark:text-pink-100'
-                      : 'border border-gray-200 bg-white text-gray-600 hover:border-pink-200 hover:text-pink-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300 dark:hover:border-pink-400'
+                      ? 'border-primary-200 bg-primary-50 text-primary-600 dark:border-primary-400/60 dark:bg-primary-400/10 dark:text-primary-100 border shadow-sm'
+                      : 'hover:border-primary-200 hover:text-primary-600 dark:hover:border-primary-400 border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300'
                   }`}
                   aria-label={`View posts tagged ${t}`}
                 >

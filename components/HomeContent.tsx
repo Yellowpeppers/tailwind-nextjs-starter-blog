@@ -9,6 +9,8 @@ import NewsletterForm from 'pliny/ui/NewsletterForm'
 import { useTranslation } from '@/context/LanguageContext'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import { Blog } from 'contentlayer/generated'
+import { BeakerIcon } from '@heroicons/react/24/outline'
+import { BookOpenIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 
 const MAX_DISPLAY = 5
 
@@ -159,40 +161,52 @@ export default function HomeContent({ posts }: { posts: CoreContent<Blog>[] }) {
 
       <section className="bg-gray-50 py-24 dark:bg-gray-900/50">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="space-y-3 text-center md:text-left">
-            <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
-              {t.home.resourceHub.tagline}
+          <div className="mb-16">
+            <div className="text-primary-500 mb-4 flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
+              <span className="bg-primary-500 flex h-1 w-1 rounded-full"></span>
+              探索 NeuroHacks
+              <span className="bg-primary-500 flex h-1 w-1 rounded-full"></span>
+            </div>
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">资源中心</h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              从科学筛查到实战工具，我们为你打造了一整套“多动大脑”生存指南。
             </p>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {t.home.resourceHub.title}
-            </h2>
-            <p className="text-base text-gray-600 dark:text-gray-300">{t.home.resourceHub.desc}</p>
           </div>
-          <div className="mx-auto mt-12 grid max-w-4xl gap-8 md:grid-cols-2">
-            {exploreLinks.map((item) => (
-              <Link key={item.title} href={item.href} className="group block h-full">
-                <div className="flex h-full flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/10 dark:border-gray-800 dark:bg-gray-900">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-500/10 dark:text-white">
-                    {item.icon}
-                  </div>
-                  <div className="flex flex-1 flex-col gap-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-2xl font-bold text-gray-900 transition group-hover:text-pink-600 dark:text-gray-100 dark:group-hover:text-pink-400">
-                        {item.title}
-                      </h3>
-                      <span className="inline-flex items-center text-sm font-semibold text-pink-600 dark:text-pink-400">
-                        {/* @ts-ignore */}
-                        {item.linkText || `Explore ${item.title}`}
-                        <span className="ml-1 inline-block transition-transform duration-300 group-hover:translate-x-1">
-                          →
-                        </span>
-                      </span>
-                    </div>
-                    <p className="text-base text-gray-600 dark:text-gray-300">{item.description}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Focus Lab Card */}
+            <Link
+              href="/focuslab"
+              className="group hover:border-primary-200 hover:shadow-primary-500/10 dark:hover:border-primary-900 relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-8 transition-all hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"
+            >
+              <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 mb-6 inline-flex rounded-2xl p-4">
+                <BeakerIcon className="h-8 w-8" />
+              </div>
+              <h3 className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">专注实验室</h3>
+              <p className="mb-6 text-gray-600 dark:text-gray-400">
+                你的私人任务控制台。集成白噪音、任务拆解器和可视化计时器，打造无干扰的深度工作流。
+              </p>
+              <div className="text-primary-500 transition-gap flex items-center font-bold group-hover:gap-2">
+                进入实验室 <ArrowRightIcon className="ml-2 h-4 w-4" />
+              </div>
+            </Link>
+
+            {/* Guides Card */}
+            <Link
+              href="/blog"
+              className="group hover:border-primary-200 hover:shadow-primary-500/10 dark:hover:border-primary-900 relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-8 transition-all hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"
+            >
+              <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 mb-6 inline-flex rounded-2xl p-4">
+                <BookOpenIcon className="h-8 w-8" />
+              </div>
+              <h3 className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">指南</h3>
+              <p className="mb-6 text-gray-600 dark:text-gray-400">
+                拒绝智商税。哪款解压玩具真静音？哪个 App 真正好用？我们替你实测了所有装备。
+              </p>
+              <div className="text-primary-500 transition-gap flex items-center font-bold group-hover:gap-2">
+                Explore 指南 <ArrowRightIcon className="ml-2 h-4 w-4" />
+              </div>
+            </Link>
           </div>
         </div>
       </section>

@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
+import { useThemeColor, ThemeColor } from '@/context/ThemeColorContext'
 import {
   Menu,
   MenuButton,
@@ -57,6 +58,7 @@ const Blank = () => <svg className="h-6 w-6" />
 const ThemeSwitch = () => {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const { themeColor, setThemeColor } = useThemeColor()
 
   // When mounted on client, now we can show the UI
   useEffect(() => setMounted(true), [])
@@ -64,7 +66,7 @@ const ThemeSwitch = () => {
   return (
     <div className="flex items-center">
       <Menu as="div" className="relative inline-block text-left">
-        <div className="hover:text-primary-500 dark:hover:text-primary-400 flex items-center justify-center">
+        <div className="hover:text-primary-500 dark:hover:text-primary-400 flex items-center justify-center transition-all duration-300">
           <MenuButton aria-label="Theme switcher">
             {mounted ? resolvedTheme === 'dark' ? <Moon /> : <Sun /> : <Blank />}
           </MenuButton>
@@ -78,14 +80,14 @@ const ThemeSwitch = () => {
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <MenuItems className="ring-opacity-5 absolute right-0 z-50 mt-2 w-32 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-hidden dark:bg-gray-800">
+          <MenuItems className="ring-opacity-5 absolute right-0 z-50 mt-2 w-auto origin-top-right divide-y divide-gray-100 rounded-md bg-white p-2 shadow-lg ring-1 ring-black focus:outline-none dark:divide-gray-700 dark:bg-gray-800">
             <RadioGroup value={theme} onChange={setTheme}>
               <div className="p-1">
                 <Radio value="light">
                   <MenuItem>
                     {({ focus }) => (
                       <button
-                        className={`${focus ? 'bg-primary-600 text-white' : ''} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                        className={`${focus ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-200`}
                       >
                         <div className="mr-2">
                           <Sun />
@@ -100,8 +102,8 @@ const ThemeSwitch = () => {
                     {({ focus }) => (
                       <button
                         className={`${
-                          focus ? 'bg-primary-600 text-white' : ''
-                        } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                          focus ? 'bg-gray-100 dark:bg-gray-700' : ''
+                        } group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-200`}
                       >
                         <div className="mr-2">
                           <Moon />
@@ -116,8 +118,8 @@ const ThemeSwitch = () => {
                     {({ focus }) => (
                       <button
                         className={`${
-                          focus ? 'bg-primary-600 text-white' : ''
-                        } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                          focus ? 'bg-gray-100 dark:bg-gray-700' : ''
+                        } group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-200`}
                       >
                         <div className="mr-2">
                           <Monitor />
@@ -129,6 +131,34 @@ const ThemeSwitch = () => {
                 </Radio>
               </div>
             </RadioGroup>
+            <div className="p-3">
+              <div className="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                Theme Color
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { name: 'pink', color: '#db2777', label: 'Pink' },
+                  { name: 'blue', color: '#0B1F3B', label: 'Deep Navy Blue' },
+                  { name: 'green', color: '#0F6B61', label: 'Cool Ink Green' },
+                  { name: 'yellow', color: '#C6A15B', label: 'Champagne Gold' },
+                  { name: 'violet', color: '#3B3A82', label: 'Misty Indigo' },
+                  { name: 'orange', color: '#B85C4A', label: 'Terracotta Orange' },
+                  { name: 'red', color: '#7A8F86', label: 'Sage Green' },
+                  { name: 'slate', color: '#1F2933', label: 'Graphite Gray' },
+                ].map(({ name, color, label }) => (
+                  <button
+                    key={name}
+                    onClick={() => setThemeColor(name as ThemeColor)}
+                    className={`h-6 w-6 rounded-full ring-2 ring-offset-2 ring-offset-white transition-all hover:scale-110 dark:ring-offset-gray-800 ${
+                      themeColor === name ? 'ring-gray-400 dark:ring-gray-400' : 'ring-transparent'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={label}
+                    aria-label={`Set theme to ${label}`}
+                  />
+                ))}
+              </div>
+            </div>
           </MenuItems>
         </Transition>
       </Menu>

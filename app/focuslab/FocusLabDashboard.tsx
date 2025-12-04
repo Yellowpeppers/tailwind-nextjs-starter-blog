@@ -53,7 +53,7 @@ const SegmentedControl = <T extends string>({
             onClick={() => onChange(option.value)}
             className={`relative flex-1 rounded-md px-3 text-xs font-bold tracking-wider whitespace-nowrap uppercase transition-all ${
               isActive
-                ? 'bg-white text-pink-600 shadow-sm dark:bg-gray-700 dark:text-pink-400'
+                ? 'text-primary-600 dark:text-primary-400 bg-white shadow-sm dark:bg-gray-700'
                 : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
             }`}
           >
@@ -90,7 +90,7 @@ const SoundVisualizer = ({ activeCount }: { activeCount: number }) => {
       {Array.from({ length: 10 }).map((_, index) => (
         <motion.div
           key={index}
-          className="w-1.5 rounded-full bg-pink-500/80"
+          className="bg-primary-500/80 w-1.5 rounded-full"
           animate={{
             height: [12, 32 + Math.random() * 16, 12],
             opacity: [0.5, 1, 0.5],
@@ -225,7 +225,7 @@ const WidgetCard = ({
               }}
               className={`transition-colors ${
                 showInfo
-                  ? 'text-pink-500 dark:text-pink-400'
+                  ? 'text-primary-500 dark:text-primary-400'
                   : 'text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'
               }`}
               aria-label="Toggle description"
@@ -522,7 +522,7 @@ export const FocusLabDashboard = () => {
                       exit={{ opacity: 0, x: -20 }}
                       className="flex items-center gap-3 border-r border-gray-200 pr-4 dark:border-gray-800"
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500 text-white">
+                      <div className="bg-primary-500 flex h-8 w-8 items-center justify-center rounded-lg text-white">
                         <svg
                           viewBox="0 0 24 24"
                           fill="none"
@@ -545,8 +545,8 @@ export const FocusLabDashboard = () => {
                     onClick={() => setIsFocusMode(!isFocusMode)}
                     className={`group flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition-all ${
                       isFocusMode
-                        ? 'border-pink-200 bg-pink-50 text-pink-600 hover:bg-pink-100 dark:border-pink-900/30 dark:bg-pink-900/20 dark:text-pink-400'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200 hover:text-pink-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-pink-400'
+                        ? 'border-primary-200 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:border-primary-900/30 dark:bg-primary-900/20 dark:text-primary-400'
+                        : 'hover:border-primary-200 hover:text-primary-600 dark:hover:text-primary-400 border-gray-200 bg-white text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400'
                     }`}
                   >
                     {isFocusMode ? (
@@ -1347,7 +1347,7 @@ const SonicShieldWidget = () => {
             }}
           >
             <div
-              className="absolute bottom-0 w-full rounded-full bg-gray-300 transition-all group-hover:bg-pink-500 dark:bg-gray-600 dark:group-hover:bg-pink-400"
+              className="group-hover:bg-primary-500 dark:group-hover:bg-primary-400 absolute bottom-0 w-full rounded-full bg-gray-300 transition-all dark:bg-gray-600"
               style={{ height: `${masterVolume * 100}%` }}
             />
             {/* Thumb indicator on hover */}
@@ -1374,8 +1374,8 @@ const SonicShieldWidget = () => {
                 key={sound.id}
                 className={`group relative flex flex-col justify-between rounded-xl border p-2.5 transition-all ${
                   isActive
-                    ? 'border-pink-500 bg-pink-50 dark:border-pink-400 dark:bg-pink-900/20'
-                    : 'border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/40 dark:hover:border-pink-900'
+                    ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+                    : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/40'
                 }`}
               >
                 <button
@@ -1383,7 +1383,7 @@ const SonicShieldWidget = () => {
                   className="flex flex-1 flex-col items-start text-left"
                 >
                   <span
-                    className={`text-xs font-bold ${isActive ? 'text-pink-700 dark:text-pink-300' : 'text-gray-700 dark:text-gray-300'}`}
+                    className={`text-xs font-bold ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
                   >
                     {tSounds[sound.name as keyof typeof tSounds] || sound.name}
                   </span>
@@ -1399,7 +1399,7 @@ const SonicShieldWidget = () => {
                       value={track.volume}
                       onChange={(e) => updateTrackVolume(sound.id, parseFloat(e.target.value))}
                       onClick={(e) => e.stopPropagation()}
-                      className="h-1 w-full cursor-pointer rounded-full bg-pink-200 accent-pink-600 dark:bg-pink-900 dark:accent-pink-400"
+                      className="bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400 h-1 w-full cursor-pointer rounded-full"
                     />
                   </div>
                 )}
@@ -1602,7 +1602,7 @@ const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) 
               onClick={() => setTimerMode(mode)}
               className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-all ${
                 timerMode === mode
-                  ? 'bg-white text-pink-600 shadow-sm'
+                  ? 'text-primary-600 bg-white shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -1624,7 +1624,7 @@ const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) 
                   onClick={() => setActivePreset(preset)}
                   className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${
                     activePreset === preset
-                      ? 'bg-pink-500 text-white shadow-md'
+                      ? 'bg-primary-500 text-white shadow-md'
                       : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
                   }`}
                 >
@@ -1638,7 +1638,7 @@ const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) 
                 type="time"
                 value={targetTime}
                 onChange={(event) => setTargetTime(event.target.value)}
-                className="h-8 rounded-md border border-gray-200 bg-transparent px-2 text-xs font-semibold text-gray-800 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 focus:outline-none dark:border-gray-700 dark:text-gray-200"
+                className="focus:border-primary-300 focus:ring-primary-100 h-8 rounded-md border border-gray-200 bg-transparent px-2 text-xs font-semibold text-gray-800 focus:ring-2 focus:outline-none dark:border-gray-700 dark:text-gray-200"
               />
               <button
                 type="button"
@@ -1649,7 +1649,7 @@ const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) 
                   setTimeLeft(diff)
                   setIsRunning(false)
                 }}
-                className="rounded-md bg-pink-50 px-3 py-1 text-[10px] font-bold tracking-wider text-pink-600 uppercase hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400"
+                className="bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 rounded-md px-3 py-1 text-[10px] font-bold tracking-wider uppercase"
               >
                 {t.focusLab.widgets.timer.set}
               </button>
@@ -1668,7 +1668,7 @@ const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) 
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth="4"
+              strokeWidth="2"
               className="text-gray-100 dark:text-gray-800"
             />
             <circle
@@ -1677,11 +1677,11 @@ const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) 
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth="8"
+              strokeWidth="4"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
               strokeLinecap="round"
-              className={`${isDone ? 'text-green-500' : 'text-pink-500'} transition-all duration-500 ease-in-out`}
+              className={`${isDone ? 'text-green-500' : 'text-primary-500'} transition-all duration-500 ease-in-out`}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -1720,7 +1720,7 @@ const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) 
               ? 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
               : isDone
                 ? 'bg-green-500 shadow-green-200 hover:bg-green-600 dark:shadow-none'
-                : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
+                : 'bg-primary-500 shadow-primary-200 hover:bg-primary-600 dark:shadow-none'
           }`}
         >
           {isRunning ? (
@@ -1825,9 +1825,9 @@ const TaskBreakerWidget = () => {
   if (isResultView) {
     return (
       <div className="flex h-full flex-col gap-4">
-        <div className="flex items-start justify-between gap-4 rounded-2xl bg-pink-50 p-3 dark:bg-pink-900/20">
+        <div className="bg-primary-50 dark:bg-primary-900/20 flex items-start justify-between gap-4 rounded-2xl p-3">
           <div>
-            <p className="text-[10px] font-bold tracking-wider text-pink-600/70 uppercase dark:text-pink-400/70">
+            <p className="text-primary-600/70 dark:text-primary-400/70 text-[10px] font-bold tracking-wider uppercase">
               {t.focusLab.widgets.taskBreaker.currentMission}
             </p>
             <p className="line-clamp-2 text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -1836,7 +1836,7 @@ const TaskBreakerWidget = () => {
           </div>
           <button
             onClick={handleReset}
-            className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm hover:text-pink-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-pink-400"
+            className="hover:text-primary-600 dark:hover:text-primary-400 shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300"
           >
             {t.focusLab.widgets.taskBreaker.newTask}
           </button>
@@ -1845,7 +1845,7 @@ const TaskBreakerWidget = () => {
         <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
           {isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-pink-200 border-t-pink-500" />
+              <div className="border-primary-200 border-t-primary-500 h-8 w-8 animate-spin rounded-full border-4" />
               <p className="text-xs font-medium">{t.focusLab.widgets.taskBreaker.summoning}</p>
             </div>
           ) : (
@@ -1864,7 +1864,7 @@ const TaskBreakerWidget = () => {
   return (
     <div className="flex h-full flex-col justify-center gap-4">
       <div className="space-y-2 text-center">
-        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400">
+        <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 mx-auto flex h-10 w-10 items-center justify-center rounded-2xl">
           <MagicIcon className="h-6 w-6" />
         </div>
         <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
@@ -1879,7 +1879,7 @@ const TaskBreakerWidget = () => {
         value={task}
         onChange={(event) => setTask(event.target.value)}
         placeholder={t.focusLab.widgets.taskBreaker.placeholder}
-        className="min-h-[80px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-pink-500 focus:bg-white focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        className="focus:border-primary-500 focus:ring-primary-500 min-h-[80px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
       />
 
       <button
@@ -1909,7 +1909,7 @@ const TaskStepItem = ({ step }: { step: string }) => {
         type="checkbox"
         checked={isChecked}
         onChange={() => {}} // Handled by parent onClick
-        className="pointer-events-none h-5 w-5 rounded border-gray-300 text-pink-500 focus:ring-pink-500 dark:border-gray-600 dark:bg-gray-800"
+        className="text-primary-500 focus:ring-primary-500 pointer-events-none h-5 w-5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800"
       />
       <span
         className={`text-sm transition-all ${
@@ -2108,7 +2108,7 @@ const BrainDumpWidget = () => {
         <div className="mt-2 flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={() => handleMoveToOtherColumn(item, column)}
-            className="text-gray-400 hover:text-pink-500 dark:text-gray-500 dark:hover:text-pink-400"
+            className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 dark:text-gray-500"
             title="Move to other column"
           >
             <svg
@@ -2157,12 +2157,12 @@ const BrainDumpWidget = () => {
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={t.focusLab.widgets.brainDump.placeholder}
-              className="w-full rounded-xl border border-gray-200 bg-white py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-white py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             />
             <button
               onClick={handleAdd}
               disabled={!inputValue.trim() && !pendingImage}
-              className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 text-pink-500 transition-colors hover:bg-pink-50 disabled:text-gray-300 dark:hover:bg-pink-900/20 dark:disabled:text-gray-600"
+              className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -2420,7 +2420,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
     <div className="flex h-full flex-col gap-4">
       <div className="flex gap-2">
         {/* Result Area */}
-        <div className="flex min-h-[80px] flex-1 flex-col items-center justify-center rounded-2xl bg-pink-50 p-2 text-center shadow-sm ring-1 ring-pink-100 dark:bg-pink-900/20 dark:ring-pink-900/30">
+        <div className="bg-primary-50 ring-primary-100 dark:bg-primary-900/20 dark:ring-primary-900/30 flex min-h-[80px] flex-1 flex-col items-center justify-center rounded-2xl p-2 text-center shadow-sm ring-1">
           {selected ? (
             <motion.div
               key={selected}
@@ -2431,7 +2431,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
               {selected}
             </motion.div>
           ) : (
-            <p className="text-xs font-bold tracking-wider text-pink-400/70 uppercase">
+            <p className="text-primary-400/70 text-xs font-bold tracking-wider uppercase">
               {isSpinning
                 ? t.focusLab.widgets.dopamineMenu.spinning
                 : t.focusLab.widgets.dopamineMenu.ready}
@@ -2446,8 +2446,9 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
             handleSpin()
           }}
           disabled={isSpinning || options.length === 0}
-          className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-pink-500 p-2 text-xs font-bold text-white shadow-lg shadow-pink-200 transition-all hover:bg-pink-600 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none dark:shadow-none"
+          className="group/btn from-primary-400 to-primary-600 shadow-primary-500/30 hover:shadow-primary-500/50 dark:from-primary-500 dark:to-primary-700 relative flex w-20 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl bg-gradient-to-br p-2 text-xs font-bold text-white shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:shadow-none"
         >
+          <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover/btn:opacity-100" />
           {isSpinning ? (
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           ) : (
@@ -2459,12 +2460,14 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-5 w-5"
+                className="relative z-10 h-5 w-5 drop-shadow-sm"
               >
                 <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
                 <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
               </svg>
-              <span>{t.focusLab.widgets.dopamineMenu.button}</span>
+              <span className="relative z-10 drop-shadow-sm">
+                {t.focusLab.widgets.dopamineMenu.button}
+              </span>
             </>
           )}
         </button>
@@ -2479,11 +2482,11 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
             onChange={(e) => setNewOption(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addOption()}
             placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            className="focus:border-primary-500 focus:ring-primary-500 flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
           <button
             onClick={addOption}
-            className="rounded-lg bg-pink-50 px-3 py-2 text-xs font-bold text-pink-600 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-400 dark:hover:bg-pink-900/40"
+            className="bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/40 rounded-lg px-3 py-2 text-xs font-bold"
           >
             {t.focusLab.widgets.dopamineMenu.add}
           </button>
@@ -2492,7 +2495,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
           {options.map((opt, idx) => (
             <div
               key={idx}
-              className="group flex items-center justify-between rounded-lg border border-transparent bg-white px-2 py-1.5 shadow-sm transition-all hover:border-pink-100 hover:shadow-md dark:bg-gray-800 dark:hover:border-pink-900/30"
+              className="group hover:border-primary-100 dark:hover:border-primary-900/30 flex items-center justify-between rounded-lg border border-transparent bg-white px-2 py-1.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-800"
             >
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{opt}</span>
               <button

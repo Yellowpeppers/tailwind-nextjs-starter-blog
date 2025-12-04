@@ -1,27 +1,25 @@
-import { genPageMetadata } from 'app/seo'
 import { FocusLabDashboard } from './FocusLabDashboard'
 
 export const metadata = {
-  ...genPageMetadata({
-    title: 'Focus Lab: ADHD Dashboard with AI Task Breaker & Brown Noise',
-    description:
-      'Free ADHD productivity dashboard featuring an **AI task breaker**, **Brown Noise generator**, and **visual timer**. Designed to help neurodivergent brains enter flow state.',
-    keywords: [
-      'ADHD tools',
-      'white noise',
-      'nature sounds',
-      'body doubling',
-      'pomodoro timer',
-      'task breaker',
-      'dopamine menu',
-      'executive function',
-      'focus dashboard',
-      'online adhd planner',
-      'visual timer',
-    ],
-  }),
   title: {
-    absolute: 'Focus Lab: ADHD Dashboard with AI Task Breaker & Brown Noise',
+    absolute: 'Focus Lab: Free ADHD Dashboard, Brown Noise & AI Timer',
+  },
+  description:
+    'Overwhelmed? This free ADHD dashboard helps you hack executive dysfunction. Features AI task breakdown, Brown Noise, and Body Doubling tools. No login needed.',
+  keywords: [
+    'adhd dashboard',
+    'brown noise generator',
+    'ai task breaker',
+    'visual timer',
+    'body doubling app',
+    'dopamine menu',
+    'executive dysfunction',
+    'goblin tools alternative',
+    'focus timer',
+  ],
+  openGraph: {
+    title: 'Focus Lab: Free ADHD Dashboard',
+    description: 'Overwhelmed? This free ADHD dashboard helps you hack executive dysfunction.',
   },
 }
 
