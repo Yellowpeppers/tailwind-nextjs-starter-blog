@@ -765,7 +765,7 @@ export const dictionary = {
       questions: [
         {
           id: 1,
-          text: '一旦完成任何计划中最具挑战的部分之后，你多常有<strong>完成计划最后细节</strong>的困难？',
+          text: '一旦完成任何计划中最具挑战的部分之后，你会多常有<strong>完成计划最后细节</strong>的困难？',
           isPartA: true,
           hints: [
             '我的工作通常都很完美',
@@ -777,7 +777,7 @@ export const dictionary = {
         },
         {
           id: 2,
-          text: '当必须从事需要<strong>有组织规划性</strong>的任务时，你多常有困难<strong>井然有序</strong>地去做？',
+          text: '当必须从事需要<strong>有组织规划性</strong>的任务时，你会多常有困难<strong>井然有序</strong>地去做？',
           isPartA: true,
           hints: [
             '列表和系统对我来说很自然',
@@ -789,7 +789,7 @@ export const dictionary = {
         },
         {
           id: 3,
-          text: '你多常有问题去<strong>记得约会或是必须要做的事</strong>？',
+          text: '你会多常有问题去<strong>记得约会或是必须要做的事</strong>？',
           isPartA: true,
           hints: [
             '我的日历总是最新的',
@@ -801,7 +801,7 @@ export const dictionary = {
         },
         {
           id: 4,
-          text: '当有一件需要<strong>多费心思考</strong>的工作时，你多常<strong>逃避或是延后开始</strong>去做？',
+          text: '当有一件需要<strong>多费心思思考</strong>的工作时，你会多常<strong>逃避或是延后开始</strong>去做？',
           isPartA: true,
           hints: [
             '我直接开始',
@@ -813,7 +813,7 @@ export const dictionary = {
         },
         {
           id: 5,
-          text: '当你必须<strong>长时间坐着</strong>时，你多常<strong>坐不安稳或扭动手脚</strong>？',
+          text: '当你必须<strong>长时间坐着</strong>时，你会多常<strong>坐立不安或扭动手脚</strong>？',
           isPartA: true,
           hints: [
             '坐着不动不是问题',
@@ -825,7 +825,7 @@ export const dictionary = {
         },
         {
           id: 6,
-          text: '你多常像<strong>被马达所驱动</strong>一样，觉得自己<strong>过度地活跃</strong>，不得不做事情？',
+          text: '你会多常像<strong>被马达所驱动</strong>一样，觉得自己<strong>过度地活跃</strong>，不得不做事情？',
           isPartA: true,
           hints: [
             '我的精力稳定且可控',
@@ -837,7 +837,7 @@ export const dictionary = {
         },
         {
           id: 7,
-          text: '当必须进行一件<strong>枯燥或困难</strong>的计划时，你多常<strong>粗心犯错</strong>？',
+          text: '当必须进行一件<strong>枯燥或困难</strong>的计划时，你会多常<strong>粗心犯错</strong>？',
           isPartA: false,
           hints: [
             '我的工作通常没有错误',
@@ -849,7 +849,7 @@ export const dictionary = {
         },
         {
           id: 8,
-          text: '当正在做<strong>枯燥或重复性</strong>的工作时，你多常有<strong>持续专注的困难</strong>？',
+          text: '当正在做<strong>枯燥或重复性</strong>的工作时，你会多常有<strong>持续专注的困难</strong>？',
           isPartA: false,
           hints: [
             '无论任务如何，我都能保持专注',
@@ -861,7 +861,7 @@ export const dictionary = {
         },
         {
           id: 9,
-          text: '即使有人直接对你说话，你多常有困难<strong>专注于别人跟你讲话的内容</strong>？',
+          text: '即使有人直接对你说话，你会多常有困难<strong>专注于别人跟你讲话的内容</strong>？',
           isPartA: false,
           hints: [
             '当有人说话时，我会保持专注',
@@ -873,7 +873,7 @@ export const dictionary = {
         },
         {
           id: 10,
-          text: '在家里或是工作时，你多常<strong>没有把东西放对地方或是找不到东西</strong>？',
+          text: '在家里或是在工作时，你会多常<strong>没有把东西放对地方或是找不到东西</strong>？',
           isPartA: false,
           hints: [
             '每样东西都有位置，并且都在那里',
@@ -885,7 +885,7 @@ export const dictionary = {
         },
         {
           id: 11,
-          text: '你多常因身旁的<strong>活动或声音而分心</strong>？',
+          text: '你会多常因身旁的<strong>活动或声音而分心</strong>？',
           isPartA: false,
           hints: [
             '背景噪音很少困扰我',
@@ -897,7 +897,7 @@ export const dictionary = {
         },
         {
           id: 12,
-          text: '你多常在开会时或在其他<strong>被期待坐好的场合中离开座位</strong>？',
+          text: '你会多常在开会时或在其他<strong>被期待坐好的场合中离开座位</strong>？',
           isPartA: false,
           hints: [
             '我按要求坐着',
@@ -909,7 +909,7 @@ export const dictionary = {
         },
         {
           id: 13,
-          text: '你多常觉得<strong>静不下来或烦躁不安</strong>？',
+          text: '你会多常觉得<strong>静不下来或烦躁不安</strong>？',
           isPartA: false,
           hints: [
             '我大部分时间都感到平静',
@@ -921,7 +921,7 @@ export const dictionary = {
         },
         {
           id: 14,
-          text: '当有自己独处的时间时，你多常觉得有困难<strong>让自己平静和放松</strong>？',
+          text: '当有自己独处的时间时，你会多常觉得有困难<strong>使自己平静和放松</strong>？',
           isPartA: false,
           hints: [
             '休息时间确实让我放松',
@@ -933,7 +933,7 @@ export const dictionary = {
         },
         {
           id: 15,
-          text: '在社交场合中，你多常发现自己<strong>话讲得太多</strong>？',
+          text: '在社交场合中，你会多常发现自己<strong>话讲得太多</strong>？',
           isPartA: false,
           hints: [
             '我配合房间的节奏',
@@ -945,7 +945,7 @@ export const dictionary = {
         },
         {
           id: 16,
-          text: '当与他人交谈时，你多常<strong>在别人还没把话说完前就插嘴或接话替对方把话讲完</strong>？',
+          text: '当与他人交谈时，你会多常<strong>在别人还没把话讲完前就插嘴或接话替对方把话讲完</strong>？',
           isPartA: false,
           hints: [
             '我很少过早插话',
@@ -957,7 +957,7 @@ export const dictionary = {
         },
         {
           id: 17,
-          text: '在需要轮流排队的场合时，你多常有困难<strong>轮流等待</strong>？',
+          text: '在需要轮流排队的场合时，你会多常有困难<strong>轮流等待</strong>？',
           isPartA: false,
           hints: [
             '排队对我来说没问题',
@@ -969,7 +969,7 @@ export const dictionary = {
         },
         {
           id: 18,
-          text: '你多常在别人忙碌时<strong>打断别人</strong>？',
+          text: '你会多常在别人忙碌时<strong>打断别人</strong>？',
           isPartA: false,
           hints: [
             '我尊重别人的空间和专注',
