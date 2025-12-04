@@ -107,6 +107,10 @@ export const dictionary = {
           start: 'START',
           done: 'Congrats! Another Focus Finished',
           todayFocus: 'Today: {minutes}m',
+          accessibility: {
+            showDailyFocus: "Show today's total focus time",
+            showTimer: 'Show timer countdown again',
+          },
         },
         taskBreaker: {
           title: 'AI Task Breaker',
@@ -128,6 +132,13 @@ export const dictionary = {
           emptyTitle: 'Your mind is clear',
           emptySubtitle: 'Capture thoughts as they come',
           placeholder: 'Type or paste anything...',
+          accessibility: {
+            addThought: 'Add note',
+            clearBoard: 'Clear all notes',
+            removeImage: 'Remove image preview',
+            moveToOtherColumn: 'Move note to other column',
+            deleteNote: 'Delete note',
+          },
         },
         dopamineMenu: {
           title: 'Dopamine Menu',
@@ -137,6 +148,9 @@ export const dictionary = {
           button: 'GIVE ME DOPAMINE',
           addPlaceholder: 'Add option...',
           add: 'Add',
+          accessibility: {
+            removeOption: 'Remove option',
+          },
           defaultOptions: [
             'Drink Water 💧',
             'Stretch 🧘',
@@ -159,6 +173,7 @@ export const dictionary = {
         exitFocus: 'Exit Focus',
         resetLayout: 'Reset Layout',
         tip: 'Drag the header row to change the layout. Click the header row to hide or show the card. Drag the bottom right corner of the card to resize it.',
+        dismissTip: 'Dismiss tip',
         delete: {
           confirm: 'Remove this card?',
           desc: 'You can restore it by clicking "Reset Layout" at the top.',
@@ -618,6 +633,7 @@ export const dictionary = {
         exitFocus: '退出专注',
         resetLayout: '重置布局',
         tip: '拖动标题行来改变布局。点击标题行来隐藏或者显示这个卡片。拖动卡片右下角来改变卡片大小。',
+        dismissTip: '关闭提示',
         delete: {
           confirm: '删除此卡片？',
           desc: '您可以通过点击顶部的“重置布局”来恢复它。',
@@ -655,6 +671,10 @@ export const dictionary = {
           start: '开始',
           done: '恭喜！又完成了一次专注',
           todayFocus: '今日专注：{minutes}分钟',
+          accessibility: {
+            showDailyFocus: '显示今日专注分钟数',
+            showTimer: '返回倒计时显示',
+          },
         },
         taskBreaker: {
           title: 'AI 任务拆解',
@@ -675,6 +695,13 @@ export const dictionary = {
           emptyTitle: '你的大脑很清醒',
           emptySubtitle: '随时捕捉闪现的灵感',
           placeholder: '输入或粘贴任何内容...',
+          accessibility: {
+            addThought: '添加便签',
+            clearBoard: '清空所有便签',
+            removeImage: '移除图片预览',
+            moveToOtherColumn: '移动到另一列',
+            deleteNote: '删除便签',
+          },
         },
         dopamineMenu: {
           title: '多巴胺菜单',
@@ -684,6 +711,9 @@ export const dictionary = {
           button: '给我多巴胺',
           addPlaceholder: '添加选项...',
           add: '添加',
+          accessibility: {
+            removeOption: '删除选项',
+          },
           defaultOptions: [
             '喝水 💧',
             '伸展 🧘',

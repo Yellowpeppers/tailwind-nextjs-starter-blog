@@ -1,6 +1,6 @@
 import { genPageMetadata } from 'app/seo'
 
-export const metadata = genPageMetadata({ title: 'Privacy Policy' })
+export const metadata = genPageMetadata({ title: 'Privacy Policy', path: '/privacy' })
 
 const lastUpdated = 'November 25, 2025'
 

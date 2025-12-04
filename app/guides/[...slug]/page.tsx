@@ -43,15 +43,20 @@ export async function generateMetadata(props: {
   if (post.images) {
     imageList = typeof post.images === 'string' ? [post.images] : post.images
   }
+  const canonicalUrl = post.canonicalUrl || `${siteMetadata.siteUrl}/${post.path}`
   const ogImages = imageList.map((img) => {
+    const imageUrl = img && img.includes('http') ? img : `${siteMetadata.siteUrl}${img}`
     return {
-      url: img && img.includes('http') ? img : siteMetadata.siteUrl + img,
+      url: imageUrl,
     }
   })
 
   return {
     title: post.title,
     description: post.summary,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title: post.title,
       description: post.summary,
@@ -60,7 +65,7 @@ export async function generateMetadata(props: {
       type: 'article',
       publishedTime: publishedAt,
       modifiedTime: modifiedAt,
-      url: './',
+      url: canonicalUrl,
       images: ogImages,
       authors: authors.length > 0 ? authors : [siteMetadata.author],
     },
@@ -68,7 +73,7 @@ export async function generateMetadata(props: {
       card: 'summary_large_image',
       title: post.title,
       description: post.summary,
-      images: imageList,
+      images: ogImages.map((image) => image.url),
     },
   }
 }

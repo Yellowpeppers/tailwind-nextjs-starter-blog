@@ -6,6 +6,7 @@ import { genPageMetadata } from 'app/seo'
 export const metadata = genPageMetadata({
   title: 'Explore Topics',
   description: 'Browse our growing library of guides, reviews, and hacks by category.',
+  path: '/tags',
 })
 
 const formatTag = (tag: string) =>

@@ -13,7 +13,8 @@ export async function generateMetadata(props: {
   params: Promise<{ tag: string }>
 }): Promise<Metadata> {
   const params = await props.params
-  const tag = decodeURI(params.tag)
+  const encodedTag = params.tag
+  const tag = decodeURI(encodedTag)
   const tagCounts = tagData as Record<string, number>
   const postCount = tagCounts[tag]
   const noIndex = postCount < 2
@@ -21,8 +22,8 @@ export async function generateMetadata(props: {
   return genPageMetadata({
     title: tag,
     description: `${siteMetadata.title} ${tag} tagged content`,
+    path: `/tags/${encodedTag}`,
     alternates: {
-      canonical: './',
       types: {
         'application/rss+xml': `${siteMetadata.siteUrl}/tags/${tag}/feed.xml`,
       },

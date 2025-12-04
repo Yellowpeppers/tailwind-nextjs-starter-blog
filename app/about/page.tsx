@@ -7,7 +7,7 @@ import { components } from '@/components/MDXComponents'
 
 import AboutContent from '@/components/AboutContent'
 
-export const metadata = genPageMetadata({ title: 'About' })
+export const metadata = genPageMetadata({ title: 'About', path: '/about' })
 
 export default function Page() {
   const authorEn = allAuthors.find((p) => p.slug === 'default') as Authors

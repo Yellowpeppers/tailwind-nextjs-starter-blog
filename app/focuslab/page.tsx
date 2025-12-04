@@ -1,11 +1,15 @@
-import { FocusLabDashboard } from './FocusLabDashboard'
+import { genPageMetadata } from 'app/seo'
+import siteMetadata from '@/data/siteMetadata'
+import FocusLabInfo from '@/components/FocusLabInfo'
+import { FocusLabLazy } from './FocusLabLazy'
 
-export const metadata = {
-  title: {
-    absolute: 'Focus Lab: Free ADHD Dashboard, Brown Noise & AI Timer',
-  },
-  description:
-    'Overwhelmed? This free ADHD dashboard helps you hack executive dysfunction. Features AI task breakdown, Brown Noise, and Body Doubling tools. No login needed.',
+const focusLabDescription =
+  'Overwhelmed? This free ADHD dashboard helps you hack executive dysfunction with AI task breakdowns, Brown Noise, Pomodoro timers, and body doubling rituals.'
+
+export const metadata = genPageMetadata({
+  title: 'Focus Lab: Free ADHD Dashboard, Brown Noise & AI Timer',
+  description: focusLabDescription,
+  path: '/focuslab',
   keywords: [
     'adhd dashboard',
     'brown noise generator',
@@ -18,18 +22,47 @@ export const metadata = {
     'focus timer',
   ],
   openGraph: {
-    title: 'Focus Lab: Free ADHD Dashboard',
-    description: 'Overwhelmed? This free ADHD dashboard helps you hack executive dysfunction.',
+    images: [`${siteMetadata.siteUrl}/static/images/twitter-card.png`],
+  },
+})
+
+const focusLabSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Focus Lab — Quiet ADHD Dashboard',
+  applicationCategory: 'ProductivityApplication',
+  operatingSystem: 'Web',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  description: focusLabDescription,
+  featureList: [
+    'Brown, pink, and white noise soundboard',
+    'AI task breaker and dopamine menu',
+    'Body doubling rituals and Pomodoro timers',
+    'Drag-and-drop ADHD workspace widgets',
+  ],
+  url: `${siteMetadata.siteUrl}/focuslab`,
+  creator: {
+    '@type': 'Organization',
+    name: siteMetadata.title,
+    url: siteMetadata.siteUrl,
   },
 }
 
-import FocusLabInfo from '@/components/FocusLabInfo'
-
 export default function Projects() {
   return (
-    <div className="min-h-screen">
-      <FocusLabDashboard />
-      <FocusLabInfo />
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(focusLabSchema) }}
+      />
+      <div className="min-h-screen">
+        <FocusLabLazy />
+        <FocusLabInfo />
+      </div>
+    </>
   )
 }
