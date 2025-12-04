@@ -150,8 +150,9 @@ const WidgetCard = ({
   children,
   onHeaderClick,
   onDelete,
+  badge,
   className = '',
-}: WidgetCardProps) => {
+}: WidgetCardProps & { badge?: ReactNode }) => {
   const [showInfo, setShowInfo] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const infoRef = useRef<HTMLDivElement>(null)
@@ -210,7 +211,10 @@ const WidgetCard = ({
               <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
             </svg>
           </div> */}
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+            {badge && <div>{badge}</div>}
+          </div>
           {/* Info Button */}
           <div className="relative" ref={infoRef}>
             <button
@@ -408,8 +412,21 @@ export const FocusLabDashboard = () => {
     }
 
     updateDimensions()
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions()
+    })
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
     window.addEventListener('resize', updateDimensions)
-    return () => window.removeEventListener('resize', updateDimensions)
+
+    return () => {
+      window.removeEventListener('resize', updateDimensions)
+      resizeObserver.disconnect()
+    }
   }, [])
 
   // Lock scroll in Focus Mode
@@ -443,203 +460,206 @@ export const FocusLabDashboard = () => {
 
   return (
     <>
-      <div
-        className={`relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] w-screen ${isFocusMode ? 'min-h-0' : 'min-h-screen'}`}
-      >
-        {/* Global Grid Background - Only visible on Desktop */}
-        {!isMobile && (
-          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-            <div
-              className="h-full w-full"
-              style={{
-                position: 'absolute',
-                top: 0,
-                height: '100%',
-                backgroundImage: `
+      <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
+        <motion.div
+          layout
+          transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
+          className={`${
+            isFocusMode
+              ? 'fixed inset-0 z-[100] h-screen w-screen overflow-y-scroll bg-white/95 backdrop-blur-sm dark:bg-gray-950/95'
+              : 'relative h-full w-full'
+          }`}
+        >
+          {/* Global Grid Background - Only visible on Desktop and not in Focus Mode */}
+          {!isMobile && !isFocusMode && (
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+              <div
+                className="h-full w-full"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  height: '100%',
+                  backgroundImage: `
                 linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
               `,
-                backgroundSize: `${containerWidth > 0 ? (containerWidth - (14 - 1) * GAP) / 14 + GAP : COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
-                backgroundPosition: 'center -16px',
-              }}
-            />
-          </div>
-        )}
-
-        {/* Inner Wide Container */}
-        <div className="mx-auto h-full max-w-[1800px] px-4 sm:px-6 lg:px-8">
-          <div className="h-full w-full" ref={containerRef}>
-            {/* Focus Mode Backdrop - Covers everything including global header */}
-            <div
-              className={`fixed inset-0 bg-white/95 backdrop-blur-sm transition-all duration-500 dark:bg-gray-950/95 ${
-                isFocusMode ? 'z-[90] opacity-100' : 'pointer-events-none z-[-1] opacity-0'
-              }`}
-            />
-
-            {/* Focus Mode Backdrop - Covers everything including global header */}
-            <div
-              className={`fixed inset-0 bg-white/95 backdrop-blur-sm transition-all duration-500 dark:bg-gray-950/95 ${
-                isFocusMode ? 'z-[90] opacity-100' : 'pointer-events-none z-[-1] opacity-0'
-              }`}
-            />
-
-            {/* Intro Section - Fades out and collapses in Focus Mode */}
-            <div
-              className={`overflow-hidden transition-all duration-700 ease-in-out ${
-                isFocusMode ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
-              }`}
-            >
-              <div className="py-12" style={{ paddingLeft: headerPadding }}>
-                <FocusLabIntro />
-              </div>
+                  backgroundSize: `${containerWidth > 0 ? (containerWidth - (14 - 1) * GAP) / 14 + GAP : COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
+                  backgroundPosition: 'center -16px',
+                }}
+              />
             </div>
+          )}
 
-            {/* Dashboard Controls Header */}
-            <div
-              className={`relative z-[100] flex items-center gap-4 transition-all duration-500 ${isFocusMode ? '-mt-24 mb-12 pt-6' : 'mb-8 pt-0'}`}
-              style={{ paddingLeft: headerPadding }}
-            >
-              <AnimatePresence mode="popLayout">
-                {isFocusMode && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="flex items-center gap-3 border-r border-gray-200 pr-4 dark:border-gray-800"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500 text-white">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        className="h-5 w-5"
-                      >
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                      </svg>
-                    </div>
-                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      Focus Lab
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          {/* Inner Wide Container */}
+          <div className="mx-auto h-full max-w-[1800px] px-4 sm:px-6 lg:px-8">
+            <div className="h-full w-full" ref={containerRef}>
+              {/* Intro Section - Fades out and collapses in Focus Mode */}
+              <motion.div
+                initial={false}
+                animate={{
+                  height: isFocusMode ? 0 : 'auto',
+                  opacity: isFocusMode ? 0 : 1,
+                  marginBottom: isFocusMode ? 0 : 48, // 12 * 4 = 48px (py-12)
+                }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div className="py-12" style={{ paddingLeft: headerPadding }}>
+                  <FocusLabIntro />
+                </div>
+              </motion.div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setIsFocusMode(!isFocusMode)}
-                  className={`group flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition-all ${
-                    isFocusMode
-                      ? 'border-pink-200 bg-pink-50 text-pink-600 hover:bg-pink-100 dark:border-pink-900/30 dark:bg-pink-900/20 dark:text-pink-400'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200 hover:text-pink-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-pink-400'
-                  }`}
-                >
-                  {isFocusMode ? (
-                    <>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="h-4 w-4"
-                      >
-                        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-                      </svg>
-                      {t.focusLab.controls.exitFocus}
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="h-4 w-4"
-                      >
-                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                      </svg>
-                      {t.focusLab.controls.focusMode}
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        lang === 'en'
-                          ? 'Reset dashboard layout? Your data (tasks, notes, etc.) will be preserved.'
-                          : '重置卡片布局？您的数据（任务、便签等）将被保留。'
-                      )
-                    ) {
-                      const keys = ['focus-lab-layout-v1']
-                      keys.forEach((key) => window.localStorage.removeItem(key))
-                      window.location.reload()
-                    }
-                  }}
-                  className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-4 w-4 transition-transform group-hover:-rotate-180"
-                  >
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                    <path d="M3 3v5h5" />
-                  </svg>
-                  {t.focusLab.controls.resetLayout}
-                </button>
-                {/* Focus Mode Tip */}
-                <AnimatePresence>
-                  {isFocusMode && showTip && (
+              {/* Dashboard Controls Header */}
+              <div
+                className={`relative z-[100] flex items-center gap-4 transition-all duration-500 ${isFocusMode ? 'mt-6 mb-12' : 'mb-8 pt-0'}`}
+                style={{ paddingLeft: headerPadding }}
+              >
+                <AnimatePresence mode="popLayout">
+                  {isFocusMode && (
                     <motion.div
-                      initial={{ opacity: 0, x: -10 }}
+                      initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
+                      exit={{ opacity: 0, x: -20 }}
+                      className="flex items-center gap-3 border-r border-gray-200 pr-4 dark:border-gray-800"
                     >
-                      <span>{t.focusLab.controls.tip}</span>
-                      <button
-                        onClick={() => setShowTip(false)}
-                        className="rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40"
-                      >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500 text-white">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          className="h-5 w-5"
+                        >
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                      </div>
+                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        Focus Lab
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setIsFocusMode(!isFocusMode)}
+                    className={`group flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition-all ${
+                      isFocusMode
+                        ? 'border-pink-200 bg-pink-50 text-pink-600 hover:bg-pink-100 dark:border-pink-900/30 dark:bg-pink-900/20 dark:text-pink-400'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200 hover:text-pink-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-pink-400'
+                    }`}
+                  >
+                    {isFocusMode ? (
+                      <>
                         <svg
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
-                          className="h-3.5 w-3.5"
+                          className="h-4 w-4"
                         >
-                          <path d="M18 6L6 18M6 6l12 12" />
+                          <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
                         </svg>
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+                        {t.focusLab.controls.exitFocus}
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-4 w-4"
+                        >
+                          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                        </svg>
+                        {t.focusLab.controls.focusMode}
+                      </>
+                    )}
+                  </button>
 
-            {/* Grid Section */}
-            <div
-              className={`transition-all duration-500 ${isFocusMode ? 'relative z-[95]' : 'mt-10'}`}
-            >
-              {isMobile ? (
-                <FocusLabMobileGrid />
-              ) : (
-                <FocusLabGrid
-                  isFocusMode={isFocusMode}
-                  focusedCardIds={focusedCardIds}
-                  onToggleFocus={toggleCardFocus}
-                  containerWidth={containerWidth}
-                />
-              )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (
+                        window.confirm(
+                          lang === 'en'
+                            ? 'Reset dashboard layout? Your data (tasks, notes, etc.) will be preserved.'
+                            : '重置卡片布局？您的数据（任务、便签等）将被保留。'
+                        )
+                      ) {
+                        const keys = ['focus-lab-layout-v1']
+                        keys.forEach((key) => window.localStorage.removeItem(key))
+                        window.location.reload()
+                      }
+                    }}
+                    className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 transition-transform group-hover:-rotate-180"
+                    >
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                    </svg>
+                    {t.focusLab.controls.resetLayout}
+                  </button>
+                  {/* Focus Mode Tip */}
+                  <AnimatePresence>
+                    {isFocusMode && showTip && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
+                      >
+                        <span>{t.focusLab.controls.tip}</span>
+                        <button
+                          onClick={() => setShowTip(false)}
+                          className="rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-3.5 w-3.5"
+                          >
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Grid Section */}
+              <motion.div
+                layout
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+                className={`transition-all duration-500 ${isFocusMode ? 'relative z-[95]' : 'mt-10'}`}
+              >
+                {isMobile ? (
+                  <FocusLabMobileGrid />
+                ) : (
+                  <FocusLabGrid
+                    isFocusMode={isFocusMode}
+                    focusedCardIds={focusedCardIds}
+                    onToggleFocus={toggleCardFocus}
+                    containerWidth={containerWidth}
+                  />
+                )}
+              </motion.div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </>
   )
@@ -731,8 +751,7 @@ export const FocusLabGrid = ({
       className={`relative w-full transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
       style={{
         height:
-          (visibleItems.length > 0 ? Math.max(...visibleItems.map((i) => i.y + i.h)) : 0) *
-            (ROW_HEIGHT + GAP) +
+          (layout.length > 0 ? Math.max(...layout.map((i) => i.y + i.h)) : 0) * (ROW_HEIGHT + GAP) +
           (isFocusMode ? 20 : 100),
       }}
     >
@@ -988,15 +1007,56 @@ export function TimerCard({
   className?: string
 }) {
   const { t } = useTranslation()
+  const [dailyFocusMinutes, setDailyFocusMinutes] = useState(0)
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem('focus-lab-daily-focus')
+    if (stored) {
+      try {
+        const { date, minutes } = JSON.parse(stored)
+        const today = new Date().toDateString()
+        if (date === today) {
+          setDailyFocusMinutes(minutes)
+        } else {
+          // Reset for new day
+          setDailyFocusMinutes(0)
+          window.localStorage.setItem(
+            'focus-lab-daily-focus',
+            JSON.stringify({ date: today, minutes: 0 })
+          )
+        }
+      } catch (e) {
+        console.error('Failed to parse daily focus', e)
+      }
+    }
+  }, [])
+
+  const handleTimerComplete = (minutes: number) => {
+    setDailyFocusMinutes((prev) => {
+      const newMinutes = prev + minutes
+      const today = new Date().toDateString()
+      window.localStorage.setItem(
+        'focus-lab-daily-focus',
+        JSON.stringify({ date: today, minutes: newMinutes })
+      )
+      return newMinutes
+    })
+  }
+
   return (
     <WidgetCard
       title={t.focusLab.widgets.timer.title}
+      badge={
+        <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+          {t.focusLab.widgets.timer.todayFocus.replace('{minutes}', dailyFocusMinutes.toString())}
+        </span>
+      }
       subtitle={t.focusLab.widgets.timer.subtitle}
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
     >
-      <TimerWidget />
+      <TimerWidget onTimerComplete={handleTimerComplete} />
     </WidgetCard>
   )
 }
@@ -1372,7 +1432,7 @@ const SonicShieldWidget = () => {
   )
 }
 
-const TimerWidget = () => {
+const TimerWidget = ({ onTimerComplete }: { onTimerComplete?: (minutes: number) => void }) => {
   const { t } = useTranslation()
   const [activePreset, setActivePreset] = useState<TimerPreset>('focus')
   const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration)
@@ -1380,12 +1440,37 @@ const TimerWidget = () => {
   const [timerMode, setTimerMode] = useState<'countdown' | 'target'>('countdown')
   const [targetTime, setTargetTime] = useState('')
   const [targetDuration, setTargetDuration] = useState(0)
+  const [isDone, setIsDone] = useState(false)
+  const [permission, setPermission] = useState<NotificationPermission>('default')
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Initialize Audio
+  useEffect(() => {
+    audioRef.current = new Audio('/static/sounds/alarm.mp3')
+    audioRef.current.load()
+  }, [])
+
+  // Check permission on mount
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') {
+      setPermission(Notification.permission)
+    }
+  }, [])
+
+  const requestPermission = () => {
+    if (typeof Notification !== 'undefined') {
+      Notification.requestPermission().then((p) => {
+        setPermission(p)
+      })
+    }
+  }
 
   useEffect(() => {
     if (timerMode === 'countdown') {
       setTimeLeft(timerPresets[activePreset].duration)
       setTargetDuration(0)
       setIsRunning(false)
+      setIsDone(false)
     }
   }, [activePreset, timerMode])
 
@@ -1395,6 +1480,7 @@ const TimerWidget = () => {
       setTimeLeft(diff)
       setTargetDuration(diff)
       setIsRunning(false)
+      setIsDone(false)
     }
   }, [timerMode, targetTime])
 
@@ -1415,12 +1501,59 @@ const TimerWidget = () => {
   }, [isRunning])
 
   useEffect(() => {
-    if (timeLeft === 0) {
+    if (timeLeft === 0 && isRunning) {
+      setIsRunning(false)
+      setIsDone(true)
+
+      // Play Alarm
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0
+        audioRef.current.play().catch((e) => console.error('Failed to play alarm:', e))
+      }
+
+      // Notification
+      if (typeof Notification !== 'undefined') {
+        const options = {
+          icon: '/static/images/logo.png',
+        }
+        if (Notification.permission === 'granted') {
+          new Notification(t.focusLab.widgets.timer.done, options)
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+              new Notification(t.focusLab.widgets.timer.done, options)
+            }
+          })
+        }
+      }
+
+      // Update Daily Focus
+      const durationSeconds =
+        timerMode === 'countdown' ? timerPresets[activePreset].duration : targetDuration
+      const minutes = Math.floor(durationSeconds / 60)
+      if (minutes > 0) {
+        onTimerComplete?.(minutes)
+      }
+    } else if (timeLeft === 0) {
       setIsRunning(false)
     }
-  }, [timeLeft])
+  }, [timeLeft, isRunning, timerMode, activePreset, targetDuration, onTimerComplete, t])
 
   const handleStartPause = () => {
+    if (isDone) {
+      // Reset if done
+      setIsDone(false)
+      if (timerMode === 'countdown') {
+        setTimeLeft(timerPresets[activePreset].duration)
+      } else if (timerMode === 'target' && targetTime) {
+        const next = getSecondsUntilTarget(targetTime)
+        setTargetDuration(next)
+        setTimeLeft(next)
+      }
+      setIsRunning(true)
+      return
+    }
+
     if (timeLeft === 0) {
       if (timerMode === 'countdown') {
         setTimeLeft(timerPresets[activePreset].duration)
@@ -1435,6 +1568,7 @@ const TimerWidget = () => {
 
   const handleReset = () => {
     setIsRunning(false)
+    setIsDone(false)
     if (timerMode === 'countdown') {
       setTimeLeft(timerPresets[activePreset].duration)
     } else if (timerMode === 'target' && targetTime) {
@@ -1457,7 +1591,7 @@ const TimerWidget = () => {
   const dashOffset = circumference * (1 - progress)
 
   return (
-    <div className="flex h-full flex-col items-center justify-between py-0.5">
+    <div className="relative flex h-full flex-col items-center justify-between py-0.5">
       {/* Top Controls */}
       <div className="flex w-full flex-col items-center gap-1">
         <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1">
@@ -1547,12 +1681,16 @@ const TimerWidget = () => {
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
               strokeLinecap="round"
-              className="text-pink-500 transition-all duration-500 ease-in-out"
+              className={`${isDone ? 'text-green-500' : 'text-pink-500'} transition-all duration-500 ease-in-out`}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="font-mono text-3xl font-bold tracking-tighter text-gray-800 dark:text-white">
-              {display}
+            <span
+              className={`font-mono text-3xl font-bold tracking-tighter ${
+                isDone ? 'text-green-500' : 'text-gray-800 dark:text-white'
+              }`}
+            >
+              {isDone ? t.focusLab.widgets.timer.done : display}
             </span>
           </div>
         </div>
@@ -1580,7 +1718,9 @@ const TimerWidget = () => {
           className={`flex h-10 items-center justify-center gap-2 rounded-full px-6 text-xs font-bold whitespace-nowrap text-white shadow-lg transition-all active:scale-95 ${
             isRunning
               ? 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
-              : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
+              : isDone
+                ? 'bg-green-500 shadow-green-200 hover:bg-green-600 dark:shadow-none'
+                : 'bg-pink-500 shadow-pink-200 hover:bg-pink-600 dark:shadow-none'
           }`}
         >
           {isRunning ? (

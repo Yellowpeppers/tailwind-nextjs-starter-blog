@@ -150,10 +150,14 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                  className="group relative flex items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md dark:bg-gray-900/40 dark:ring-gray-800"
+                  className="group relative flex cursor-pointer items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md dark:bg-gray-900/40 dark:ring-gray-800"
+                  onClick={() => toggleTask(task.id)}
                 >
                   <button
-                    onClick={() => toggleTask(task.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleTask(task.id)
+                    }}
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
                       task.completed
                         ? 'border-pink-500 bg-pink-500 text-white'
@@ -187,7 +191,10 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
                   </span>
 
                   <button
-                    onClick={() => removeTask(task.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeTask(task.id)
+                    }}
                     className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
                     aria-label="Delete task"
                     onPointerDown={(e) => e.stopPropagation()} // Prevent drag start on delete button

@@ -104,6 +104,8 @@ export const dictionary = {
           reset: 'Reset',
           pause: 'PAUSE',
           start: 'START',
+          done: 'Congrats! Another Focus Finished',
+          todayFocus: 'Today: {minutes}m',
         },
         taskBreaker: {
           title: 'AI Task Breaker',
@@ -589,7 +591,7 @@ export const dictionary = {
         eyebrow: '专注实验室',
         title: '你的 ADHD 沉浸式工作台',
         description:
-          '专为多动大脑设计的“专注避难所”。无需在不同 App 间来回切换，这里集成了白噪音、番茄钟和任务拆解工具。\n这就是你的私人任务控制中心，帮你屏蔽干扰，找回掌控感。',
+          '专为多动大脑设计的“专注避难所”。无需在不同 App 间来回切换，这里集成了注意力中转站、今日待办、白噪音、番茄钟和AI任务拆解等工具。\n这就是你的私人任务控制中心，帮你屏蔽干扰，找回掌控感。',
       },
       controls: {
         focusMode: '专注模式',
@@ -631,6 +633,8 @@ export const dictionary = {
           reset: '重置',
           pause: '暂停',
           start: '开始',
+          done: '恭喜！又完成了一次专注',
+          todayFocus: '今日专注：{minutes}分钟',
         },
         taskBreaker: {
           title: 'AI 任务拆解',
