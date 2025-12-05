@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  motion,
-  AnimatePresence,
-  Reorder,
-  useDragControls,
-  DragControls,
-  MotionConfig,
-} from 'framer-motion'
+import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
 import { ReactNode, useEffect, useRef, useState, createContext, useContext } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { ToDoWidget } from '@/components/focus-lab/ToDoWidget'
@@ -371,7 +364,41 @@ const INITIAL_LAYOUT: GridItem[] = [
   { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 5 },
 ]
 
-const TOTAL_COLUMNS = 14
+const TRIPLE_LAYOUT: GridItem[] = [
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'dopamine', x: 8, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'todo', x: 0, y: 5, w: 6, h: 10, minW: 4, minH: 5 },
+  { id: 'brain', x: 6, y: 5, w: 6, h: 10, minW: 4, minH: 5 },
+  { id: 'breaker', x: 0, y: 15, w: 6, h: 5, minW: 3, minH: 5 },
+]
+
+const DOUBLE_LAYOUT: GridItem[] = [
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'todo', x: 0, y: 5, w: 4, h: 10, minW: 4, minH: 5 },
+  { id: 'dopamine', x: 4, y: 5, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'breaker', x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'brain', x: 0, y: 15, w: 8, h: 10, minW: 4, minH: 5 },
+]
+
+type LayoutPreset = 'desktop' | 'triple' | 'double'
+
+const GRID_PRESETS: Record<LayoutPreset, { columns: number; layout: GridItem[] }> = {
+  desktop: { columns: 14, layout: INITIAL_LAYOUT },
+  triple: { columns: 12, layout: TRIPLE_LAYOUT },
+  double: { columns: 8, layout: DOUBLE_LAYOUT },
+}
+
+const cloneLayout = (items: GridItem[]) => items.map((item) => ({ ...item }))
+
+const getPresetForWidth = (width: number): LayoutPreset => {
+  if (width >= 1200) return 'desktop'
+  if (width >= 900) return 'triple'
+  return 'double'
+}
+
+const getLayoutStorageKey = (preset: LayoutPreset) => `focus-lab-layout-${preset}-v1`
 
 const FocusLabMobileGrid = () => {
   return (
@@ -389,8 +416,6 @@ const FocusLabMobileGrid = () => {
 const COL_WIDTH = 54
 const ROW_HEIGHT = 54
 const GAP = 22
-const DEFAULT_DESKTOP_GRID_WIDTH = 1200
-const MIN_VISUAL_FONT_SCALE = 0.75
 
 export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
@@ -400,7 +425,7 @@ export const FocusLabDashboard = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
-  const [desktopGridWidth, setDesktopGridWidth] = useState(DEFAULT_DESKTOP_GRID_WIDTH)
+  const [activePreset, setActivePreset] = useState<LayoutPreset>('desktop')
 
   const headerPadding = 0
 
@@ -409,12 +434,10 @@ export const FocusLabDashboard = () => {
       if (containerRef.current) {
         const measuredWidth = containerRef.current.offsetWidth
         setContainerWidth(measuredWidth)
-        if (measuredWidth > 0) {
-          setDesktopGridWidth((prev) => Math.max(prev, measuredWidth, DEFAULT_DESKTOP_GRID_WIDTH))
-        }
       }
       const width = window.innerWidth
-      setIsMobile(width < 500)
+      setIsMobile(width < 540)
+      setActivePreset(getPresetForWidth(width))
     }
 
     updateDimensions()
@@ -447,10 +470,14 @@ export const FocusLabDashboard = () => {
     }
   }, [isFocusMode])
 
-  // Calculate Grid Offset for background alignment
-  // For the wide layout, we want the grid to cover the container
-  // We'll calculate this inside FocusLabGrid for the desktop view
-  const gridOffset = 0
+  const activePresetConfig = GRID_PRESETS[activePreset]
+  const backgroundColumnWidth =
+    containerWidth > 0
+      ? Math.max(
+          40,
+          (containerWidth - (activePresetConfig.columns - 1) * GAP) / activePresetConfig.columns
+        )
+      : COL_WIDTH
 
   const toggleCardFocus = (id: string) => {
     setFocusedCardIds((prev) => {
@@ -464,8 +491,6 @@ export const FocusLabDashboard = () => {
     })
   }
 
-  const isCompactDesktop = containerWidth > 0 && containerWidth < desktopGridWidth
-
   return (
     <>
       <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
@@ -478,8 +503,8 @@ export const FocusLabDashboard = () => {
               : 'relative h-full w-full'
           }`}
         >
-          {/* Global Grid Background - Only visible on Desktop and not in Focus Mode */}
-          {!isMobile && !isFocusMode && !isCompactDesktop && (
+          {/* Global Grid Background - Only visible on non-mobile viewports and not in Focus Mode */}
+          {!isMobile && !isFocusMode && (
             <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
               <div
                 className="h-full w-full"
@@ -491,7 +516,7 @@ export const FocusLabDashboard = () => {
                 linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
               `,
-                  backgroundSize: `${desktopGridWidth > 0 ? (desktopGridWidth - (TOTAL_COLUMNS - 1) * GAP) / TOTAL_COLUMNS + GAP : COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
+                  backgroundSize: `${backgroundColumnWidth + GAP}px ${ROW_HEIGHT + GAP}px`,
                   backgroundPosition: 'center -16px',
                 }}
               />
@@ -521,7 +546,7 @@ export const FocusLabDashboard = () => {
 
               {/* Dashboard Controls Header */}
               <div
-                className={`relative z-[100] flex flex-col gap-4 transition-all duration-500 sm:flex-row sm:flex-wrap sm:items-center sm:justify-start ${isFocusMode ? 'mt-6 mb-12' : 'mb-8 pt-0'}`}
+                className={`relative z-[100] flex flex-wrap items-center gap-4 transition-all duration-500 ${isFocusMode ? 'mt-6 mb-12' : 'mb-8 pt-0'}`}
                 style={{ paddingLeft: headerPadding }}
               >
                 <AnimatePresence mode="popLayout">
@@ -550,107 +575,108 @@ export const FocusLabDashboard = () => {
                   )}
                 </AnimatePresence>
 
-                <div className="flex w-full flex-col gap-3 sm:ml-6 sm:w-auto sm:min-w-[260px] sm:flex-row sm:flex-wrap sm:items-center sm:justify-start">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                    <button
-                      onClick={() => setIsFocusMode(!isFocusMode)}
-                      className={`group flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition-all sm:w-auto ${
-                        isFocusMode
-                          ? 'border-primary-200 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:border-primary-900/30 dark:bg-primary-900/20 dark:text-primary-400'
-                          : 'hover:border-primary-200 hover:text-primary-600 dark:hover:text-primary-400 border-gray-200 bg-white text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400'
-                      }`}
-                    >
-                      {isFocusMode ? (
-                        <>
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="h-4 w-4"
-                          >
-                            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-                          </svg>
-                          {t.focusLab.controls.exitFocus}
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="h-4 w-4"
-                          >
-                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                          </svg>
-                          {t.focusLab.controls.focusMode}
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (
-                          window.confirm(
-                            lang === 'en'
-                              ? 'Reset dashboard layout? Your data (tasks, notes, etc.) will be preserved.'
-                              : '重置卡片布局？您的数据（任务、便签等）将被保留。'
-                          )
-                        ) {
-                          const keys = ['focus-lab-layout-v1']
-                          keys.forEach((key) => window.localStorage.removeItem(key))
-                          window.location.reload()
-                        }
-                      }}
-                      className="group flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 sm:w-auto dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4 transition-transform group-hover:-rotate-180"
-                      >
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                        <path d="M3 3v5h5" />
-                      </svg>
-                      {t.focusLab.controls.resetLayout}
-                    </button>
-                  </div>
-                  {/* Focus Mode Tip */}
-                  <AnimatePresence>
-                    {isFocusMode && showTip && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        className="flex w-full items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 sm:w-auto sm:items-center dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
-                      >
-                        <span className="text-left leading-relaxed">{t.focusLab.controls.tip}</span>
-                        <button
-                          onClick={() => setShowTip(false)}
-                          className="rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40"
-                          aria-label={t.focusLab.controls.dismissTip}
+                <div className="flex flex-wrap items-center gap-3 sm:ml-6 sm:min-w-[260px]">
+                  <button
+                    onClick={() => setIsFocusMode(!isFocusMode)}
+                    className={`group flex min-w-[150px] items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition-all ${
+                      isFocusMode
+                        ? 'border-primary-200 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:border-primary-900/30 dark:bg-primary-900/20 dark:text-primary-400'
+                        : 'hover:border-primary-200 hover:text-primary-600 dark:hover:text-primary-400 border-gray-200 bg-white text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400'
+                    }`}
+                  >
+                    {isFocusMode ? (
+                      <>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-4 w-4"
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="h-3.5 w-3.5"
-                          >
-                            <path d="M18 6L6 18M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </motion.div>
+                          <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                        </svg>
+                        {t.focusLab.controls.exitFocus}
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-4 w-4"
+                        >
+                          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                        </svg>
+                        {t.focusLab.controls.focusMode}
+                      </>
                     )}
-                  </AnimatePresence>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (
+                        window.confirm(
+                          lang === 'en'
+                            ? 'Reset dashboard layout? Your data (tasks, notes, etc.) will be preserved.'
+                            : '重置卡片布局？您的数据（任务、便签等）将被保留。'
+                        )
+                      ) {
+                        const legacyKeys = ['focus-lab-layout-v1']
+                        const presetKeys = Object.keys(GRID_PRESETS) as LayoutPreset[]
+                        ;[...legacyKeys, ...presetKeys.map((p) => getLayoutStorageKey(p))].forEach(
+                          (key) => window.localStorage.removeItem(key)
+                        )
+                        window.location.reload()
+                      }
+                    }}
+                    className="group flex min-w-[150px] items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 transition-transform group-hover:-rotate-180"
+                    >
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                    </svg>
+                    {t.focusLab.controls.resetLayout}
+                  </button>
                 </div>
+                {/* Focus Mode Tip */}
+                <AnimatePresence>
+                  {isFocusMode && showTip && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="order-last flex w-full items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
+                    >
+                      <span className="text-left leading-relaxed">{t.focusLab.controls.tip}</span>
+                      <button
+                        onClick={() => setShowTip(false)}
+                        className="rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                        aria-label={t.focusLab.controls.dismissTip}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-3.5 w-3.5"
+                        >
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Grid Section */}
@@ -663,11 +689,11 @@ export const FocusLabDashboard = () => {
                   <FocusLabMobileGrid />
                 ) : (
                   <FocusLabGrid
+                    preset={activePreset}
                     isFocusMode={isFocusMode}
                     focusedCardIds={focusedCardIds}
                     onToggleFocus={toggleCardFocus}
                     containerWidth={containerWidth}
-                    desktopGridWidth={desktopGridWidth}
                   />
                 )}
               </motion.div>
@@ -684,51 +710,54 @@ export const FocusLabGrid = ({
   focusedCardIds = new Set(),
   onToggleFocus = () => {},
   containerWidth,
-  desktopGridWidth,
+  preset,
 }: {
   isFocusMode?: boolean
   focusedCardIds?: Set<string>
   onToggleFocus?: (id: string) => void
   containerWidth: number
-  desktopGridWidth: number
+  preset: LayoutPreset
 }) => {
-  const [layout, setLayout] = useState<GridItem[]>(INITIAL_LAYOUT)
+  const presetConfig = GRID_PRESETS[preset]
+  const [layout, setLayout] = useState<GridItem[]>(() => cloneLayout(presetConfig.layout))
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-  // containerRef removed as width is passed down
+  const [isPresetLoaded, setIsPresetLoaded] = useState(false)
 
-  // Load layout from localStorage
   useEffect(() => {
+    setIsPresetLoaded(false)
+    const storageKey = getLayoutStorageKey(preset)
     try {
-      const savedLayout = window.localStorage.getItem('focus-lab-layout-v1')
+      if (typeof window === 'undefined') {
+        setLayout(cloneLayout(presetConfig.layout))
+        setIsPresetLoaded(true)
+        return
+      }
+      const savedLayout = window.localStorage.getItem(storageKey)
       if (savedLayout) {
         const parsed = JSON.parse(savedLayout)
-        // Enforce new minimums for existing layouts
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const updated = parsed.map((item: any) => {
-          if (item.id === 'timer' || item.id === 'dopamine') {
-            return { ...item, minH: 5, h: Math.max(item.h, 5) }
-          }
-          return item
-        })
-        setLayout(updated)
+        if (Array.isArray(parsed)) {
+          setLayout(parsed)
+          setIsPresetLoaded(true)
+          return
+        }
       }
     } catch (error) {
       console.error('Failed to load layout:', error)
-    } finally {
-      setIsLoaded(true)
     }
-  }, [])
+    setLayout(cloneLayout(presetConfig.layout))
+    setIsPresetLoaded(true)
+  }, [preset])
 
-  // Save layout to localStorage
   useEffect(() => {
-    if (!isLoaded) return
+    if (!isPresetLoaded) return
     try {
-      window.localStorage.setItem('focus-lab-layout-v1', JSON.stringify(layout))
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(getLayoutStorageKey(preset), JSON.stringify(layout))
+      }
     } catch (error) {
       console.error('Failed to save layout:', error)
     }
-  }, [layout, isLoaded])
+  }, [layout, preset, isPresetLoaded])
 
   const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false)
 
@@ -736,20 +765,13 @@ export const FocusLabGrid = ({
 
   // Auto-centering logic removed to ensure strict left alignment
 
-  // Calculate column widths based on the desktop canvas instead of the shrinking viewport
-  const totalGapsWidth = (TOTAL_COLUMNS - 1) * GAP
-  const gridWidth = Math.max(desktopGridWidth, DEFAULT_DESKTOP_GRID_WIDTH)
-  const availableWidth = gridWidth - totalGapsWidth
-  const colWidth = availableWidth / TOTAL_COLUMNS
-
-  const needsScale = containerWidth > 0 && containerWidth < gridWidth
-  const scale = needsScale && gridWidth > 0 ? Math.min(1, containerWidth / gridWidth) : 1
-  const visualScale = scale || 1
-  const fontCompensation =
-    visualScale < MIN_VISUAL_FONT_SCALE ? MIN_VISUAL_FONT_SCALE / visualScale : 1
-
-  // Grid width is fixed to the intrinsic width so scaling can shrink it when necessary
-  const contentWidth = gridWidth
+  const columns = presetConfig.columns
+  const totalGapsWidth = Math.max(0, (columns - 1) * GAP)
+  const baseWidth = columns * COL_WIDTH + totalGapsWidth
+  const safeContainerWidth = containerWidth > 0 ? containerWidth : baseWidth
+  const availableWidth = Math.max(0, safeContainerWidth - totalGapsWidth)
+  const colWidth = columns > 0 ? availableWidth / columns : COL_WIDTH
+  const contentWidth = safeContainerWidth
   const gridOffset = 0
 
   // Helper to snap to grid
@@ -772,97 +794,80 @@ export const FocusLabGrid = ({
     (layout.length > 0 ? Math.max(...layout.map((i) => i.y + i.h)) : 0) * (ROW_HEIGHT + GAP) +
     (isFocusMode ? 20 : 100)
 
-  const transformPagePoint =
-    scale !== 1 && scale > 0
-      ? (point: { x: number; y: number }) => ({
-          x: point.x / scale,
-          y: point.y / scale,
-        })
-      : undefined
-
   return (
     <div
       className={`relative w-full transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
       style={{ height: containerHeight }}
     >
-      <MotionConfig transformPagePoint={transformPagePoint}>
-        {/* Centered Grid Container */}
-        <div
-          className="absolute top-0 h-full transition-all duration-500 ease-out"
-          style={{
-            left: gridOffset,
-            width: contentWidth,
-            transform: `scale(${visualScale})`,
-            transformOrigin: 'top left',
-            fontSize: fontCompensation !== 1 ? `${fontCompensation}em` : undefined,
-          }}
-        >
-          {/* Visible Grid Background - Moved to Parent */}
-
-          {containerWidth > 0 &&
-            layout.map((item) => (
-              <DraggableResizableItem
-                key={item.id}
-                item={item}
-                colWidth={colWidth}
-                onUpdate={(newProps) => updateLayout(item.id, newProps)}
-                isActive={activeId === item.id}
-                onActivate={() => setActiveId(item.id)}
-                onInteractionStart={() => setIsDraggingOrResizing(true)}
-                onInteractionEnd={() => setIsDraggingOrResizing(false)}
-                isFocusMode={isFocusMode}
-                isFocused={focusedCardIds.has(item.id)}
-                hasFocusedCards={focusedCardIds.size > 0}
-                scale={scale}
-              >
-                {item.id === 'sonic' && (
-                  <SonicShieldCard
-                    className="h-full w-full"
-                    onToggleFocus={() => onToggleFocus(item.id)}
-                    onDelete={() => handleRemoveWidget(item.id)}
-                  />
-                )}
-                {item.id === 'timer' && (
-                  <TimerCard
-                    className="h-full w-full"
-                    onToggleFocus={() => onToggleFocus(item.id)}
-                    onDelete={() => handleRemoveWidget(item.id)}
-                  />
-                )}
-                {item.id === 'brain' && (
-                  <BrainDumpCard
-                    className="h-full w-full"
-                    onToggleFocus={() => onToggleFocus(item.id)}
-                    onDelete={() => handleRemoveWidget(item.id)}
-                  />
-                )}
-                {item.id === 'todo' && (
-                  <ToDoCard
-                    className="h-full w-full"
-                    cols={item.w}
-                    onToggleFocus={() => onToggleFocus(item.id)}
-                    onDelete={() => handleRemoveWidget(item.id)}
-                  />
-                )}
-                {item.id === 'breaker' && (
-                  <TaskBreakerCard
-                    className="h-full w-full"
-                    onToggleFocus={() => onToggleFocus(item.id)}
-                    onDelete={() => handleRemoveWidget(item.id)}
-                  />
-                )}
-                {item.id === 'dopamine' && (
-                  <DopamineMenuCard
-                    className="h-full w-full"
-                    cols={item.w}
-                    onToggleFocus={() => onToggleFocus(item.id)}
-                    onDelete={() => handleRemoveWidget(item.id)}
-                  />
-                )}
-              </DraggableResizableItem>
-            ))}
-        </div>
-      </MotionConfig>
+      <div
+        className="absolute top-0 h-full transition-all duration-500 ease-out"
+        style={{
+          left: gridOffset,
+          width: contentWidth,
+        }}
+      >
+        {containerWidth > 0 &&
+          layout.map((item) => (
+            <DraggableResizableItem
+              key={item.id}
+              item={item}
+              colWidth={colWidth}
+              onUpdate={(newProps) => updateLayout(item.id, newProps)}
+              isActive={activeId === item.id}
+              onActivate={() => setActiveId(item.id)}
+              onInteractionStart={() => setIsDraggingOrResizing(true)}
+              onInteractionEnd={() => setIsDraggingOrResizing(false)}
+              isFocusMode={isFocusMode}
+              isFocused={focusedCardIds.has(item.id)}
+              hasFocusedCards={focusedCardIds.size > 0}
+            >
+              {item.id === 'sonic' && (
+                <SonicShieldCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'timer' && (
+                <TimerCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'brain' && (
+                <BrainDumpCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'todo' && (
+                <ToDoCard
+                  className="h-full w-full"
+                  cols={item.w}
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'breaker' && (
+                <TaskBreakerCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'dopamine' && (
+                <DopamineMenuCard
+                  className="h-full w-full"
+                  cols={item.w}
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+            </DraggableResizableItem>
+          ))}
+      </div>
     </div>
   )
 }
@@ -879,7 +884,6 @@ const DraggableResizableItem = ({
   isFocusMode,
   isFocused,
   hasFocusedCards,
-  scale,
 }: {
   item: GridItem
   colWidth: number
@@ -892,7 +896,6 @@ const DraggableResizableItem = ({
   isFocusMode?: boolean
   isFocused?: boolean
   hasFocusedCards?: boolean
-  scale: number
 }) => {
   const [isResizing, setIsResizing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -909,8 +912,8 @@ const DraggableResizableItem = ({
     if (!isResizing) return
 
     const handlePointerMove = (e: PointerEvent) => {
-      const deltaX = (e.clientX - startPosRef.current.x) / scale
-      const deltaY = (e.clientY - startPosRef.current.y) / scale
+      const deltaX = e.clientX - startPosRef.current.x
+      const deltaY = e.clientY - startPosRef.current.y
 
       const newWidth = startSizeRef.current.w + deltaX
       const newHeight = startSizeRef.current.h + deltaY
@@ -934,7 +937,7 @@ const DraggableResizableItem = ({
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
     }
-  }, [isResizing, colWidth, onUpdate, onInteractionEnd, item.minW, item.minH, scale])
+  }, [isResizing, colWidth, onUpdate, onInteractionEnd, item.minW, item.minH])
 
   const startPosRef = useRef({ x: 0, y: 0 })
   const startSizeRef = useRef({ w: 0, h: 0 })
