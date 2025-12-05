@@ -656,7 +656,7 @@ export const FocusLabDashboard = () => {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="order-last flex w-full items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
+                      className="order-last flex w-full flex-none flex-wrap items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 sm:w-auto sm:max-w-xl sm:self-start dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
                     >
                       <span className="text-left leading-relaxed">{t.focusLab.controls.tip}</span>
                       <button
