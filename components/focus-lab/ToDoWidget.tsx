@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
+import {
+  TODO_SYNC_EVENT,
+  createToDoItem,
+  readToDoStorage,
+  type ToDoStorageItem,
+  writeToDoStorage,
+} from './todoStorage'
 
-type ToDoItem = {
-  id: string
-  text: string
-  completed: boolean
-}
+type ToDoItem = ToDoStorageItem
 
 export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
   const { t, language: lang } = useTranslation()
@@ -19,10 +22,7 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
   // Load from localStorage
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem('focus-lab-todo-list')
-      if (saved) {
-        setTasks(JSON.parse(saved))
-      }
+      setTasks(readToDoStorage())
     } catch (e) {
       console.error('Failed to load todo list:', e)
     } finally {
@@ -34,19 +34,31 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
   useEffect(() => {
     if (!isLoaded) return
     try {
-      window.localStorage.setItem('focus-lab-todo-list', JSON.stringify(tasks))
+      writeToDoStorage(tasks)
     } catch (e) {
       console.error('Failed to save todo list:', e)
     }
   }, [tasks, isLoaded])
 
+  // Respond to external sync events
+  useEffect(() => {
+    if (!isLoaded) return
+    const handleSync = (event: Event) => {
+      const detail = (event as CustomEvent<ToDoItem[]>).detail
+      if (Array.isArray(detail)) {
+        setTasks(detail)
+      } else {
+        setTasks(readToDoStorage())
+      }
+    }
+
+    window.addEventListener(TODO_SYNC_EVENT, handleSync as EventListener)
+    return () => window.removeEventListener(TODO_SYNC_EVENT, handleSync as EventListener)
+  }, [isLoaded])
+
   const addTask = () => {
     if (!inputValue.trim()) return
-    const newTask: ToDoItem = {
-      id: Date.now().toString(),
-      text: inputValue.trim(),
-      completed: false,
-    }
+    const newTask = createToDoItem(inputValue.trim())
     setTasks((prev) => [...prev, newTask])
     setInputValue('')
   }

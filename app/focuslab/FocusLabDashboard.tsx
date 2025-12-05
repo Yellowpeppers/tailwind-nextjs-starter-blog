@@ -4,6 +4,11 @@ import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 
 import { ReactNode, useEffect, useRef, useState, createContext, useContext } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { ToDoWidget } from '@/components/focus-lab/ToDoWidget'
+import {
+  createToDoItem,
+  readToDoStorage,
+  writeToDoStorage,
+} from '@/components/focus-lab/todoStorage'
 import { dictionary } from '@/data/locale/dictionary'
 
 // Context for passing drag controls to children
@@ -1676,7 +1681,7 @@ const TimerWidget = ({
                   setTimeLeft(diff)
                   setIsRunning(false)
                 }}
-                className="bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 rounded-md px-3 py-1 text-[10px] font-bold tracking-wider uppercase"
+                className="bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 rounded-md px-3 py-1 text-xs font-bold tracking-wider uppercase"
               >
                 {t.focusLab.widgets.timer.set}
               </button>
@@ -1789,6 +1794,9 @@ const TaskBreakerWidget = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isResultView, setIsResultView] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [hasTransferred, setHasTransferred] = useState(false)
+  const [transferStatus, setTransferStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const clearTimers = () => {
@@ -1807,6 +1815,8 @@ const TaskBreakerWidget = () => {
     setIsResultView(true)
     setVisibleSteps([])
     setError(null)
+    setHasTransferred(false)
+    setTransferStatus('idle')
 
     try {
       const response = await fetch('/api/gemini', {
@@ -1843,6 +1853,23 @@ const TaskBreakerWidget = () => {
     }
   }
 
+  const handleTransferToTodo = () => {
+    if (visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred) return
+    setIsTransferring(true)
+    try {
+      const existingTasks = readToDoStorage()
+      const newTasks = visibleSteps.map((step) => createToDoItem(step))
+      writeToDoStorage([...existingTasks, ...newTasks])
+      setTransferStatus('success')
+      setHasTransferred(true)
+    } catch (err) {
+      console.error('Failed to transfer AI steps to To-Do list:', err)
+      setTransferStatus('error')
+    } finally {
+      setIsTransferring(false)
+    }
+  }
+
   const handleReset = () => {
     clearTimers()
     setTask('')
@@ -1850,27 +1877,67 @@ const TaskBreakerWidget = () => {
     setIsResultView(false)
     setIsLoading(false)
     setError(null)
+    setHasTransferred(false)
+    setTransferStatus('idle')
+    setIsTransferring(false)
   }
 
   if (isResultView) {
     return (
       <div className="flex h-full flex-col gap-4">
-        <div className="bg-primary-50 dark:bg-primary-900/20 flex items-start justify-between gap-4 rounded-2xl p-3">
-          <div>
-            <p className="text-primary-600/70 dark:text-primary-400/70 text-[10px] font-bold tracking-wider uppercase">
+        <div className="bg-primary-50 dark:bg-primary-900/20 flex flex-col gap-2 rounded-2xl p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-primary-600/80 dark:text-primary-400/80 text-xs font-bold tracking-wider uppercase">
               {t.focusLab.widgets.taskBreaker.currentMission}
             </p>
-            <p className="line-clamp-2 text-sm font-bold text-gray-900 dark:text-gray-100">
-              {task}
-            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleTransferToTodo}
+                disabled={
+                  visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred
+                }
+                className="bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 dark:bg-primary-400 dark:hover:bg-primary-300 dark:disabled:bg-primary-700/60 flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-sm transition-all disabled:cursor-not-allowed"
+                aria-label={
+                  isTransferring
+                    ? t.focusLab.widgets.taskBreaker.transferInProgress
+                    : t.focusLab.widgets.taskBreaker.transferButton
+                }
+                title={t.focusLab.widgets.taskBreaker.transferButton}
+              >
+                {isTransferring ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+                ) : (
+                  <ArrowLaunchIcon className="h-4 w-4" />
+                )}
+                <span className="sr-only">
+                  {isTransferring
+                    ? t.focusLab.widgets.taskBreaker.transferInProgress
+                    : t.focusLab.widgets.taskBreaker.transferButton}
+                </span>
+              </button>
+              <button
+                onClick={handleReset}
+                className="hover:text-primary-600 dark:hover:text-primary-400 flex h-9 shrink-0 items-center rounded-xl bg-white px-3 text-[11px] font-semibold text-gray-600 shadow-sm transition-colors dark:bg-gray-800 dark:text-gray-300"
+              >
+                {t.focusLab.widgets.taskBreaker.newTask}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleReset}
-            className="hover:text-primary-600 dark:hover:text-primary-400 shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300"
-          >
-            {t.focusLab.widgets.taskBreaker.newTask}
-          </button>
+          <p className="text-sm font-bold break-words text-gray-900 dark:text-gray-100">{task}</p>
         </div>
+        {transferStatus !== 'idle' && (
+          <p
+            className={`text-xs font-semibold ${
+              transferStatus === 'success'
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-500 dark:text-red-400'
+            }`}
+          >
+            {transferStatus === 'success'
+              ? t.focusLab.widgets.taskBreaker.transferSuccess
+              : t.focusLab.widgets.taskBreaker.transferError}
+          </p>
+        )}
 
         <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
           {isLoading ? (
@@ -1916,7 +1983,7 @@ const TaskBreakerWidget = () => {
         type="button"
         onClick={handleBreakDown}
         disabled={!task.trim()}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-2.5 font-bold text-white transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:bg-gray-100 dark:text-gray-900"
+        className="bg-primary-500 hover:bg-primary-600 dark:bg-primary-400 dark:hover:bg-primary-300 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 font-bold text-white transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:text-gray-900"
       >
         {t.focusLab.widgets.taskBreaker.button}
       </button>
@@ -2367,6 +2434,21 @@ const InfoIcon = ({ className }: { className?: string }) => (
     <circle cx="12" cy="12" r="10" />
     <line x1="12" y1="16" x2="12" y2="12" />
     <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+)
+
+const ArrowLaunchIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M7 17 17 7" />
+    <path d="M9 7h8v8" />
   </svg>
 )
 
