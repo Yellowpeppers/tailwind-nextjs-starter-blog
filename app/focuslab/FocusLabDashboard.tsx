@@ -1,6 +1,13 @@
 'use client'
 
-import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
+import {
+  motion,
+  AnimatePresence,
+  Reorder,
+  useDragControls,
+  DragControls,
+  MotionConfig,
+} from 'framer-motion'
 import { ReactNode, useEffect, useRef, useState, createContext, useContext } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { ToDoWidget } from '@/components/focus-lab/ToDoWidget'
@@ -364,6 +371,8 @@ const INITIAL_LAYOUT: GridItem[] = [
   { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 5 },
 ]
 
+const TOTAL_COLUMNS = 14
+
 const FocusLabMobileGrid = () => {
   return (
     <div className="flex flex-col gap-5 pb-16">
@@ -377,22 +386,11 @@ const FocusLabMobileGrid = () => {
   )
 }
 
-const FocusLabTabletGrid = () => {
-  return (
-    <div className="grid grid-cols-2 gap-6 pb-20">
-      <SonicShieldCard className="h-full" />
-      <TimerCard className="h-full" />
-      <BrainDumpCard className="col-span-2 h-full" />
-      <ToDoCard className="col-span-2 h-full" />
-      <TaskBreakerCard className="h-full" />
-      <DopamineMenuCard className="h-full" />
-    </div>
-  )
-}
-
 const COL_WIDTH = 54
 const ROW_HEIGHT = 54
 const GAP = 22
+const DEFAULT_DESKTOP_GRID_WIDTH = 1200
+const MIN_VISUAL_FONT_SCALE = 0.75
 
 export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
@@ -402,22 +400,21 @@ export const FocusLabDashboard = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
-  const [isTablet, setIsTablet] = useState(false)
+  const [desktopGridWidth, setDesktopGridWidth] = useState(DEFAULT_DESKTOP_GRID_WIDTH)
 
-  // Calculate dynamic padding to align with grid (x=0)
-  const totalGapsWidth = (14 - 1) * GAP
-  const availableWidth = containerWidth - totalGapsWidth
-  const colWidth = containerWidth > 0 ? availableWidth / 14 : COL_WIDTH
   const headerPadding = 0
 
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth)
+        const measuredWidth = containerRef.current.offsetWidth
+        setContainerWidth(measuredWidth)
+        if (measuredWidth > 0) {
+          setDesktopGridWidth((prev) => Math.max(prev, measuredWidth, DEFAULT_DESKTOP_GRID_WIDTH))
+        }
       }
       const width = window.innerWidth
-      setIsMobile(width < 768)
-      setIsTablet(width >= 768 && width < 1024)
+      setIsMobile(width < 500)
     }
 
     updateDimensions()
@@ -467,6 +464,8 @@ export const FocusLabDashboard = () => {
     })
   }
 
+  const isCompactDesktop = containerWidth > 0 && containerWidth < desktopGridWidth
+
   return (
     <>
       <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
@@ -480,7 +479,7 @@ export const FocusLabDashboard = () => {
           }`}
         >
           {/* Global Grid Background - Only visible on Desktop and not in Focus Mode */}
-          {!isMobile && !isFocusMode && (
+          {!isMobile && !isFocusMode && !isCompactDesktop && (
             <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
               <div
                 className="h-full w-full"
@@ -492,7 +491,7 @@ export const FocusLabDashboard = () => {
                 linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
               `,
-                  backgroundSize: `${containerWidth > 0 ? (containerWidth - (14 - 1) * GAP) / 14 + GAP : COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
+                  backgroundSize: `${desktopGridWidth > 0 ? (desktopGridWidth - (TOTAL_COLUMNS - 1) * GAP) / TOTAL_COLUMNS + GAP : COL_WIDTH + GAP}px ${ROW_HEIGHT + GAP}px`,
                   backgroundPosition: 'center -16px',
                 }}
               />
@@ -662,14 +661,13 @@ export const FocusLabDashboard = () => {
               >
                 {isMobile ? (
                   <FocusLabMobileGrid />
-                ) : isTablet ? (
-                  <FocusLabTabletGrid />
                 ) : (
                   <FocusLabGrid
                     isFocusMode={isFocusMode}
                     focusedCardIds={focusedCardIds}
                     onToggleFocus={toggleCardFocus}
                     containerWidth={containerWidth}
+                    desktopGridWidth={desktopGridWidth}
                   />
                 )}
               </motion.div>
@@ -686,11 +684,13 @@ export const FocusLabGrid = ({
   focusedCardIds = new Set(),
   onToggleFocus = () => {},
   containerWidth,
+  desktopGridWidth,
 }: {
   isFocusMode?: boolean
   focusedCardIds?: Set<string>
   onToggleFocus?: (id: string) => void
   containerWidth: number
+  desktopGridWidth: number
 }) => {
   const [layout, setLayout] = useState<GridItem[]>(INITIAL_LAYOUT)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -736,14 +736,20 @@ export const FocusLabGrid = ({
 
   // Auto-centering logic removed to ensure strict left alignment
 
-  // Calculate dynamic column width to fit container (14 columns)
-  const totalGapsWidth = (14 - 1) * GAP
-  const availableWidth = containerWidth - totalGapsWidth
-  const calculatedColWidth = containerWidth > 0 ? availableWidth / 14 : COL_WIDTH
-  const colWidth = Math.max(20, calculatedColWidth)
+  // Calculate column widths based on the desktop canvas instead of the shrinking viewport
+  const totalGapsWidth = (TOTAL_COLUMNS - 1) * GAP
+  const gridWidth = Math.max(desktopGridWidth, DEFAULT_DESKTOP_GRID_WIDTH)
+  const availableWidth = gridWidth - totalGapsWidth
+  const colWidth = availableWidth / TOTAL_COLUMNS
 
-  // Grid is now full width of the container
-  const contentWidth = containerWidth
+  const needsScale = containerWidth > 0 && containerWidth < gridWidth
+  const scale = needsScale && gridWidth > 0 ? Math.min(1, containerWidth / gridWidth) : 1
+  const visualScale = scale || 1
+  const fontCompensation =
+    visualScale < MIN_VISUAL_FONT_SCALE ? MIN_VISUAL_FONT_SCALE / visualScale : 1
+
+  // Grid width is fixed to the intrinsic width so scaling can shrink it when necessary
+  const contentWidth = gridWidth
   const gridOffset = 0
 
   // Helper to snap to grid
@@ -762,87 +768,101 @@ export const FocusLabGrid = ({
   const visibleItems =
     isFocusMode && focusedCardIds.size > 0 ? layout.filter((i) => focusedCardIds.has(i.id)) : layout
 
+  const containerHeight =
+    (layout.length > 0 ? Math.max(...layout.map((i) => i.y + i.h)) : 0) * (ROW_HEIGHT + GAP) +
+    (isFocusMode ? 20 : 100)
+
+  const transformPagePoint =
+    scale !== 1 && scale > 0
+      ? (point: { x: number; y: number }) => ({
+          x: point.x / scale,
+          y: point.y / scale,
+        })
+      : undefined
+
   return (
     <div
       className={`relative w-full transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
-      style={{
-        height:
-          (layout.length > 0 ? Math.max(...layout.map((i) => i.y + i.h)) : 0) * (ROW_HEIGHT + GAP) +
-          (isFocusMode ? 20 : 100),
-      }}
+      style={{ height: containerHeight }}
     >
-      {/* Centered Grid Container */}
-      <div
-        className="absolute top-0 h-full transition-all duration-500 ease-out"
-        style={{
-          left: gridOffset,
-          width: contentWidth, // Optional, but helps debug
-        }}
-      >
-        {/* Visible Grid Background - Moved to Parent */}
+      <MotionConfig transformPagePoint={transformPagePoint}>
+        {/* Centered Grid Container */}
+        <div
+          className="absolute top-0 h-full transition-all duration-500 ease-out"
+          style={{
+            left: gridOffset,
+            width: contentWidth,
+            transform: `scale(${visualScale})`,
+            transformOrigin: 'top left',
+            fontSize: fontCompensation !== 1 ? `${fontCompensation}em` : undefined,
+          }}
+        >
+          {/* Visible Grid Background - Moved to Parent */}
 
-        {containerWidth > 0 &&
-          layout.map((item) => (
-            <DraggableResizableItem
-              key={item.id}
-              item={item}
-              colWidth={colWidth}
-              onUpdate={(newProps) => updateLayout(item.id, newProps)}
-              isActive={activeId === item.id}
-              onActivate={() => setActiveId(item.id)}
-              onInteractionStart={() => setIsDraggingOrResizing(true)}
-              onInteractionEnd={() => setIsDraggingOrResizing(false)}
-              isFocusMode={isFocusMode}
-              isFocused={focusedCardIds.has(item.id)}
-              hasFocusedCards={focusedCardIds.size > 0}
-            >
-              {item.id === 'sonic' && (
-                <SonicShieldCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
-                />
-              )}
-              {item.id === 'timer' && (
-                <TimerCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
-                />
-              )}
-              {item.id === 'brain' && (
-                <BrainDumpCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
-                />
-              )}
-              {item.id === 'todo' && (
-                <ToDoCard
-                  className="h-full w-full"
-                  cols={item.w}
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
-                />
-              )}
-              {item.id === 'breaker' && (
-                <TaskBreakerCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
-                />
-              )}
-              {item.id === 'dopamine' && (
-                <DopamineMenuCard
-                  className="h-full w-full"
-                  cols={item.w}
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
-                />
-              )}
-            </DraggableResizableItem>
-          ))}
-      </div>
+          {containerWidth > 0 &&
+            layout.map((item) => (
+              <DraggableResizableItem
+                key={item.id}
+                item={item}
+                colWidth={colWidth}
+                onUpdate={(newProps) => updateLayout(item.id, newProps)}
+                isActive={activeId === item.id}
+                onActivate={() => setActiveId(item.id)}
+                onInteractionStart={() => setIsDraggingOrResizing(true)}
+                onInteractionEnd={() => setIsDraggingOrResizing(false)}
+                isFocusMode={isFocusMode}
+                isFocused={focusedCardIds.has(item.id)}
+                hasFocusedCards={focusedCardIds.size > 0}
+                scale={scale}
+              >
+                {item.id === 'sonic' && (
+                  <SonicShieldCard
+                    className="h-full w-full"
+                    onToggleFocus={() => onToggleFocus(item.id)}
+                    onDelete={() => handleRemoveWidget(item.id)}
+                  />
+                )}
+                {item.id === 'timer' && (
+                  <TimerCard
+                    className="h-full w-full"
+                    onToggleFocus={() => onToggleFocus(item.id)}
+                    onDelete={() => handleRemoveWidget(item.id)}
+                  />
+                )}
+                {item.id === 'brain' && (
+                  <BrainDumpCard
+                    className="h-full w-full"
+                    onToggleFocus={() => onToggleFocus(item.id)}
+                    onDelete={() => handleRemoveWidget(item.id)}
+                  />
+                )}
+                {item.id === 'todo' && (
+                  <ToDoCard
+                    className="h-full w-full"
+                    cols={item.w}
+                    onToggleFocus={() => onToggleFocus(item.id)}
+                    onDelete={() => handleRemoveWidget(item.id)}
+                  />
+                )}
+                {item.id === 'breaker' && (
+                  <TaskBreakerCard
+                    className="h-full w-full"
+                    onToggleFocus={() => onToggleFocus(item.id)}
+                    onDelete={() => handleRemoveWidget(item.id)}
+                  />
+                )}
+                {item.id === 'dopamine' && (
+                  <DopamineMenuCard
+                    className="h-full w-full"
+                    cols={item.w}
+                    onToggleFocus={() => onToggleFocus(item.id)}
+                    onDelete={() => handleRemoveWidget(item.id)}
+                  />
+                )}
+              </DraggableResizableItem>
+            ))}
+        </div>
+      </MotionConfig>
     </div>
   )
 }
@@ -859,6 +879,7 @@ const DraggableResizableItem = ({
   isFocusMode,
   isFocused,
   hasFocusedCards,
+  scale,
 }: {
   item: GridItem
   colWidth: number
@@ -871,6 +892,7 @@ const DraggableResizableItem = ({
   isFocusMode?: boolean
   isFocused?: boolean
   hasFocusedCards?: boolean
+  scale: number
 }) => {
   const [isResizing, setIsResizing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -887,8 +909,11 @@ const DraggableResizableItem = ({
     if (!isResizing) return
 
     const handlePointerMove = (e: PointerEvent) => {
-      const newWidth = startSizeRef.current.w + (e.clientX - startPosRef.current.x)
-      const newHeight = startSizeRef.current.h + (e.clientY - startPosRef.current.y)
+      const deltaX = (e.clientX - startPosRef.current.x) / scale
+      const deltaY = (e.clientY - startPosRef.current.y) / scale
+
+      const newWidth = startSizeRef.current.w + deltaX
+      const newHeight = startSizeRef.current.h + deltaY
 
       const gridW = Math.max(item.minW || 3, Math.round(newWidth / (colWidth + GAP)))
       const gridH = Math.max(item.minH || 3, Math.round(newHeight / (ROW_HEIGHT + GAP)))
@@ -909,7 +934,7 @@ const DraggableResizableItem = ({
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
     }
-  }, [isResizing, colWidth, onUpdate, onInteractionEnd, item.minW, item.minH])
+  }, [isResizing, colWidth, onUpdate, onInteractionEnd, item.minW, item.minH, scale])
 
   const startPosRef = useRef({ x: 0, y: 0 })
   const startSizeRef = useRef({ w: 0, h: 0 })
