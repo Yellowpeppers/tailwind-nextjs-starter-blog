@@ -57,7 +57,6 @@ export function genPageMetadata({
     description: description || siteMetadata.description,
     alternates: {
       canonical: canonicalUrl,
-      languages: languageAlternates,
       ...alternates,
       languages: {
         ...languageAlternates,
