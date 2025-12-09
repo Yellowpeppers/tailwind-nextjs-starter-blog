@@ -10,8 +10,9 @@ const languageAlternates: Record<string, string> = Object.fromEntries(
   locales.map((locale) => [locale, `${baseSiteUrl}/${locale}`])
 )
 
-export async function generateMetadata({ params }: { params: { lang: string } }) {
-  const locale = resolveLocale(params?.lang)
+export async function generateMetadata(props: { params: Promise<{ lang: string }> }) {
+  const params = await props.params
+  const locale = resolveLocale(params.lang)
   const canonical = `${baseSiteUrl}/${locale}`
 
   if (locale === 'en') {
@@ -54,8 +55,9 @@ export async function generateMetadata({ params }: { params: { lang: string } })
   })
 }
 
-export default async function Page({ params }: { params: { lang: string } }) {
-  const locale = resolveLocale(params?.lang)
+export default async function Page(props: { params: Promise<{ lang: string }> }) {
+  const params = await props.params
+  const locale = resolveLocale(params.lang)
   const { posts } = getLocalizedCoreContent(locale)
   return <HomeContent posts={posts} />
 }

@@ -94,7 +94,8 @@ const TestPageSchema = () => (
   </>
 )
 
-export default function TestPage({ params }: { params: { lang: string } }) {
+export default async function TestPage(props: { params: Promise<{ lang: string }> }) {
+  const params = await props.params
   return (
     <>
       <TestPageSchema />
