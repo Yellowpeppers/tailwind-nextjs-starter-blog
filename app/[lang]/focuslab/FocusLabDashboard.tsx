@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
 import { ReactNode, useEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
@@ -122,7 +123,7 @@ export function FocusLabIntro() {
 
   return (
     <header className="space-y-4 text-center lg:text-left">
-      <p className="text-primary-500 text-xs font-semibold tracking-[0.4em] uppercase">
+      <p className="inline-flex items-center justify-center rounded-full border-2 border-[#0EA5E9] bg-[#0EA5E9]/5 px-5 py-1 text-sm font-semibold tracking-[0.5em] text-[#0EA5E9] uppercase shadow-[0_8px_30px_rgba(14,165,233,0.35)] sm:text-base dark:bg-[#0EA5E9]/10">
         {t.focusLab.header.eyebrow}
       </p>
       <div className="space-y-3">
@@ -183,7 +184,7 @@ const WidgetCard = ({
   return (
     <motion.section
       layout
-      className={`group flex h-full flex-col rounded-[32px] border border-gray-200/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-shadow duration-300 sm:p-6 dark:border-gray-800/80 dark:bg-gray-950/85 ${className}`}
+      className={`group flex h-full flex-col rounded-[32px] border border-gray-200/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-shadow duration-300 sm:p-6 dark:border-gray-700/80 dark:bg-gray-900 ${className}`}
     >
       <div
         className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
@@ -230,7 +231,7 @@ const WidgetCard = ({
               className={`transition-colors ${
                 showInfo
                   ? 'text-primary-500 dark:text-primary-400'
-                  : 'text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'
+                  : 'text-gray-300 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300'
               }`}
               aria-label="Toggle description"
             >
@@ -268,7 +269,7 @@ const WidgetCard = ({
               className={`transition-colors ${
                 showDeleteConfirm
                   ? 'text-red-500 dark:text-red-400'
-                  : 'text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400'
+                  : 'text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400'
               }`}
               aria-label="Remove widget"
             >
@@ -306,7 +307,7 @@ const WidgetCard = ({
                           e.stopPropagation()
                           setShowDeleteConfirm(false)
                         }}
-                        className="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                        className="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"
                       >
                         {t.focusLab.controls.delete.cancel}
                       </button>
@@ -415,10 +416,13 @@ const FocusLabMobileGrid = () => {
 const COL_WIDTH = 54
 const ROW_HEIGHT = 54
 const GAP = 22
+const CONTROL_BUTTON_BASE =
+  'relative flex h-12 px-5 min-w-[150px] items-center justify-center rounded-full border text-sm font-semibold transition-all text-center'
 
 export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
-  const [showTip, setShowTip] = useState(true)
+  const [isTipOpen, setIsTipOpen] = useState(true)
+  const [showGroupModal, setShowGroupModal] = useState(false)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
   const { t, language: lang } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -457,6 +461,19 @@ export const FocusLabDashboard = () => {
     }
   }, [])
 
+  useEffect(() => {
+    if (!showGroupModal) return
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowGroupModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [showGroupModal])
+
   // Lock scroll in Focus Mode
   useEffect(() => {
     if (isFocusMode) {
@@ -466,6 +483,15 @@ export const FocusLabDashboard = () => {
     }
     return () => {
       document.body.style.overflow = ''
+    }
+  }, [isFocusMode])
+
+  useEffect(() => {
+    if (isFocusMode) {
+      setIsTipOpen(true)
+    } else {
+      setIsTipOpen(false)
+      setShowGroupModal(false)
     }
   }, [isFocusMode])
 
@@ -492,6 +518,77 @@ export const FocusLabDashboard = () => {
 
   return (
     <>
+      <AnimatePresence>
+        {showGroupModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setShowGroupModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              className="relative w-full max-w-md rounded-3xl border border-gray-100 bg-white/95 p-6 text-center shadow-2xl backdrop-blur dark:border-gray-700 dark:bg-gray-950/90"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="focuslab-group-modal-title"
+              aria-describedby="focuslab-group-modal-desc"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setShowGroupModal(false)}
+                className="absolute top-4 right-4 rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                aria-label={t.focusLab.controls.groupModal.close}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+              <h3
+                id="focuslab-group-modal-title"
+                className="text-xl font-bold text-gray-900 dark:text-gray-100"
+              >
+                {t.focusLab.controls.groupModal.title}
+              </h3>
+              <p
+                id="focuslab-group-modal-desc"
+                className="mt-2 text-sm text-gray-500 dark:text-gray-400"
+              >
+                {t.focusLab.controls.groupModal.description}
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Image
+                  src="/static/images/wechat-group-qr.JPG"
+                  alt={t.focusLab.controls.groupModal.qrAlt}
+                  width={320}
+                  height={320}
+                  className="h-auto w-full max-w-[260px] rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700"
+                  sizes="(max-width: 640px) 80vw, 320px"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGroupModal(false)}
+                className="mt-6 inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              >
+                {t.focusLab.controls.groupModal.close}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
         <motion.div
           layout
@@ -554,9 +651,9 @@ export const FocusLabDashboard = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
-                      className="flex items-center gap-3 border-gray-200 pr-0 sm:border-r sm:pr-4 dark:border-gray-800"
+                      className="flex items-center gap-3 border-gray-200 pr-0 sm:border-r sm:pr-4 dark:border-gray-700"
                     >
-                      <div className="bg-primary-500 flex h-8 w-8 items-center justify-center rounded-lg text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0f172a] text-white">
                         <svg
                           viewBox="0 0 24 24"
                           fill="none"
@@ -574,42 +671,59 @@ export const FocusLabDashboard = () => {
                   )}
                 </AnimatePresence>
 
-                <div className="flex flex-wrap items-center gap-3 sm:ml-6 sm:min-w-[260px]">
+                <div className="flex flex-wrap items-center gap-3 sm:ml-6">
                   <button
                     onClick={() => setIsFocusMode(!isFocusMode)}
-                    className={`group flex min-w-[150px] items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition-all ${
+                    className={`${CONTROL_BUTTON_BASE} ${
                       isFocusMode
-                        ? 'border-primary-200 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:border-primary-900/30 dark:bg-primary-900/20 dark:text-primary-400'
-                        : 'hover:border-primary-200 hover:text-primary-600 dark:hover:text-primary-400 border-gray-200 bg-white text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400'
+                        ? 'border-transparent text-white'
+                        : 'border-transparent text-white'
                     }`}
                   >
-                    {isFocusMode ? (
-                      <>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className="h-4 w-4"
-                        >
-                          <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-                        </svg>
-                        {t.focusLab.controls.exitFocus}
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className="h-4 w-4"
-                        >
-                          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                        </svg>
-                        {t.focusLab.controls.focusMode}
-                      </>
-                    )}
+                    <>
+                      <motion.span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-full"
+                        style={{
+                          background:
+                            'linear-gradient(120deg, var(--color-primary-200), var(--color-primary-400), var(--color-primary-500), var(--color-primary-300))',
+                          backgroundSize: '220% 220%',
+                        }}
+                        animate={{
+                          backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                        }}
+                        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </>
+                    <span className={`relative z-10 flex items-center gap-2 text-white`}>
+                      {isFocusMode ? (
+                        <>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                          </svg>
+                          {t.focusLab.controls.exitFocus}
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                          </svg>
+                          {t.focusLab.controls.focusMode}
+                        </>
+                      )}
+                    </span>
                   </button>
 
                   <button
@@ -631,7 +745,7 @@ export const FocusLabDashboard = () => {
                         window.location.reload()
                       }
                     }}
-                    className="group flex min-w-[150px] items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                    className={`${CONTROL_BUTTON_BASE} group border-primary-500 text-primary-600 hover:bg-primary-50 bg-white dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800`}
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -647,35 +761,76 @@ export const FocusLabDashboard = () => {
                     </svg>
                     {t.focusLab.controls.resetLayout}
                   </button>
-                </div>
-                {/* Focus Mode Tip */}
-                <AnimatePresence>
-                  {isFocusMode && showTip && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="order-last flex w-full flex-none flex-wrap items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 sm:w-auto sm:max-w-xl sm:self-start dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400"
-                    >
-                      <span className="text-left leading-relaxed">{t.focusLab.controls.tip}</span>
+
+                  {isFocusMode && (
+                    <>
                       <button
-                        onClick={() => setShowTip(false)}
-                        className="rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40"
-                        aria-label={t.focusLab.controls.dismissTip}
+                        type="button"
+                        onClick={() => setIsTipOpen((prev) => !prev)}
+                        aria-expanded={isTipOpen}
+                        className={`${CONTROL_BUTTON_BASE} border-primary-500 text-primary-600 flex-none justify-between dark:bg-gray-900 dark:text-white ${
+                          isTipOpen ? 'bg-primary-50 dark:bg-gray-800' : 'bg-white'
+                        }`}
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className="h-3.5 w-3.5"
-                        >
-                          <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
+                        <span className="mx-auto font-semibold">
+                          {isTipOpen
+                            ? t.focusLab.controls.tipToggle.hide
+                            : t.focusLab.controls.tipToggle.show}
+                        </span>
+                        <span className={`transition-transform ${isTipOpen ? 'rotate-90' : ''}`}>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                        </span>
                       </button>
-                    </motion.div>
+
+                      {lang === 'zh' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowGroupModal(true)}
+                          aria-haspopup="dialog"
+                          aria-expanded={showGroupModal}
+                          className={`${CONTROL_BUTTON_BASE} border-primary-500 text-primary-600 hover:bg-primary-50 bg-white dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M5 5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5l-4 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+                            <path d="M8 10h8M8 14h5" />
+                          </svg>
+                          {t.focusLab.controls.joinGroup}
+                        </button>
+                      )}
+
+                      <AnimatePresence initial={false}>
+                        {isTipOpen && (
+                          <motion.div
+                            key="focus-tip-banner"
+                            layout
+                            initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                            className="inline-flex max-w-full shrink-0 items-center rounded-2xl border border-gray-200/80 bg-white/90 px-4 text-xs text-gray-600 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200"
+                            style={{ minHeight: '48px' }}
+                          >
+                            <p className="text-left leading-relaxed">{t.focusLab.controls.tip}</p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
                   )}
-                </AnimatePresence>
+                </div>
               </div>
 
               {/* Grid Section */}
@@ -1005,7 +1160,7 @@ const DraggableResizableItem = ({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400"
+              className="h-3.5 w-3.5 text-gray-500 dark:text-gray-500"
             >
               <path d="M15 9l6 6" />
               <path d="M9 15l6 6" />
@@ -1359,7 +1514,7 @@ const SonicShieldWidget = () => {
         </div>
 
         {/* Vertical Master Volume */}
-        <div className="group flex h-full flex-col items-center justify-center gap-2 border-l border-gray-100 pl-4 dark:border-gray-800">
+        <div className="group flex h-full flex-col items-center justify-center gap-2 border-l border-gray-100 pl-4 dark:border-gray-700">
           <div
             className="relative h-14 w-1.5 cursor-pointer rounded-full bg-gray-100 py-1 transition-all hover:w-2 dark:bg-gray-800"
             onPointerDown={(e) => {
@@ -1413,7 +1568,7 @@ const SonicShieldWidget = () => {
                 className={`group relative flex flex-col justify-between rounded-xl border p-2.5 transition-all ${
                   isActive
                     ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
-                    : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/40'
+                    : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800'
                 }`}
               >
                 <button
@@ -1653,7 +1808,7 @@ const TimerWidget = ({
     <div className="relative flex h-full flex-col items-center justify-between py-0.5">
       {/* Top Controls */}
       <div className="flex w-full flex-col items-center gap-1">
-        <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1">
+        <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1 dark:border dark:border-gray-700 dark:bg-gray-800">
           {(['countdown', 'target'] as const).map((mode) => (
             <button
               key={mode}
@@ -1661,8 +1816,8 @@ const TimerWidget = ({
               onClick={() => setTimerMode(mode)}
               className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-all ${
                 timerMode === mode
-                  ? 'text-primary-600 bg-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'text-primary-600 bg-white shadow-sm dark:bg-gray-600 dark:text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
               }`}
             >
               {mode === 'countdown'
@@ -1697,7 +1852,7 @@ const TimerWidget = ({
                 type="time"
                 value={targetTime}
                 onChange={(event) => setTargetTime(event.target.value)}
-                className="focus:border-primary-300 focus:ring-primary-100 h-8 rounded-md border border-gray-200 bg-transparent px-2 text-xs font-semibold text-gray-800 focus:ring-2 focus:outline-none dark:border-gray-700 dark:text-gray-200"
+                className="focus:border-primary-300 focus:ring-primary-100 h-8 rounded-md border border-gray-200 bg-transparent px-2 text-xs font-semibold text-gray-800 focus:ring-2 focus:outline-none dark:border-gray-700 dark:text-gray-100"
               />
               <button
                 type="button"
@@ -1994,7 +2149,7 @@ const TaskBreakerWidget = () => {
         <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
           {t.focusLab.widgets.taskBreaker.overwhelmed}
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-gray-500 dark:text-gray-300">
           {t.focusLab.widgets.taskBreaker.description}
         </p>
       </div>
@@ -2003,14 +2158,14 @@ const TaskBreakerWidget = () => {
         value={task}
         onChange={(event) => setTask(event.target.value)}
         placeholder={t.focusLab.widgets.taskBreaker.placeholder}
-        className="focus:border-primary-500 focus:ring-primary-500 min-h-[80px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-800"
       />
 
       <button
         type="button"
         onClick={handleBreakDown}
         disabled={!task.trim()}
-        className="bg-primary-500 hover:bg-primary-600 dark:bg-primary-400 dark:hover:bg-primary-300 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 font-bold text-white transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:text-gray-900"
+        className="bg-primary-500 shadow-primary-200 hover:bg-primary-600 dark:bg-primary-500 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 font-bold text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:text-white dark:shadow-none"
       >
         {t.focusLab.widgets.taskBreaker.button}
       </button>
@@ -2038,7 +2193,7 @@ const TaskStepItem = ({ step }: { step: string }) => {
       <span
         className={`text-sm transition-all ${
           isChecked
-            ? 'text-gray-400 line-through dark:text-gray-600'
+            ? 'text-gray-400 line-through dark:text-gray-500'
             : 'text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100'
         }`}
       >
@@ -2283,7 +2438,7 @@ const BrainDumpWidget = () => {
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={t.focusLab.widgets.brainDump.placeholder}
-              className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-white py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             />
             <button
               type="button"
@@ -2310,7 +2465,7 @@ const BrainDumpWidget = () => {
             type="button"
             onClick={handleClearAll}
             disabled={leftItems.length === 0 && rightItems.length === 0}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:bg-gray-100 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:bg-gray-100 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             title={t.focusLab.widgets.brainDump.accessibility.clearBoard}
             aria-label={t.focusLab.widgets.brainDump.accessibility.clearBoard}
           >
@@ -2363,7 +2518,7 @@ const BrainDumpWidget = () => {
       </div>
 
       {/* Two-Column Masonry Grid */}
-      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-1.5 dark:border-gray-800 dark:bg-gray-900/20 [&::-webkit-scrollbar]:hidden">
+      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-1.5 dark:border-gray-700 dark:bg-gray-800/20 [&::-webkit-scrollbar]:hidden">
         {leftItems.length === 0 && rightItems.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-gray-400">
             <p className="text-sm">{t.focusLab.widgets.brainDump.emptyTitle}</p>
@@ -2619,7 +2774,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
             onChange={(e) => setNewOption(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addOption()}
             placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
-            className="focus:border-primary-500 focus:ring-primary-500 flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            className="focus:border-primary-500 focus:ring-primary-500 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
           <button
             onClick={addOption}
@@ -2637,7 +2792,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{opt}</span>
               <button
                 onClick={() => removeOption(idx)}
-                className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
+                className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:text-gray-500"
                 aria-label={t.focusLab.widgets.dopamineMenu.accessibility.removeOption}
               >
                 <svg

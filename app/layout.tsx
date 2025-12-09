@@ -3,18 +3,12 @@ import 'pliny/search/algolia.css'
 import 'remark-github-blockquote-alert/alert.css'
 
 import { Space_Grotesk } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/react'
-import { SearchProvider, SearchConfig } from 'pliny/search'
-import { Suspense } from 'react'
-import Header from '@/components/Header'
-import SectionContainer from '@/components/SectionContainer'
-import Footer from '@/components/Footer'
-import GoogleAnalytics from '@/components/GoogleAnalytics'
-import MicrosoftClarity from '@/components/MicrosoftClarity'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
-import { LanguageProvider } from '@/context/LanguageContext'
 import { Metadata } from 'next'
+import { ReactNode } from 'react'
+import { headers } from 'next/headers'
+import { defaultLocale, isLocale, localeToHtmlLang, Locale } from '@/lib/i18n'
 
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -67,8 +61,25 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const getHeaderLocale = async () => {
+  try {
+    const headerList = await headers()
+    if (typeof headerList?.get === 'function') {
+      return headerList.get('x-path-locale')
+    }
+  } catch (error) {
+    // headers() is unavailable during static builds; fall back to default
+  }
+  return null
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
   const basePath = process.env.BASE_PATH || ''
+  const headerLocale = await getHeaderLocale()
+  const fallbackLocale: Locale = siteMetadata.language.toLowerCase().startsWith('zh')
+    ? 'zh'
+    : defaultLocale
+  const activeLocale = headerLocale && isLocale(headerLocale) ? headerLocale : fallbackLocale
   const socialProfiles = [
     siteMetadata.github,
     siteMetadata.x,
@@ -92,14 +103,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         '@type': 'ContactPoint',
         email: siteMetadata.email,
         contactType: 'customer support',
-        availableLanguage: siteMetadata.language,
+        availableLanguage: localeToHtmlLang(activeLocale),
       },
     ],
   }
 
   return (
     <html
-      lang={siteMetadata.language}
+      lang={localeToHtmlLang(activeLocale)}
       className={`${space_grotesk.variable} scroll-smooth`}
       suppressHydrationWarning
     >
@@ -141,22 +152,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`bg-white pl-[calc(100vw-100%)] text-black antialiased dark:bg-gray-950 dark:text-white ${space_grotesk.variable}`}
         suppressHydrationWarning
       >
-        <ThemeProviders>
-          <LanguageProvider>
-            <Suspense fallback={null}>
-              <GoogleAnalytics />
-              <MicrosoftClarity />
-            </Suspense>
-            <Analytics />
-            <SectionContainer>
-              <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
-                <Header />
-                <main className="mb-auto">{children}</main>
-              </SearchProvider>
-              <Footer />
-            </SectionContainer>
-          </LanguageProvider>
-        </ThemeProviders>
+        <ThemeProviders>{children}</ThemeProviders>
       </body>
     </html>
   )

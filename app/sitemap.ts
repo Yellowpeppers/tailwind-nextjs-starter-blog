@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { allBlogs } from 'contentlayer/generated'
 import siteMetadata from '@/data/siteMetadata'
+import { addLocalePrefix, locales } from '@/lib/i18n'
 
 export const dynamic = 'force-static'
 
@@ -9,10 +10,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const blogRoutes = allBlogs
     .filter((post) => !post.draft)
-    .map((post) => ({
-      url: `${siteUrl}/${post.path}`,
-      lastModified: post.lastmod || post.date,
-    }))
+    .flatMap((post) =>
+      locales.map((locale) => ({
+        url: `${siteUrl}${addLocalePrefix(locale, `/${post.path}`)}`,
+        lastModified: post.lastmod || post.date,
+      }))
+    )
 
   const staticRoutes = [
     '',
@@ -26,10 +29,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     'tools/noise',
   ]
 
-  const routes = staticRoutes.map((route) => ({
-    url: `${siteUrl}/${route}`,
-    lastModified: new Date().toISOString().split('T')[0],
-  }))
+  const routes = locales.flatMap((locale) =>
+    staticRoutes.map((route) => ({
+      url: `${siteUrl}${addLocalePrefix(locale, route ? `/${route}` : '/')}`,
+      lastModified: new Date().toISOString().split('T')[0],
+    }))
+  )
 
   return [...routes, ...blogRoutes]
 }

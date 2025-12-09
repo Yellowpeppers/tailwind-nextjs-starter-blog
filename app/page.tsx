@@ -1,25 +1,29 @@
-import { sortPosts, allCoreContent } from 'pliny/utils/contentlayer'
-// Force rebuild
-import { allBlogs } from 'contentlayer/generated'
-import HomeContent from '@/components/HomeContent'
+import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
+import { defaultLocale } from '@/lib/i18n'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: {
-    absolute: 'NeuroHacks Lab | ADHD Tools & Test',
+    absolute: 'Free ADHD Test Online & Focus Tools | NeuroHacks Lab',
   },
   description:
-    'Take our free, private ADHD test online. Based on the WHO ASRS v1.1 checklist for adults. No email required, instant scoring, and the Focus Lab productivity dashboard.',
+    'Take the free Adult ADHD Test (WHO ASRS v1.1). Private, instant results, no email required. Plus, access our Focus Lab dashboard to boost productivity.',
   keywords: [
     'adhd test online',
-    'adhd tools',
-    'adhd resources for adults',
-    'adhd focus lab',
+    'free adhd assessment',
+    'adult adhd symptoms',
+    'neurodivergent tools',
+    'focus dashboard',
+    'asrs v1.1',
     'neurohacks lab',
   ],
+  openGraph: {
+    title: 'Free ADHD Test Online & Focus Tools',
+    description: 'Take the free, private WHO ASRS v1.1 assessment. No email required.',
+    type: 'website',
+  },
 }
 
-export default async function Page() {
-  const sortedPosts = sortPosts(allBlogs)
-  const posts = allCoreContent(sortedPosts)
-  return <HomeContent posts={posts} />
+export default function RootPage() {
+  redirect(`/${defaultLocale}`)
 }

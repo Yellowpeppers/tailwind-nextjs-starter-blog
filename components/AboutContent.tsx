@@ -15,7 +15,7 @@ interface Props {
 
 export default function AboutContent({ authorEn, authorCn, mainContentEn, mainContentCn }: Props) {
   const { language } = useTranslation()
-  const isCn = language === 'cn'
+  const isCn = language === 'zh'
 
   const author = isCn ? authorCn : authorEn
   const content = isCn ? mainContentCn : mainContentEn

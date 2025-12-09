@@ -1,4 +1,4 @@
-export type Locale = 'en' | 'cn'
+import { Locale } from '@/lib/i18n'
 
 export const dictionary = {
   en: {
@@ -43,6 +43,7 @@ export const dictionary = {
         guidesDesc:
           "Say no to the 'ADHD tax'. Which fidgets are truly silent? Which apps actually work? We've tested all the gear for you.",
         enterFocusLab: 'Enter Focus Lab',
+        exploreGuides: 'Discover Guides',
       },
       faq: {
         tagline: 'FAQs',
@@ -63,7 +64,7 @@ export const dictionary = {
           },
           {
             q: 'What should I do after the test?',
-            a: 'If your score is high, we recommend consulting a psychiatrist. Meanwhile, you can directly use our **Focus Lab** and read related guides to start managing distraction issues immediately.',
+            a: 'If your score is high, we recommend consulting a psychiatrist. Meanwhile, you can directly use our [Focus Lab](/focuslab) and read related guides to start managing distraction issues immediately.',
           },
         ],
       },
@@ -76,12 +77,49 @@ export const dictionary = {
         allPosts: 'All Posts',
       },
     },
+    guides: {
+      metaTitle: 'ADHD Guides & Product Reviews',
+      metaDescription:
+        'Browse ADHD-friendly gear tests, low-stim routines, and sensory regulation guides written by NeuroHacks Lab.',
+      pageTitle: 'All Guides & Reviews',
+      list: {
+        allPosts: 'All Posts',
+        prev: 'Previous',
+        next: 'Next',
+        pagination: '{current} of {total}',
+        filterLabel: 'Filter posts by tag',
+        tagLabel: 'View posts tagged {tag}',
+        readMore: 'Read more',
+        readMoreLabel: 'Read more: {title}',
+      },
+    },
+    tags: {
+      metaTitle: 'Browse ADHD Topics',
+      metaDescription: 'Find ADHD tools, routines, and sensory supports by topic.',
+      eyebrow: 'Topics',
+      title: 'Explore Topics',
+      description: 'Browse our growing library of guides, reviews, and hacks by category.',
+      empty: 'No topics found.',
+      cardDescription: 'Insights, guides, and reviews curated for {tag}.',
+      cardAria: 'View posts tagged {tag}',
+      single: 'post',
+      plural: 'posts',
+    },
+    notFound: {
+      title: 'Sorry we couldn’t find this page.',
+      description: 'But don’t worry, you can find plenty of other things on our homepage.',
+      cta: 'Back to homepage',
+    },
     focusLab: {
       header: {
         eyebrow: 'Focus Lab',
         title: 'Your Immersive ADHD Workspace',
         description:
           'A "focus sanctuary" designed for the hyperactive brain. No more switching between apps—white noise, Pomodoro timer, and task breakdown tools are all integrated here.\nThis is your personal mission control to block distractions and regain control.',
+      },
+      loading: {
+        title: 'Loading Focus Lab',
+        description: 'Building your distraction-free workspace...',
       },
       widgets: {
         sonicShield: {
@@ -135,7 +173,7 @@ export const dictionary = {
           subtitle: 'Clear your mind. Capture thoughts.',
           emptyTitle: 'Your mind is clear',
           emptySubtitle: 'Capture thoughts as they come',
-          placeholder: 'Type or paste anything...',
+          placeholder: 'Type text here or paste an image...',
           accessibility: {
             addThought: 'Add note',
             clearBoard: 'Clear all notes',
@@ -178,6 +216,18 @@ export const dictionary = {
         resetLayout: 'Reset Layout',
         tip: 'Drag the header row to change the layout. Click the header row to hide or show the card. Drag the bottom right corner of the card to resize it.',
         dismissTip: 'Dismiss tip',
+        tipToggle: {
+          show: 'Show tips',
+          hide: 'Hide tips',
+        },
+        joinGroup: 'Join Focus Lab WeChat',
+        groupModal: {
+          title: 'Join the NeuroHacks Lab WeChat Group',
+          description:
+            'Scan to join other Focus Lab users and swap ADHD productivity systems, rituals, and tools.',
+          close: 'Close',
+          qrAlt: 'WeChat QR code for the NeuroHacks community',
+        },
         delete: {
           confirm: 'Remove this card?',
           desc: 'You can restore it by clicking "Reset Layout" at the top.',
@@ -550,11 +600,97 @@ export const dictionary = {
       loading: 'Loading...',
       error: 'Something went wrong',
     },
+    tools: {
+      dopamine: {
+        metaTitle: 'Dopamine Menu Spinner',
+        metaDescription:
+          'Spin a wheel of science-backed micro-activities whenever your ADHD brain craves dopamine.',
+        eyebrow: 'Micro Tool',
+        title: 'The Dopamine Menu',
+        subtitle: "Don't doom-scroll. Spin the wheel.",
+        question: 'How much time/energy do you have?',
+        nowServingEyebrow: 'Now Serving',
+        resultEyebrow: 'Your pull',
+        spinButton: 'Give me a hit',
+        emptyHistory: 'Spin the wheel to log your dopamine hits.',
+        energyModes: {
+          low: {
+            label: 'Low',
+            selectorHint: 'Quick Hit (5 mins)',
+            description: 'Micro hits to re-engage your brain without spending a ton of energy.',
+            activities: [
+              'Drink water',
+              'Stretch it out',
+              '5 jumping jacks',
+              'Pet the cat',
+              'Deep belly breaths',
+              'Sip a hot drink',
+            ],
+          },
+          medium: {
+            label: 'Medium',
+            selectorHint: 'Sensory Reset',
+            description: 'Regulate your nervous system with tactile or sensory boosts.',
+            activities: [
+              'Cold water on your face',
+              'Wrap up in a weighted blanket',
+              'Blast your hype playlist',
+              'Diffuse a citrus scent',
+            ],
+          },
+          high: {
+            label: 'High',
+            selectorHint: 'Deep Dive (30+ mins)',
+            description: 'Lean into the hyperfocus with immersive, soul-filling work.',
+            activities: [
+              'Read a chapter',
+              'Sketch or draw',
+              'Walk outside',
+              'Tidy one zone',
+              'Cook something cozy',
+            ],
+          },
+        },
+      },
+      noise: {
+        metaTitle: 'Deep Focus Noise Generator',
+        metaDescription:
+          'Loop brown, pink, or white noise to mask distractions and enter deep work.',
+        eyebrow: 'Deep Work Utility',
+        title: 'Deep Focus Noise Generator',
+        subtitle: 'Select a color frequency to mask distractions.',
+        nowPlayingEyebrow: 'Now Playing',
+        colorLabel: 'Color',
+        whyItWorksEyebrow: 'Why it works',
+        whyItWorksDescription:
+          "Brown noise (low frequency) is often preferred by ADHD brains because it dampens the 'internal monologue' and creates a consistent sound blanket, unlike white noise which can be too harsh.",
+        controls: {
+          playLabel: 'Play noise',
+          pauseLabel: 'Pause noise',
+          volumeLabel: 'Volume',
+        },
+        playerLabel: 'Focus noise player',
+        tracks: {
+          brown: {
+            label: 'Brown Noise',
+            sublabel: 'Deep rumble for silencing mental chatter',
+          },
+          pink: {
+            label: 'Pink Noise',
+            sublabel: 'Balanced rain-like bed for gentle focus',
+          },
+          white: {
+            label: 'White Noise',
+            sublabel: 'Bright static to mask office conversations',
+          },
+        },
+      },
+    },
   },
-  cn: {
+  zh: {
     nav: {
       test: 'ADHD 自测',
-      focusLab: '专注实验室',
+      focusLab: 'Focus Lab',
       guides: '指南',
       about: '关于',
       home: '首页',
@@ -592,6 +728,7 @@ export const dictionary = {
           '你的私人任务控制台。集成白噪音、任务拆解器和可视化计时器，打造无干扰的深度工作流。',
         guidesDesc: '拒绝智商税。哪款解压玩具真静音？哪个 App 真正好用？我们替你实测了所有装备。',
         enterFocusLab: '进入实验室',
+        exploreGuides: '查看指南',
       },
       faq: {
         tagline: '常见问题',
@@ -612,7 +749,7 @@ export const dictionary = {
           },
           {
             q: '测完之后我该做什么？',
-            a: '如果分数较高，建议咨询精神科医师。同时，你可以直接使用我们的 Focus Lab（专注实验室） 和阅读相关指南，立即开始尝试缓解注意力分散的问题。',
+            a: '如果分数较高，建议咨询精神科医师。同时，你可以直接使用我们的 [Focus Lab](/focuslab) 并阅读相关指南，立即开始尝试缓解注意力分散的问题。',
           },
         ],
       },
@@ -625,12 +762,48 @@ export const dictionary = {
         allPosts: '所有文章',
       },
     },
+    guides: {
+      metaTitle: 'ADHD 指南与产品评测',
+      metaDescription: '浏览 NeuroHacks Lab 撰写的 ADHD 友好型装备评测、低刺激日常与感官调节指南。',
+      pageTitle: '全部指南与评测',
+      list: {
+        allPosts: '所有文章',
+        prev: '上一页',
+        next: '下一页',
+        pagination: '第 {current} / {total} 页',
+        filterLabel: '按标签筛选文章',
+        tagLabel: '查看 {tag} 标签文章',
+        readMore: '阅读更多',
+        readMoreLabel: '阅读更多：{title}',
+      },
+    },
+    tags: {
+      metaTitle: '按主题浏览 ADHD 资源',
+      metaDescription: '按主题查找 ADHD 工具、日常系统与感官调节装备。',
+      eyebrow: '主题',
+      title: '探索主题',
+      description: '按照类别浏览我们不断扩展的指南、评测与实战技巧。',
+      empty: '暂无主题',
+      cardDescription: '围绕 {tag} 精选的洞察与指南。',
+      cardAria: '查看 {tag} 标签文章',
+      single: '篇文章',
+      plural: '篇文章',
+    },
+    notFound: {
+      title: '抱歉，页面不存在。',
+      description: '别担心，可以回到首页继续探索。',
+      cta: '返回首页',
+    },
     focusLab: {
       header: {
-        eyebrow: '专注实验室',
+        eyebrow: 'Focus Lab',
         title: '你的 ADHD 沉浸式工作台',
         description:
           '专为多动大脑设计的“专注避难所”。无需在不同 App 间来回切换，这里集成了注意力中转站、今日待办、白噪音、番茄钟和AI任务拆解等工具。\n这就是你的私人任务控制中心，帮你屏蔽干扰，找回掌控感。',
+      },
+      loading: {
+        title: '正在加载 Focus Lab',
+        description: '正在搭建你的无干扰工作台...',
       },
       controls: {
         focusMode: '专注模式',
@@ -638,6 +811,17 @@ export const dictionary = {
         resetLayout: '重置布局',
         tip: '拖动标题行来改变布局。点击标题行来隐藏或者显示这个卡片。拖动卡片右下角来改变卡片大小。',
         dismissTip: '关闭提示',
+        tipToggle: {
+          show: '显示提示',
+          hide: '收起提示',
+        },
+        joinGroup: '加入 Focus Lab 微信群',
+        groupModal: {
+          title: '加入 NeuroHacks Lab 微信群',
+          description: '微信扫码进群，与其他 Focus Lab 用户一同交流 ADHD 效率工具。',
+          close: '关闭',
+          qrAlt: 'NeuroHacks 微信交流群二维码',
+        },
         delete: {
           confirm: '删除此卡片？',
           desc: '您可以通过点击顶部的“重置布局”来恢复它。',
@@ -703,7 +887,7 @@ export const dictionary = {
           subtitle: '清空大脑，捕捉想法',
           emptyTitle: '你的大脑很清醒',
           emptySubtitle: '随时捕捉闪现的灵感',
-          placeholder: '输入或粘贴任何内容...',
+          placeholder: '在这里输入文本或粘贴图片...',
           accessibility: {
             addThought: '添加便签',
             clearBoard: '清空所有便签',
@@ -783,8 +967,12 @@ export const dictionary = {
           title: '常见问题',
           items: [
             {
-              q: '这个专注实验室是免费的吗？',
-              a: '是的，专注实验室完全免费使用。它完全在你的浏览器中运行。',
+              q: 'Focus Lab 是免费的吗？',
+              a: '是的，Focus Lab 完全免费使用。它完全在你的浏览器中运行。',
+            },
+            {
+              q: '如何在桌面端更好地使用 Focus Lab？',
+              a: '在 Chrome、Edge 等现代浏览器中使用“安装”或“添加到 Dock/任务栏”的功能，将 Focus Lab 保存为桌面应用，就能像普通软件一样一键启动，保持沉浸体验。',
             },
             {
               q: '我需要下载什么吗？',
@@ -795,7 +983,7 @@ export const dictionary = {
       },
     },
     test: {
-      title: '免费成人 ADHD 自测',
+      title: '成人 ADHD 在线免费自测',
       subtitle: 'ASRS-v1.1',
       description:
         '通过 18 道基于临床标准的问题，科学评估您的日常行为模式与成人 ADHD 典型症状的契合度。',
@@ -1060,7 +1248,7 @@ export const dictionary = {
         },
         cta: {
           title: '准备好进入状态了吗？访问您的个人专注仪表盘。',
-          button: '进入专注实验室 →',
+          button: '进入 Focus Lab →',
           retake: '重新测试',
           guide: '📚 推荐阅读：静音解压玩具指南',
           home: '返回首页',
@@ -1097,5 +1285,77 @@ export const dictionary = {
       loading: '加载中...',
       error: '出错了',
     },
+    tools: {
+      dopamine: {
+        metaTitle: '多巴胺菜单旋转器',
+        metaDescription: '当 ADHD 大脑渴望刺激时，随机抽取一项经验证的微活动来补充多巴胺。',
+        eyebrow: '微型工具',
+        title: '多巴胺菜单',
+        subtitle: '别再刷短视频了，抽一张卡就动起来。',
+        question: '你现在的时间/能量是多少？',
+        nowServingEyebrow: '现在供应',
+        resultEyebrow: '你的抽卡',
+        spinButton: '给我多巴胺',
+        emptyHistory: '转动转盘即可记录你的多巴胺任务。',
+        energyModes: {
+          low: {
+            label: '低能量',
+            selectorHint: '快速回血（5分钟）',
+            description: '用最小的能量重新启动大脑，不造成额外负担。',
+            activities: ['喝水', '伸展身体', '5个开合跳', '撸猫/狗', '深呼吸', '喝一口热饮'],
+          },
+          medium: {
+            label: '中等',
+            selectorHint: '感官重启',
+            description: '用触觉或感官刺激来调节神经系统。',
+            activities: ['用冷水洗脸', '裹上重力毯', '播放打气歌单', '扩香柑橘味'],
+          },
+          high: {
+            label: '高能量',
+            selectorHint: '深潜模式（30+分钟）',
+            description: '把高能量导入沉浸式的、滋养心灵的项目。',
+            activities: ['读一章书', '随手速写', '走到户外', '整理一个角落', '做一道治愈料理'],
+          },
+        },
+      },
+      noise: {
+        metaTitle: '深度专注噪音发生器',
+        metaDescription: '循环播放棕噪、粉噪或白噪音，屏蔽干扰进入深度工作。',
+        eyebrow: '深度工作工具',
+        title: '深度专注噪音发生器',
+        subtitle: '选择一个频段来屏蔽干扰。',
+        nowPlayingEyebrow: '当前播放',
+        colorLabel: '频段',
+        whyItWorksEyebrow: '为什么有效',
+        whyItWorksDescription:
+          '棕噪音（低频）更受 ADHD 大脑青睐，因为它能压低“内部独白”，形成稳定的声音毯，而白噪音往往过于刺耳。',
+        controls: {
+          playLabel: '播放噪音',
+          pauseLabel: '暂停噪音',
+          volumeLabel: '音量',
+        },
+        playerLabel: '专注噪音播放器',
+        tracks: {
+          brown: {
+            label: '棕噪音',
+            sublabel: '深沉的隆隆声，消除脑内杂音',
+          },
+          pink: {
+            label: '粉噪音',
+            sublabel: '平衡的落雨声，温柔包裹注意力',
+          },
+          white: {
+            label: '白噪音',
+            sublabel: '明亮静电声，遮蔽办公室闲聊',
+          },
+        },
+      },
+    },
   },
+}
+
+export type Dictionary = (typeof dictionary)['en']
+
+export const getDictionary = async (locale: Locale): Promise<Dictionary> => {
+  return dictionary[locale]
 }

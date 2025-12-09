@@ -10,13 +10,66 @@ import { useTranslation } from '@/context/LanguageContext'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import { Blog } from 'contentlayer/generated'
 import { BeakerIcon } from '@heroicons/react/24/outline'
-import { BookOpenIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
+import { BookOpenIcon } from '@heroicons/react/24/outline'
+import { motion } from 'framer-motion'
+import { Fragment, ReactNode } from 'react'
 
 const MAX_DISPLAY = 5
 
 export default function HomeContent({ posts }: { posts: CoreContent<Blog>[] }) {
   const { t, language } = useTranslation()
-  const locale = language === 'cn' ? 'zh-CN' : 'en-US'
+  const locale = language === 'zh' ? 'zh-CN' : 'en-US'
+  const containerClass = 'mx-auto w-full max-w-6xl px-6'
+  const sectionAnimation = {
+    initial: { opacity: 0, y: 20 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true },
+    transition: { duration: 0.5 },
+  }
+
+  const renderRichText = (text: string) => {
+    const nodes: ReactNode[] = []
+    const pattern = /(\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*)/g
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        nodes.push(
+          <Fragment key={`text-${lastIndex}`}>{text.slice(lastIndex, match.index)}</Fragment>
+        )
+      }
+
+      if (match[2] && match[3]) {
+        nodes.push(
+          <Link
+            key={`link-${match.index}-${match[3]}`}
+            href={match[3]}
+            className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 font-semibold"
+          >
+            {match[2]}
+          </Link>
+        )
+      } else if (match[4]) {
+        nodes.push(
+          <strong
+            key={`bold-${match.index}`}
+            className="font-semibold text-gray-900 dark:text-gray-100"
+          >
+            {match[4]}
+          </strong>
+        )
+      }
+
+      lastIndex = match.index + match[0].length
+    }
+
+    if (lastIndex < text.length) {
+      nodes.push(<Fragment key={`text-${lastIndex}`}>{text.slice(lastIndex)}</Fragment>)
+    }
+
+    return nodes
+  }
 
   const trustFeatures = [
     {
@@ -75,50 +128,10 @@ export default function HomeContent({ posts }: { posts: CoreContent<Blog>[] }) {
     },
   ]
 
-  const exploreLinks = [
-    {
-      title: t.nav.focusLab,
-      description: t.home.resourceHub.focusLabDesc,
-      href: '/focuslab',
-      icon: (
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className="h-7 w-7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeLinejoin="round" />
-          <path d="M3 9h18" strokeLinejoin="round" />
-          <path d="M9 21V9" strokeLinejoin="round" />
-        </svg>
-      ),
-      linkText: t.home.resourceHub.enterFocusLab,
-    },
-    {
-      title: t.nav.guides,
-      description: t.home.resourceHub.guidesDesc,
-      href: '/guides',
-      icon: (
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className="h-7 w-7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
-          <path d="M6 3h11a2 2 0 012 2v14l-4-3-4 3-4-3-4 3V5a2 2 0 012-2z" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-  ]
-
   return (
     <div className="space-y-0">
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="text-left">
+      <motion.section {...sectionAnimation} className="py-16">
+        <div className={`${containerClass} text-left`}>
           <p className="text-primary-500 text-sm font-semibold tracking-[0.2em] uppercase">
             {t.home.heroTagline}
           </p>
@@ -157,63 +170,71 @@ export default function HomeContent({ posts }: { posts: CoreContent<Blog>[] }) {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="bg-gray-50 py-24 dark:bg-gray-900/50">
-        <div className="mx-auto max-w-6xl px-6">
+      <motion.section {...sectionAnimation} className="bg-gray-50 py-24 dark:bg-gray-900/50">
+        <div className={containerClass}>
           <div className="mb-16">
             <div className="text-primary-500 mb-4 flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
               <span className="bg-primary-500 flex h-1 w-1 rounded-full"></span>
-              探索 NeuroHacks
+              {t.home.resourceHub.tagline}
               <span className="bg-primary-500 flex h-1 w-1 rounded-full"></span>
             </div>
-            <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">资源中心</h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              从科学筛查到实战工具，我们为你打造了一整套“多动大脑”生存指南。
-            </p>
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">
+              {t.home.resourceHub.title}
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400">{t.home.resourceHub.desc}</p>
           </div>
 
           <div className="grid gap-8 md:grid-cols-2">
-            {/* Focus Lab Card */}
             <Link
               href="/focuslab"
-              className="group hover:border-primary-200 hover:shadow-primary-500/10 dark:hover:border-primary-900 relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-8 transition-all hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"
+              className="group rounded-2xl border border-gray-100 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
             >
-              <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 mb-6 inline-flex rounded-2xl p-4">
-                <BeakerIcon className="h-8 w-8" />
+              <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-300 mb-6 inline-flex items-center justify-center rounded-full p-3">
+                <BeakerIcon className="h-10 w-10" />
               </div>
-              <h3 className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">专注实验室</h3>
+              <h3 className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
+                {t.nav.focusLab}
+              </h3>
               <p className="mb-6 text-gray-600 dark:text-gray-400">
-                你的私人任务控制台。集成白噪音、任务拆解器和可视化计时器，打造无干扰的深度工作流。
+                {t.home.resourceHub.focusLabDesc}
               </p>
-              <div className="text-primary-500 transition-gap flex items-center font-bold group-hover:gap-2">
-                进入实验室 <ArrowRightIcon className="ml-2 h-4 w-4" />
+              <div className="text-primary-600 mt-8 flex items-center justify-between font-semibold">
+                <span>{t.home.resourceHub.enterFocusLab}</span>
+                <span className="text-xl transition-transform duration-300 group-hover:translate-x-1">
+                  -&gt;
+                </span>
               </div>
             </Link>
 
-            {/* Guides Card */}
             <Link
-              href="/blog"
-              className="group hover:border-primary-200 hover:shadow-primary-500/10 dark:hover:border-primary-900 relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-8 transition-all hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"
+              href="/guides"
+              className="group rounded-2xl border border-gray-100 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
             >
-              <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 mb-6 inline-flex rounded-2xl p-4">
-                <BookOpenIcon className="h-8 w-8" />
+              <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-300 mb-6 inline-flex items-center justify-center rounded-full p-3">
+                <BookOpenIcon className="h-10 w-10" />
               </div>
-              <h3 className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">指南</h3>
+              <h3 className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
+                {t.nav.guides}
+              </h3>
               <p className="mb-6 text-gray-600 dark:text-gray-400">
-                拒绝智商税。哪款解压玩具真静音？哪个 App 真正好用？我们替你实测了所有装备。
+                {t.home.resourceHub.guidesDesc}
               </p>
-              <div className="text-primary-500 transition-gap flex items-center font-bold group-hover:gap-2">
-                Explore 指南 <ArrowRightIcon className="ml-2 h-4 w-4" />
+              <div className="text-primary-600 mt-8 flex items-center justify-between font-semibold">
+                <span>{t.home.resourceHub.exploreGuides}</span>
+                <span className="text-xl transition-transform duration-300 group-hover:translate-x-1">
+                  -&gt;
+                </span>
               </div>
             </Link>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="bg-white py-24 dark:bg-gray-950">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="space-y-4 text-center">
+      <motion.section {...sectionAnimation} className="bg-white py-24 dark:bg-gray-950">
+        <div className={containerClass}>
+          <div className="mx-auto max-w-4xl space-y-4 text-center">
             <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
               {t.home.faq.tagline}
             </p>
@@ -222,7 +243,7 @@ export default function HomeContent({ posts }: { posts: CoreContent<Blog>[] }) {
             </h2>
             <p className="text-base text-gray-600 dark:text-gray-300">{t.home.faq.desc}</p>
           </div>
-          <div className="mx-auto mt-10 max-w-2xl space-y-4">
+          <div className="mx-auto mt-10 max-w-3xl space-y-4">
             {t.home.faq.items.map((faq) => (
               <details
                 key={faq.q}
@@ -246,105 +267,113 @@ export default function HomeContent({ posts }: { posts: CoreContent<Blog>[] }) {
                     </svg>
                   </span>
                 </summary>
-                <div className="mt-4 text-base text-gray-600 dark:text-gray-300">{faq.a}</div>
+                <div className="mt-4 text-base text-gray-600 dark:text-gray-300">
+                  {renderRichText(faq.a)}
+                </div>
               </details>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <div className="mb-12 space-y-4 text-left">
-          <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
-            {t.home.blog.tagline}
-          </p>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-            {t.home.blog.title}
-          </h2>
-          <p className="max-w-3xl text-base text-gray-600 dark:text-gray-300">{t.home.blog.desc}</p>
-        </div>
-        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
-          {!posts.length && t.home.blog.noPosts}
-          {posts.slice(0, MAX_DISPLAY).map((post) => {
-            const { slug, date, title, summary, tags, images } = post
-            const coverImage = images?.[0]
-            return (
-              <li key={slug} className="py-12">
-                <article>
-                  <div className="space-y-2 xl:grid xl:grid-cols-5 xl:items-center xl:space-y-0">
-                    <dl>
-                      <dt className="sr-only">Published on</dt>
-                      <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
-                        <time dateTime={date}>{formatDate(date, locale)}</time>
-                      </dd>
-                    </dl>
-                    <div className={`space-y-5 ${coverImage ? 'xl:col-span-3' : 'xl:col-span-4'}`}>
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="text-2xl leading-8 font-bold tracking-tight">
-                            <Link
-                              href={`/guides/${slug}`}
-                              className="text-gray-900 dark:text-gray-100"
-                            >
-                              {title}
-                            </Link>
-                          </h3>
-                          <div className="flex flex-wrap">
-                            {tags.map((tag) => (
-                              <Tag key={tag} text={tag} />
-                            ))}
+      <motion.section {...sectionAnimation} className="py-24">
+        <div className={containerClass}>
+          <div className="mb-12 space-y-4 text-left">
+            <p className="text-primary-500 text-sm font-semibold tracking-[0.3em] uppercase">
+              {t.home.blog.tagline}
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+              {t.home.blog.title}
+            </h2>
+            <p className="max-w-3xl text-base text-gray-600 dark:text-gray-300">
+              {t.home.blog.desc}
+            </p>
+          </div>
+          <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+            {!posts.length && t.home.blog.noPosts}
+            {posts.slice(0, MAX_DISPLAY).map((post) => {
+              const { slug, date, title, summary, tags, images } = post
+              const coverImage = images?.[0]
+              return (
+                <li key={slug} className="py-12">
+                  <article>
+                    <div className="space-y-2 xl:grid xl:grid-cols-5 xl:items-center xl:space-y-0">
+                      <dl>
+                        <dt className="sr-only">Published on</dt>
+                        <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
+                          <time dateTime={date}>{formatDate(date, locale)}</time>
+                        </dd>
+                      </dl>
+                      <div
+                        className={`space-y-5 ${coverImage ? 'xl:col-span-3' : 'xl:col-span-4'}`}
+                      >
+                        <div className="space-y-6">
+                          <div>
+                            <h3 className="text-2xl leading-8 font-bold tracking-tight">
+                              <Link
+                                href={`/guides/${slug}`}
+                                className="text-gray-900 dark:text-gray-100"
+                              >
+                                {title}
+                              </Link>
+                            </h3>
+                            <div className="flex flex-wrap">
+                              {tags.map((tag) => (
+                                <Tag key={tag} text={tag} />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="prose max-w-none text-gray-500 dark:text-gray-400">
+                            {summary}
                           </div>
                         </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
+                        <div className="text-base leading-6 font-medium">
+                          <Link
+                            href={`/guides/${slug}`}
+                            className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                            aria-label={`Read "${title}"`}
+                          >
+                            {t.home.blog.readMore} &rarr;
+                          </Link>
                         </div>
                       </div>
-                      <div className="text-base leading-6 font-medium">
-                        <Link
-                          href={`/guides/${slug}`}
-                          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                          aria-label={`Read "${title}"`}
-                        >
-                          {t.home.blog.readMore} &rarr;
-                        </Link>
-                      </div>
+                      {coverImage && (
+                        <div className="mt-6 xl:mt-0 xl:pl-6">
+                          <div className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm dark:border-gray-800">
+                            <Image
+                              src={coverImage}
+                              alt={`Cover image for ${title}`}
+                              width={480}
+                              height={320}
+                              className="h-40 w-full object-cover"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {coverImage && (
-                      <div className="mt-6 xl:mt-0 xl:pl-6">
-                        <div className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm dark:border-gray-800">
-                          <Image
-                            src={coverImage}
-                            alt={`Cover image for ${title}`}
-                            width={480}
-                            height={320}
-                            className="h-40 w-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              </li>
-            )
-          })}
-        </ul>
-        {posts.length > MAX_DISPLAY && (
-          <div className="flex justify-end text-base leading-6 font-medium">
-            <Link
-              href="/guides"
-              className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-              aria-label="All posts"
-            >
-              {t.home.blog.allPosts} &rarr;
-            </Link>
-          </div>
-        )}
-        {siteMetadata.newsletter?.provider && (
-          <div className="flex items-center justify-center pt-4">
-            <NewsletterForm />
-          </div>
-        )}
-      </section>
+                  </article>
+                </li>
+              )
+            })}
+          </ul>
+          {posts.length > MAX_DISPLAY && (
+            <div className="flex justify-end text-base leading-6 font-medium">
+              <Link
+                href="/guides"
+                className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                aria-label="All posts"
+              >
+                {t.home.blog.allPosts} &rarr;
+              </Link>
+            </div>
+          )}
+          {siteMetadata.newsletter?.provider && (
+            <div className="flex items-center justify-center pt-4">
+              <NewsletterForm />
+            </div>
+          )}
+        </div>
+      </motion.section>
     </div>
   )
 }

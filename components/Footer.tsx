@@ -19,7 +19,7 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="mt-16 border-t border-gray-200 pt-10 dark:border-gray-800">
+    <footer className="mt-24 border-t border-gray-200 pt-12 pb-16 dark:border-gray-800">
       <div className="grid gap-10 md:grid-cols-2">
         <div className="space-y-4">
           <div>
@@ -31,6 +31,7 @@ export default function Footer() {
           <a
             href={`mailto:${contactEmail}`}
             className="hover:text-primary-500 inline-flex items-center gap-2 text-sm font-medium text-gray-700 transition dark:text-gray-200"
+            title="Email NeuroHacks Lab"
           >
             <Mail className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             <span>{contactEmail}</span>
@@ -57,7 +58,11 @@ export default function Footer() {
           <ul className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
             {quickLinks.map((link) => (
               <li key={link.label}>
-                <Link className="hover:text-primary-500 transition" href={link.href}>
+                <Link
+                  className="hover:text-primary-500 transition"
+                  href={link.href}
+                  title={`Go to ${link.label}`}
+                >
                   {link.label}
                 </Link>
               </li>

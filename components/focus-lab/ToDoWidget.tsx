@@ -96,12 +96,12 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addTask()}
             placeholder={t.focusLab.widgets.todo.placeholder}
-            className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-800"
           />
           <button
             onClick={addTask}
             disabled={!inputValue.trim()}
-            className="hover:text-primary-500 dark:hover:text-primary-400 absolute top-1/2 right-2 -translate-y-1/2 rounded-lg bg-white p-1.5 text-gray-400 shadow-sm transition-colors disabled:opacity-50 dark:bg-gray-800 dark:text-gray-500"
+            className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
           >
             <svg
               viewBox="0 0 24 24"
@@ -110,9 +110,10 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-4 w-4"
+              className="h-5 w-5"
             >
-              <path d="M12 5v14M5 12h14" />
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
         </div>
@@ -121,7 +122,7 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
         <button
           onClick={handleClearAll}
           disabled={tasks.length === 0}
-          className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-400 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:bg-white disabled:hover:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500 dark:hover:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+          className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:bg-gray-100 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
           title={lang === 'en' ? 'Clear all tasks' : '清空所有任务'}
         >
           <svg
@@ -195,8 +196,8 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
                   <span
                     className={`flex-1 text-sm transition-all ${
                       task.completed
-                        ? 'text-gray-400 line-through decoration-gray-300 dark:text-gray-600'
-                        : 'text-gray-700 dark:text-gray-200'
+                        ? 'text-gray-400 line-through decoration-gray-300 dark:text-gray-500'
+                        : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     {task.text}

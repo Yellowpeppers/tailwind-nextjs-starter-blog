@@ -1,6 +1,6 @@
 'use client'
 
-import { KeyboardEvent, MouseEvent, useRef, useState } from 'react'
+import { KeyboardEvent, MouseEvent, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { slug } from 'github-slugger'
 import { formatDate } from 'pliny/utils/formatDate'
@@ -9,58 +9,85 @@ import type { Blog } from 'contentlayer/generated'
 import Image from '@/components/Image'
 import Link from '@/components/Link'
 import Tag from '@/components/Tag'
-import siteMetadata from '@/data/siteMetadata'
-import tagData from 'app/tag-data.json'
+import { useTranslation } from '@/context/LanguageContext'
+import { Locale, locales } from '@/lib/i18n'
+import { getTagCounts } from '@/lib/tagData'
 
 interface PaginationProps {
   totalPages: number
   currentPage: number
+  basePath: string
+}
+interface GuidesCopy {
+  allPosts: string
+  prev: string
+  next: string
+  pagination: string
+  filterLabel: string
+  tagLabel: string
+  readMore: string
+  readMoreLabel: string
 }
 interface ListLayoutProps {
   posts: CoreContent<Blog>[]
   title: string
   initialDisplayPosts?: CoreContent<Blog>[]
-  pagination?: PaginationProps
+  pagination?: Omit<PaginationProps, 'basePath'>
+  contentLocale?: Locale
 }
 
-function Pagination({ totalPages, currentPage }: PaginationProps) {
-  const pathname = usePathname()
-  const segments = pathname.split('/')
-  const lastSegment = segments[segments.length - 1]
-  const basePath = pathname
-    .replace(/^\//, '') // Remove leading slash
-    .replace(/\/page\/\d+\/?$/, '') // Remove any trailing /page
-    .replace(/\/$/, '') // Remove trailing slash
+const STRIP_LOCALE_REGEX = new RegExp(`^/(${locales.join('|')})(?=/|$)`)
+const stripLocalePrefix = (pathname: string) => pathname.replace(STRIP_LOCALE_REGEX, '') || '/'
+const defaultGuidesCopy: GuidesCopy = {
+  allPosts: 'All Posts',
+  prev: 'Previous',
+  next: 'Next',
+  pagination: '{current} of {total}',
+  filterLabel: 'Filter posts by tag',
+  tagLabel: 'View posts tagged {tag}',
+  readMore: 'Read more',
+  readMoreLabel: 'Read more: {title}',
+}
+
+function Pagination({
+  totalPages,
+  currentPage,
+  basePath,
+  copy,
+}: PaginationProps & { copy: GuidesCopy }) {
   const prevPage = currentPage - 1 > 0
   const nextPage = currentPage + 1 <= totalPages
+  const normalizedBasePath = basePath ? `/${basePath}` : '/'
+  const prevHref =
+    currentPage - 1 === 1 ? normalizedBasePath : `${normalizedBasePath}/page/${currentPage - 1}`
+  const nextHref = `${normalizedBasePath}/page/${currentPage + 1}`
 
   return (
     <div className="space-y-2 pt-6 pb-8 md:space-y-5">
       <nav className="flex justify-between">
         {!prevPage && (
           <button className="cursor-auto disabled:opacity-50" disabled={!prevPage}>
-            Previous
+            {copy.prev}
           </button>
         )}
         {prevPage && (
-          <Link
-            href={currentPage - 1 === 1 ? `/${basePath}/` : `/${basePath}/page/${currentPage - 1}`}
-            rel="prev"
-          >
-            Previous
+          <Link href={prevHref} rel="prev">
+            {copy.prev}
           </Link>
         )}
         <span>
-          {currentPage} of {totalPages}
+          {copy.pagination
+            .replace('{current}', currentPage.toString())
+            .replace('{total}', totalPages.toString())}
         </span>
         {!nextPage && (
           <button className="cursor-auto disabled:opacity-50" disabled={!nextPage}>
-            Next
+            {copy.next}
           </button>
         )}
         {nextPage && (
-          <Link href={`/${basePath}/page/${currentPage + 1}`} rel="next">
-            Next
+          <Link href={nextHref} rel="next">
+            {copy.next}
           </Link>
         )}
       </nav>
@@ -73,11 +100,25 @@ export default function ListLayoutWithTags({
   title,
   initialDisplayPosts = [],
   pagination,
+  contentLocale,
 }: ListLayoutProps) {
   const pathname = usePathname()
-  const tagCounts = tagData as Record<string, number>
+  const { t, language } = useTranslation()
+  const guidesCopy = (t.guides?.list as GuidesCopy) ?? defaultGuidesCopy
+  const normalizedPath = stripLocalePrefix(pathname)
+  const basePath = normalizedPath
+    .replace(/^\//, '')
+    .replace(/\/page\/\d+\/?$/, '')
+    .replace(/\/$/, '')
+  const activeContentLocale = contentLocale ?? language
+  const { counts: tagCounts } = useMemo(
+    () => getTagCounts(activeContentLocale),
+    [activeContentLocale]
+  )
   const tagKeys = Object.keys(tagCounts)
   const sortedTags = tagKeys.sort((a, b) => tagCounts[b] - tagCounts[a])
+  const isGuidesListing = normalizedPath.startsWith('/guides')
+  const dateLocale = activeContentLocale === 'zh' ? 'zh-CN' : 'en-US'
 
   const displayPosts = initialDisplayPosts.length > 0 ? initialDisplayPosts : posts
 
@@ -139,34 +180,34 @@ export default function ListLayoutWithTags({
             onKeyDown={handleKeyDown}
             tabIndex={0}
             role="listbox"
-            aria-label="Filter posts by tag"
+            aria-label={guidesCopy.filterLabel}
           >
-            {pathname.startsWith('/blog') ? (
+            {isGuidesListing ? (
               <span className="border-primary-200 bg-primary-50 text-primary-600 rounded-full border px-4 py-2 text-sm font-semibold whitespace-nowrap">
-                All Posts
+                {guidesCopy.allPosts}
               </span>
             ) : (
               <Link
-                href="/blog"
+                href="/guides"
                 className="hover:border-primary-200 hover:text-primary-600 dark:hover:border-primary-400 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold whitespace-nowrap text-gray-600 transition dark:border-gray-700 dark:bg-transparent dark:text-gray-300"
               >
-                All Posts
+                {guidesCopy.allPosts}
               </Link>
             )}
-            {sortedTags.map((t) => {
-              const isActive = decodeURI(pathname.split('/tags/')[1] || '') === slug(t)
+            {sortedTags.map((tag) => {
+              const isActive = decodeURI(pathname.split('/tags/')[1] || '') === slug(tag)
               return (
                 <Link
-                  key={t}
-                  href={`/tags/${slug(t)}`}
+                  key={tag}
+                  href={`/tags/${slug(tag)}`}
                   className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
                     isActive
                       ? 'border-primary-200 bg-primary-50 text-primary-600 dark:border-primary-400/60 dark:bg-primary-400/10 dark:text-primary-100 border shadow-sm'
                       : 'hover:border-primary-200 hover:text-primary-600 dark:hover:border-primary-400 border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300'
                   }`}
-                  aria-label={`View posts tagged ${t}`}
+                  aria-label={guidesCopy.tagLabel.replace('{tag}', tag)}
                 >
-                  {`${t} (${tagCounts[t]})`}
+                  {`${tag} (${tagCounts[tag] ?? 0})`}
                 </Link>
               )
             })}
@@ -185,7 +226,7 @@ export default function ListLayoutWithTags({
                         <div>
                           <p className="text-sm tracking-[0.2em] text-gray-400 uppercase">
                             <time dateTime={date} suppressHydrationWarning>
-                              {formatDate(date, siteMetadata.locale)}
+                              {formatDate(date, dateLocale)}
                             </time>
                           </p>
                           <h2 className="mt-1 text-2xl leading-8 font-bold tracking-tight">
@@ -206,9 +247,9 @@ export default function ListLayoutWithTags({
                           <Link
                             href={`/${path}`}
                             className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                            aria-label={`Read more: ${title}`}
+                            aria-label={guidesCopy.readMoreLabel.replace('{title}', title)}
                           >
-                            Read more &rarr;
+                            {guidesCopy.readMore} &rarr;
                           </Link>
                         </div>
                       </div>
@@ -233,7 +274,12 @@ export default function ListLayoutWithTags({
             })}
           </ul>
           {pagination && pagination.totalPages > 1 && (
-            <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              basePath={basePath}
+              copy={guidesCopy}
+            />
           )}
         </div>
       </div>

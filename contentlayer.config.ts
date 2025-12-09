@@ -25,6 +25,7 @@ import rehypePresetMinify from 'rehype-preset-minify'
 import siteMetadata from './data/siteMetadata'
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer.js'
 import prettier from 'prettier'
+import { defaultLocale, locales, Locale } from './lib/i18n'
 
 const root = process.cwd()
 const isProduction = process.env.NODE_ENV === 'production'
@@ -63,15 +64,29 @@ const computedFields: ComputedFields = {
  * Count the occurrences of all tags across blog posts and write to json file
  */
 async function createTagCount(allBlogs) {
-  const tagCount: Record<string, number> = {}
+  const initialState = locales.reduce(
+    (acc, locale) => {
+      acc[locale] = {}
+      return acc
+    },
+    {} as Record<Locale, Record<string, number>>
+  )
+
+  const tagCount = initialState
+
   allBlogs.forEach((file) => {
     if (file.tags && (!isProduction || file.draft !== true)) {
+      const postLocale = (file.locale || defaultLocale) as Locale
+      if (!tagCount[postLocale]) {
+        tagCount[postLocale] = {}
+      }
       file.tags.forEach((tag) => {
         const formattedTag = slug(tag)
-        if (formattedTag in tagCount) {
-          tagCount[formattedTag] += 1
+        const localeBucket = tagCount[postLocale]
+        if (formattedTag in localeBucket) {
+          localeBucket[formattedTag] += 1
         } else {
-          tagCount[formattedTag] = 1
+          localeBucket[formattedTag] = 1
         }
       })
     }
@@ -110,6 +125,7 @@ export const Blog = defineDocumentType(() => ({
     layout: { type: 'string' },
     bibliography: { type: 'string' },
     canonicalUrl: { type: 'string' },
+    locale: { type: 'string', default: defaultLocale },
   },
   computedFields: {
     ...computedFields,

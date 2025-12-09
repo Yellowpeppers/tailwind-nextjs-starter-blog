@@ -66,6 +66,8 @@ module.exports = () => {
   return plugins.reduce((acc, next) => next(acc), {
     output,
     basePath,
+    // Locale routing is handled manually via middleware + app/[lang],
+    // so we disable Next.js built-in i18n routing to avoid redirect loops.
     reactStrictMode: true,
     trailingSlash: false,
     pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],

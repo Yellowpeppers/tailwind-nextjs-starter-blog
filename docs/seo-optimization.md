@@ -47,6 +47,6 @@
 
 **后续待办（较大改动）**
 
-1. 双语落地：规划 `/cn` 等独立路由，输出 `alternates.languages` 与 hreflang，彻底消除页面混用语言的问题。
+1. 双语落地：规划 `/zh` 等独立路由，输出 `alternates.languages` 与 hreflang，彻底消除页面混用语言的问题。
 2. 深度性能拆分：继续把 `/test`、`/focuslab` 的子组件（噪音、番茄钟、AI Task 等）拆成按需 chunk，并结合 `prefers-reduced-motion`/Intersection Observer 进一步降低 TBT/INP。
 3. 监控调整：结合 GA4 / Search Console 数据，定期评估关键词表现、内部链路与用户行为，按月迭代内容与结构。
