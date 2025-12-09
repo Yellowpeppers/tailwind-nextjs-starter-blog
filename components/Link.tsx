@@ -54,8 +54,9 @@ const CustomLink = ({
     typeof href === 'string'
       ? href.startsWith('/')
       : typeof href === 'object' &&
-        typeof href.pathname === 'string' &&
-        href.pathname.startsWith('/')
+        href !== null &&
+        typeof (href as { pathname?: string }).pathname === 'string' &&
+        (href as { pathname?: string }).pathname?.startsWith('/')
   const combinedClass = clsx('break-words', className)
 
   const localizedHref = useMemo(
