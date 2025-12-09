@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import Image from 'next/image'
 import siteMetadata from '@/data/siteMetadata'
 import headerNavLinks from '@/data/headerNavLinks'
@@ -62,7 +63,9 @@ const Header = () => {
           </div>
           <SearchButton />
           <ThemeSwitch />
-          <LanguageSwitch />
+          <Suspense fallback={null}>
+            <LanguageSwitch />
+          </Suspense>
           <MobileNav />
         </div>
       </div>
