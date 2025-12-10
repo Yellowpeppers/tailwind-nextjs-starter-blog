@@ -58,6 +58,7 @@ export async function generateMetadata(props: { params: Promise<{ lang: string }
 export default async function Page(props: { params: Promise<{ lang: string }> }) {
   const params = await props.params
   const locale = resolveLocale(params.lang)
+  const dictionary = await getDictionary(locale)
   const { posts } = getLocalizedCoreContent(locale)
-  return <HomeContent posts={posts} />
+  return <HomeContent posts={posts} dictionary={dictionary} locale={locale} />
 }
