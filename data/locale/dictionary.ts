@@ -698,7 +698,7 @@ export const dictionary = {
       privacy: '隐私政策',
     },
     home: {
-      heroTitle: 'NeuroHacks 实验室',
+      heroTitle: 'NeuroHacks Lab',
       heroDesc: '专为 ADHD 大脑设计的工具与策略',
       heroTagline: '成人 ADHD 测试 · WHO ASRS v1.1',
       heroHeadline: '免费成人 ADHD 在线自测 & 专注力工具箱',
