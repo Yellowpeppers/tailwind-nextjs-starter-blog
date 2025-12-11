@@ -9,7 +9,9 @@
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx --fix app components context lib layouts scripts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@algolia/client-search": "^4.24.0",
@@ -62,6 +64,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.16.0",
+    "@playwright/test": "^1.57.0",
     "@svgr/webpack": "^8.0.1",
     "@types/mdx": "^2.0.12",
     "@types/react": "^19.0.8",

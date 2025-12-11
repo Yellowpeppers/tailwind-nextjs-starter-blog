@@ -8,7 +8,7 @@ export const dictionary = {
       guides: 'Guides',
       about: 'About',
       home: 'Home',
-      blog: 'Blog',
+      blog: 'Guides',
       privacy: 'Privacy Policy',
     },
     home: {
@@ -694,7 +694,7 @@ export const dictionary = {
       guides: '指南',
       about: '关于',
       home: '首页',
-      blog: '博客',
+      blog: '指南',
       privacy: '隐私政策',
     },
     home: {

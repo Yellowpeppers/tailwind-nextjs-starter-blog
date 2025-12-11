@@ -7,6 +7,7 @@ import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
 import { ReactNode } from 'react'
+import { Viewport } from 'next'
 import { headers } from 'next/headers'
 import { defaultLocale, isLocale, localeToHtmlLang, Locale } from '@/lib/i18n'
 
@@ -15,6 +16,16 @@ const space_grotesk = Space_Grotesk({
   display: 'swap',
   variable: '--font-space-grotesk',
 })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fff' },
+    { media: '(prefers-color-scheme: dark)', color: '#000' },
+  ],
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://neurohackslab.com'),
@@ -144,8 +155,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         <meta name="msapplication-TileColor" content="#0EA5E9" />
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fff" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000" />
         <link rel="alternate" type="application/rss+xml" href={`${basePath}/feed.xml`} />
       </head>
       <body
