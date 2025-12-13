@@ -11,7 +11,8 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx --fix app components context lib layouts scripts",
     "prepare": "husky",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "mcp:devtools": "chrome-devtools-mcp"
   },
   "dependencies": {
     "@algolia/client-search": "^4.24.0",
@@ -70,6 +71,7 @@
     "@types/react": "^19.0.8",
     "@typescript-eslint/eslint-plugin": "^8.12.0",
     "@typescript-eslint/parser": "^8.12.0",
+    "chrome-devtools-mcp": "^0.12.0",
     "cross-env": "^7.0.3",
     "eslint": "^9.14.0",
     "eslint-config-next": "15.2.4",

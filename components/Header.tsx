@@ -35,7 +35,6 @@ const Header = () => {
             width={48}
             height={48}
             className="h-10 w-auto"
-            priority
           />
           {typeof siteMetadata.headerTitle === 'string' ? (
             <span className="text-xl font-semibold sm:text-2xl">{siteMetadata.headerTitle}</span>

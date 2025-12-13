@@ -1,6 +1,7 @@
 import { genPageMetadata } from 'app/seo'
 import siteMetadata from '@/data/siteMetadata'
 import FocusLabInfo from '@/components/FocusLabInfo'
+import { FocusLabIntro } from '@/components/focus-lab/FocusLabIntro'
 import { FocusLabLazy } from './FocusLabLazy'
 import { resolveLocale } from '@/lib/i18n'
 
@@ -71,6 +72,11 @@ export default function Projects() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(focusLabSchema) }}
       />
       <div className="min-h-screen">
+        <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] w-screen">
+          <div className="mx-auto max-w-[1800px] px-4 py-12 sm:px-6 lg:px-8">
+            <FocusLabIntro />
+          </div>
+        </div>
         <FocusLabLazy />
         <FocusLabInfo />
       </div>
