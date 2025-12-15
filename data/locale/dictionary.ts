@@ -145,6 +145,8 @@ export const dictionary = {
           start: 'START',
           done: 'Congrats! Another Focus Finished',
           todayFocus: 'Today: {minutes}m',
+          tipTitle: 'Click title to toggle task name',
+          tipCustom: 'Double-click custom timer to edit',
           accessibility: {
             showDailyFocus: "Show today's total focus time",
             showTimer: 'Show timer countdown again',
@@ -859,6 +861,8 @@ export const dictionary = {
           start: '开始',
           done: '恭喜！又完成了一次专注',
           todayFocus: '今日专注：{minutes}分钟',
+          tipTitle: '点击标题切换任务显示',
+          tipCustom: '双击自定义计时器进行编辑',
           accessibility: {
             showDailyFocus: '显示今日专注分钟数',
             showTimer: '返回倒计时显示',

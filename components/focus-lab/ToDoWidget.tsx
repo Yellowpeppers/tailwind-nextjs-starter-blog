@@ -13,7 +13,13 @@ import {
 
 type ToDoItem = ToDoStorageItem
 
-export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
+export const ToDoWidget = ({
+  cols = 1,
+  onStartFocus,
+}: {
+  cols?: number
+  onStartFocus?: (task: string) => void
+}) => {
   const { t, language: lang } = useTranslation()
   const [tasks, setTasks] = useState<ToDoItem[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -202,6 +208,33 @@ export const ToDoWidget = ({ cols = 1 }: { cols?: number }) => {
                   >
                     {task.text}
                   </span>
+
+                  {onStartFocus && !task.completed && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onStartFocus(task.text)
+                      }}
+                      className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-600"
+                      aria-label="Focus on this task"
+                      title={lang === 'en' ? 'Focus on this task' : '专注此任务'}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2" />
+                      </svg>
+                    </button>
+                  )}
 
                   <button
                     onClick={(e) => {

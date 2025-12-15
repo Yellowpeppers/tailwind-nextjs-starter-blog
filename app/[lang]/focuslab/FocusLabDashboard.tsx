@@ -121,8 +121,8 @@ type ActiveTrack = {
 // --- Widget Card Component ---
 
 type WidgetCardProps = {
-  title: string
-  subtitle: string
+  title: ReactNode
+  subtitle: ReactNode
   children: ReactNode
   onHeaderClick?: () => void
   onDelete?: () => void
@@ -227,9 +227,9 @@ const WidgetCard = ({
                   className="absolute top-full left-0 z-50 mt-2 w-56 origin-top-left"
                 >
                   <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
-                    <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+                    <div className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
                       {subtitle}
-                    </p>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -380,13 +380,21 @@ const getPresetForWidth = (width: number): LayoutPreset => {
 
 const getLayoutStorageKey = (preset: LayoutPreset) => `focus-lab-layout-${preset}-v1`
 
-const FocusLabMobileGrid = () => {
+type FocusedTaskState = { text: string; timestamp: number } | null
+
+const FocusLabMobileGrid = ({
+  focusedTask,
+  onStartFocus,
+}: {
+  focusedTask?: FocusedTaskState
+  onStartFocus?: (task: string) => void
+}) => {
   return (
     <div className="flex flex-col gap-5 pb-16">
       <SonicShieldCard className="h-auto" />
-      <TimerCard className="h-auto" />
+      <TimerCard className="h-auto" focusedTask={focusedTask} />
       <BrainDumpCard className="h-auto" />
-      <ToDoCard className="h-auto" />
+      <ToDoCard className="h-auto" onStartFocus={onStartFocus} />
       <TaskBreakerCard className="h-auto" />
       <DopamineMenuCard className="h-auto" />
     </div>
@@ -404,6 +412,7 @@ export const FocusLabDashboard = () => {
   const [isTipOpen, setIsTipOpen] = useState(true)
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
+  const [focusedTask, setFocusedTask] = useState<FocusedTaskState>(null)
   const { t, language: lang } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -804,7 +813,10 @@ export const FocusLabDashboard = () => {
                 className={`transition-all duration-500 ${isFocusMode ? 'relative z-[95]' : 'mt-10'}`}
               >
                 {isMobile ? (
-                  <FocusLabMobileGrid />
+                  <FocusLabMobileGrid
+                    focusedTask={focusedTask}
+                    onStartFocus={(task) => setFocusedTask({ text: task, timestamp: Date.now() })}
+                  />
                 ) : (
                   <FocusLabGrid
                     preset={activePreset}
@@ -812,6 +824,8 @@ export const FocusLabDashboard = () => {
                     focusedCardIds={focusedCardIds}
                     onToggleFocus={toggleCardFocus}
                     containerWidth={containerWidth}
+                    focusedTask={focusedTask}
+                    onStartFocus={(task) => setFocusedTask({ text: task, timestamp: Date.now() })}
                   />
                 )}
               </motion.div>
@@ -829,12 +843,16 @@ export const FocusLabGrid = ({
   onToggleFocus = () => {},
   containerWidth,
   preset,
+  focusedTask,
+  onStartFocus,
 }: {
   isFocusMode?: boolean
   focusedCardIds?: Set<string>
   onToggleFocus?: (id: string) => void
   containerWidth: number
   preset: LayoutPreset
+  focusedTask?: FocusedTaskState
+  onStartFocus?: (task: string) => void
 }) => {
   const presetConfig = GRID_PRESETS[preset]
   const [layout, setLayout] = useState<GridItem[]>(() => cloneLayout(presetConfig.layout))
@@ -951,6 +969,7 @@ export const FocusLabGrid = ({
                   className="h-full w-full"
                   onToggleFocus={() => onToggleFocus(item.id)}
                   onDelete={() => handleRemoveWidget(item.id)}
+                  focusedTask={focusedTask}
                 />
               )}
               {item.id === 'brain' && (
@@ -966,6 +985,7 @@ export const FocusLabGrid = ({
                   cols={item.w}
                   onToggleFocus={() => onToggleFocus(item.id)}
                   onDelete={() => handleRemoveWidget(item.id)}
+                  onStartFocus={onStartFocus}
                 />
               )}
               {item.id === 'breaker' && (
@@ -1163,13 +1183,22 @@ export function TimerCard({
   onToggleFocus,
   onDelete,
   className,
+  focusedTask,
 }: {
   onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
+  focusedTask?: FocusedTaskState
 }) {
   const { t } = useTranslation()
   const [dailyFocusMinutes, setDailyFocusMinutes] = useState(0)
+  const [showTaskTitle, setShowTaskTitle] = useState(true)
+
+  useEffect(() => {
+    if (focusedTask) {
+      setShowTaskTitle(true)
+    }
+  }, [focusedTask])
 
   useEffect(() => {
     const stored = window.localStorage.getItem('focus-lab-daily-focus')
@@ -1207,8 +1236,35 @@ export function TimerCard({
 
   return (
     <WidgetCard
-      title={t.focusLab.widgets.timer.title}
-      subtitle={t.focusLab.widgets.timer.subtitle}
+      title={
+        focusedTask ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowTaskTitle(!showTaskTitle)
+            }}
+            className={`block max-w-[200px] truncate text-left transition-colors ${
+              showTaskTitle
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-900 hover:text-gray-600 dark:text-gray-100 dark:hover:text-gray-300'
+            }`}
+            title={showTaskTitle && focusedTask ? focusedTask.text : t.focusLab.widgets.timer.title}
+          >
+            {showTaskTitle && focusedTask ? focusedTask.text : t.focusLab.widgets.timer.title}
+          </button>
+        ) : (
+          t.focusLab.widgets.timer.title
+        )
+      }
+      subtitle={
+        <div className="flex flex-col gap-2">
+          <span>{t.focusLab.widgets.timer.subtitle}</span>
+          <div className="border-t border-gray-100 pt-2 text-[10px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            <p>• {t.focusLab.widgets.timer.tipTitle || 'Click title to toggle task name'}</p>
+            <p>• {t.focusLab.widgets.timer.tipCustom || 'Double-click custom timer to edit'}</p>
+          </div>
+        </div>
+      }
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
@@ -1269,11 +1325,13 @@ export function ToDoCard({
   onToggleFocus,
   onDelete,
   className,
+  onStartFocus,
 }: {
   cols?: number
   onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
+  onStartFocus?: (task: string) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -1284,7 +1342,7 @@ export function ToDoCard({
       onDelete={onDelete}
       className={className}
     >
-      <ToDoWidget cols={cols} />
+      <ToDoWidget cols={cols} onStartFocus={onStartFocus} />
     </WidgetCard>
   )
 }
@@ -1596,8 +1654,11 @@ const TimerWidget = ({
   onTimerComplete?: (minutes: number) => void
   dailyFocusMinutes?: number
 }) => {
-  const { t } = useTranslation()
+  const { t, language: lang } = useTranslation()
   const [activePreset, setActivePreset] = useState<TimerPreset>('focus')
+  const [customMinutes, setCustomMinutes] = useState(15)
+  const [isEditingCustom, setIsEditingCustom] = useState(false)
+  const [isCustomChanged, setIsCustomChanged] = useState(false)
   const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration)
   const [isRunning, setIsRunning] = useState(false)
   const [timerMode, setTimerMode] = useState<'countdown' | 'target'>('countdown')
@@ -1631,12 +1692,16 @@ const TimerWidget = ({
 
   useEffect(() => {
     if (timerMode === 'countdown') {
-      setTimeLeft(timerPresets[activePreset].duration)
+      if (activePreset === 'long') {
+        setTimeLeft(customMinutes * 60)
+      } else {
+        setTimeLeft(timerPresets[activePreset].duration)
+      }
       setTargetDuration(0)
       setIsRunning(false)
       setIsDone(false)
     }
-  }, [activePreset, timerMode])
+  }, [activePreset, timerMode, customMinutes])
 
   useEffect(() => {
     if (timerMode === 'target' && targetTime) {
@@ -1693,7 +1758,11 @@ const TimerWidget = ({
 
       // Update Daily Focus
       const durationSeconds =
-        timerMode === 'countdown' ? timerPresets[activePreset].duration : targetDuration
+        timerMode === 'countdown'
+          ? activePreset === 'long'
+            ? customMinutes * 60
+            : timerPresets[activePreset].duration
+          : targetDuration
       const minutes = Math.floor(durationSeconds / 60)
       if (minutes > 0) {
         onTimerComplete?.(minutes)
@@ -1701,14 +1770,25 @@ const TimerWidget = ({
     } else if (timeLeft === 0) {
       setIsRunning(false)
     }
-  }, [timeLeft, isRunning, timerMode, activePreset, targetDuration, onTimerComplete, t])
+  }, [
+    timeLeft,
+    isRunning,
+    timerMode,
+    activePreset,
+    targetDuration,
+    onTimerComplete,
+    t,
+    customMinutes,
+  ])
 
   const handleStartPause = () => {
     if (isDone) {
       // Reset if done
       setIsDone(false)
       if (timerMode === 'countdown') {
-        setTimeLeft(timerPresets[activePreset].duration)
+        setTimeLeft(
+          activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+        )
       } else if (timerMode === 'target' && targetTime) {
         const next = getSecondsUntilTarget(targetTime)
         setTargetDuration(next)
@@ -1720,7 +1800,9 @@ const TimerWidget = ({
 
     if (timeLeft === 0) {
       if (timerMode === 'countdown') {
-        setTimeLeft(timerPresets[activePreset].duration)
+        setTimeLeft(
+          activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+        )
       } else if (timerMode === 'target' && targetTime) {
         const next = getSecondsUntilTarget(targetTime)
         setTargetDuration(next)
@@ -1734,7 +1816,9 @@ const TimerWidget = ({
     setIsRunning(false)
     setIsDone(false)
     if (timerMode === 'countdown') {
-      setTimeLeft(timerPresets[activePreset].duration)
+      setTimeLeft(
+        activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+      )
     } else if (timerMode === 'target' && targetTime) {
       const diff = getSecondsUntilTarget(targetTime)
       setTargetDuration(diff)
@@ -1747,7 +1831,9 @@ const TimerWidget = ({
   const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   const fullDuration =
     timerMode === 'countdown'
-      ? timerPresets[activePreset].duration
+      ? activePreset === 'long'
+        ? customMinutes * 60
+        : timerPresets[activePreset].duration
       : targetDuration || Math.max(timeLeft, 1)
   const progress = Math.min(Math.max(timeLeft / fullDuration, 0), 1)
   const radius = 40
@@ -1795,20 +1881,82 @@ const TimerWidget = ({
         <div className="flex h-8 w-full items-center justify-center">
           {timerMode === 'countdown' ? (
             <div className="flex justify-center gap-2">
-              {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setActivePreset(preset)}
-                  className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${
-                    activePreset === preset
-                      ? 'bg-primary-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
-                  }`}
-                >
-                  {preset === 'focus' ? '25m' : preset === 'short' ? '5m' : '15m'}
-                </button>
-              ))}
+              {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => {
+                if (preset === 'long') {
+                  return (
+                    <div
+                      key={preset}
+                      className={`relative flex items-center justify-center rounded-full px-2 transition-all ${
+                        activePreset === 'long'
+                          ? 'bg-primary-500 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+                      }`}
+                    >
+                      {isEditingCustom ? (
+                        <>
+                          <input
+                            type="number"
+                            min="1"
+                            max="120"
+                            value={customMinutes}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0
+                              setCustomMinutes(val)
+                            }}
+                            onBlur={() => {
+                              const clamped = Math.max(1, Math.min(120, customMinutes))
+                              setCustomMinutes(clamped)
+                              setIsEditingCustom(false)
+                              setIsCustomChanged(true)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                setIsEditingCustom(false)
+                                setIsCustomChanged(true)
+                              }
+                            }}
+                            className="w-8 appearance-none border-none bg-transparent p-0 text-center text-sm font-bold text-white outline-none focus:outline-none [&::-webkit-inner-spin-button]:appearance-none"
+                            // eslint-disable-next-line jsx-a11y/no-autofocus
+                            autoFocus
+                          />
+                          <span className="ml-0.5 text-xs font-medium">m</span>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setActivePreset('long')}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            setIsEditingCustom(true)
+                          }}
+                          title="Double click to edit duration"
+                          className="h-full w-full truncate px-2 py-1 text-sm font-bold"
+                        >
+                          {isCustomChanged
+                            ? `${customMinutes}m`
+                            : lang === 'zh'
+                              ? '自定义'
+                              : 'Custom'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                }
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setActivePreset(preset)}
+                    className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${
+                      activePreset === preset
+                        ? 'bg-primary-500 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+                    }`}
+                  >
+                    {preset === 'focus' ? '25m' : '5m'}
+                  </button>
+                )
+              })}
             </div>
           ) : (
             <div className="flex justify-center gap-2">
