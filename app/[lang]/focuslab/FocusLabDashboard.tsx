@@ -1835,10 +1835,12 @@ const TimerWidget = ({
         ? customMinutes * 60
         : timerPresets[activePreset].duration
       : targetDuration || Math.max(timeLeft, 1)
-  const progress = Math.min(Math.max(timeLeft / fullDuration, 0), 1)
+  const safeFullDuration = fullDuration > 0 ? fullDuration : 1
+  const progress = Math.min(Math.max(timeLeft / safeFullDuration, 0), 1)
   const radius = 40
   const circumference = 2 * Math.PI * radius
-  const dashOffset = circumference * (1 - progress)
+  const rawOffset = circumference * (1 - progress)
+  const dashOffset = Number.isNaN(rawOffset) ? 0 : rawOffset
   const todayFocusText = t.focusLab.widgets.timer.todayFocus.replace(
     '{minutes}',
     dailyFocusMinutes.toString()
