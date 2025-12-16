@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { FocusSession, getHistory, getTodaySessions } from './focusStorage'
+import { FocusSession, getHistory, getTodaySessions, fetchCloudHistory } from './focusStorage'
 import { useTranslation } from '@/context/LanguageContext'
+import { useAuth } from '@/context/AuthContext'
 
 // Helper to format duration
 const formatDuration = (minutes: number) => {
@@ -16,8 +17,10 @@ const formatDuration = (minutes: number) => {
 
 export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
   const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
   const [sessions, setSessions] = useState<FocusSession[]>([])
   const [todaySessions, setTodaySessions] = useState<FocusSession[]>([])
+  // ... rest of state
   const [dailyStats, setDailyStats] = useState<
     { date: string; fullDate: string; minutes: number; start: number; end: number }[]
   >([])
@@ -31,8 +34,29 @@ export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   useEffect(() => {
-    const allSessions = getHistory()
-    setSessions(allSessions)
+    const loadData = async () => {
+      let allSessions = getHistory()
+
+      // If user is logged in, try to fetch fresh cloud data to ensure cross-device sync
+      if (user) {
+        try {
+          const cloudData = await fetchCloudHistory(user)
+          if (cloudData.length > 0) {
+            allSessions = cloudData
+          }
+        } catch (e) {
+          console.error('Background history sync failed', e)
+        }
+      }
+      setSessions(allSessions)
+    }
+    loadData()
+  }, [user])
+
+  useEffect(() => {
+    // Only proceed if sessions are loaded
+    const allSessions = sessions
+    // ... logic continues using `allSessions` (which is now from state, not getHistory direct call)
 
     // Calculate last 7 days stats based on viewDate
     const stats: { date: string; fullDate: string; minutes: number; start: number; end: number }[] =
@@ -190,7 +214,7 @@ export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
     if (!selectedRange && stats.length > 0) {
       setSelectedRange({ start: stats[stats.length - 1].start, end: stats[stats.length - 1].end })
     }
-  }, [lang, viewDate, timeRange, trendViewOffset, selectedRange]) // Added selectedRange
+  }, [lang, viewDate, timeRange, trendViewOffset, selectedRange, sessions]) // Added selectedRange and sessions
 
   const moveDay = (days: number) => {
     const newDate = new Date(viewDate)

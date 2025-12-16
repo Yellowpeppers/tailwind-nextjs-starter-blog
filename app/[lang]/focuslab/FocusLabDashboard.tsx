@@ -13,14 +13,30 @@ import {
   useContext,
 } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
-import { ToDoWidget } from '@/components/focus-lab/ToDoWidget'
+import { FocusStation } from '@/components/focus-lab/FocusStation'
 import {
-  createToDoItem,
-  readToDoStorage,
-  writeToDoStorage,
-} from '@/components/focus-lab/todoStorage'
+  syncLocalToCloud,
+  createFocusItem,
+  readStationStorage,
+  saveStationItems,
+} from '@/components/focus-lab/focusStationStorage'
 import { AnalyticsModal } from '@/components/focus-lab/AnalyticsModal'
-import { saveSession } from '@/components/focus-lab/focusStorage'
+import { saveSession, syncFocusHistory } from '@/components/focus-lab/focusStorage'
+import { useAuth } from '@/context/AuthContext'
+import AuthModal from '@/components/auth/AuthModal'
+import { syncToDo } from '@/components/focus-lab/todoStorage'
+import {
+  BrainDumpItem,
+  createBrainDumpItem,
+  fetchCloudBrainDump,
+  readBrainDumpStorage,
+  saveBrainDump,
+} from '@/components/focus-lab/brainDumpStorage'
+import {
+  fetchCloudDopamine,
+  readDopamineStorage,
+  saveDopamine,
+} from '@/components/focus-lab/dopamineStorage'
 
 // Context for passing drag controls to children
 const DragHandleContext = createContext<DragControls | null>(null)
@@ -441,6 +457,8 @@ export const FocusLabDashboard = () => {
   const [containerWidth, setContainerWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [activePreset, setActivePreset] = useState<LayoutPreset>('desktop')
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const { user } = useAuth()
 
   const headerPadding = 0
 
@@ -472,6 +490,14 @@ export const FocusLabDashboard = () => {
       resizeObserver.disconnect()
     }
   }, [])
+
+  useEffect(() => {
+    if (user) {
+      console.log('User logged in, syncing data...')
+      syncFocusHistory(user)
+      syncLocalToCloud(user)
+    }
+  }, [user])
 
   useEffect(() => {
     if (!showGroupModal) return
@@ -627,6 +653,14 @@ export const FocusLabDashboard = () => {
       <AnimatePresence>
         {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
       </AnimatePresence>
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onGuestContinue={() => {
+          setShowAuthModal(false)
+          setShowAnalytics(true)
+        }}
+      />
       <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
         <motion.div
           layout
@@ -771,6 +805,38 @@ export const FocusLabDashboard = () => {
                     {t.focusLab.controls.resetLayout}
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!user) setShowAuthModal(true)
+                    }}
+                    className={`${CONTROL_BUTTON_BASE} group border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
+                  >
+                    {user ? (
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-green-500" />
+                        <span>{user.email || 'Synced'}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-4 w-4"
+                        >
+                          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                          <polyline points="10 17 15 12 10 7" />
+                          <line x1="15" y1="12" x2="3" y2="12" />
+                        </svg>
+                        Login
+                      </>
+                    )}
+                  </button>
+
                   <AnimatePresence>
                     {showResetConfirm && (
                       <motion.div
@@ -827,7 +893,13 @@ export const FocusLabDashboard = () => {
                     <div className="from-primary-500 via-primary-200 to-primary-500 dark:from-primary-800 dark:via-primary-300 dark:to-primary-800 animate-border-flow absolute -inset-[2px] rounded-full bg-gradient-to-r bg-[length:200%_auto] opacity-80 blur-[2px] transition duration-1000 group-hover:opacity-100"></div>
 
                     <button
-                      onClick={() => setShowAnalytics(true)}
+                      onClick={() => {
+                        if (user) {
+                          setShowAnalytics(true)
+                        } else {
+                          setShowAuthModal(true)
+                        }
+                      }}
                       className={`${CONTROL_BUTTON_BASE} relative border-transparent bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
                     >
                       <svg
@@ -1440,7 +1512,7 @@ function ToDoCard({
       onDelete={onDelete}
       className={className}
     >
-      <ToDoWidget cols={cols} onStartFocus={onStartFocus} />
+      <FocusStation cols={cols} onStartFocus={onStartFocus} />
     </WidgetCard>
   )
 }
@@ -1766,6 +1838,7 @@ const TimerWidget = ({
   onCommandHandled?: () => void
 }) => {
   const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
   const [activePreset, setActivePreset] = useState<TimerPreset>('focus')
   const [customMinutes, setCustomMinutes] = useState(15)
   const [isEditingCustom, setIsEditingCustom] = useState(false)
@@ -1818,18 +1891,21 @@ const TimerWidget = ({
           task: focusedTask?.text,
         })
 
-        saveSession({
-          id,
-          taskName: focusedTask?.text || null, // Ensure unnamed sessions are recorded
-          startTime: finalStartTime,
-          durationMinutes: durationMinutes,
-          completed: completed,
-        })
+        saveSession(
+          {
+            id,
+            taskName: focusedTask?.text || null, // Ensure unnamed sessions are recorded
+            startTime: finalStartTime,
+            durationMinutes: durationMinutes,
+            completed: completed,
+          },
+          user
+        )
       } catch (e) {
         console.error('Error in handleSessionComplete:', e)
       }
     },
-    [focusedTask, startTime]
+    [focusedTask, startTime, user]
   )
 
   // -- Timer Logic --
@@ -2322,13 +2398,14 @@ const TaskBreakerWidget = () => {
     if (visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred) return
     setIsTransferring(true)
     try {
-      const existingTasks = readToDoStorage()
-      const newTasks = visibleSteps.map((step) => createToDoItem(step))
-      writeToDoStorage([...existingTasks, ...newTasks])
+      const existingItems = readStationStorage()
+      const newItems = visibleSteps.map((step) => createFocusItem('text', step))
+      // Combine and save. 'user' is available in component scope.
+      saveStationItems([...newItems, ...existingItems], user)
       setTransferStatus('success')
       setHasTransferred(true)
     } catch (err) {
-      console.error('Failed to transfer AI steps to To-Do list:', err)
+      console.error('Failed to transfer AI steps to Focus Station:', err)
       setTransferStatus('error')
     } finally {
       setIsTransferring(false)
@@ -2486,14 +2563,9 @@ const TaskStepItem = ({ step }: { step: string }) => {
   )
 }
 
-type BrainDumpItem = {
-  id: string
-  text: string
-  image?: string
-}
-
 const BrainDumpWidget = () => {
   const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
   const [leftItems, setLeftItems] = useState<BrainDumpItem[]>([])
   const [rightItems, setRightItems] = useState<BrainDumpItem[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -2503,57 +2575,94 @@ const BrainDumpWidget = () => {
 
   // Load and migrate data
   useEffect(() => {
-    try {
-      const storedLeft = window.localStorage.getItem('focus-lab-brain-dump-left')
-      const storedRight = window.localStorage.getItem('focus-lab-brain-dump-right')
+    const init = async () => {
+      const left: BrainDumpItem[] = []
+      const right: BrainDumpItem[] = []
 
-      if (storedLeft || storedRight) {
-        if (storedLeft) setLeftItems(JSON.parse(storedLeft))
-        if (storedRight) setRightItems(JSON.parse(storedRight))
-      } else {
-        // Migration from v2 (single list)
-        const storedV2 = window.localStorage.getItem('focus-lab-brain-dump-list-v2')
-        if (storedV2) {
-          const items: BrainDumpItem[] = JSON.parse(storedV2)
-          const mid = Math.ceil(items.length / 2)
-          setLeftItems(items.slice(0, mid))
-          setRightItems(items.slice(mid))
-        } else {
-          // Migration from v1 (string array)
-          const storedV1 = window.localStorage.getItem('focus-lab-brain-dump-list')
-          if (storedV1) {
-            const oldItems: string[] = JSON.parse(storedV1)
-            const migrated = oldItems.map((item) => {
-              const isImage = item.startsWith('data:image')
-              return {
-                id: Math.random().toString(36).substring(7),
-                text: isImage ? '' : item,
-                image: isImage ? item : undefined,
-              }
-            })
-            const mid = Math.ceil(migrated.length / 2)
-            setLeftItems(migrated.slice(0, mid))
-            setRightItems(migrated.slice(mid))
-          }
+      // 1. Try Cloud First if User
+      if (user) {
+        const cloud = await fetchCloudBrainDump(user)
+        // Only use cloud if it actually has data. If empty, we might be in "First Sync" scenario where we want to upload Local data.
+        if (cloud && (cloud.left.length > 0 || cloud.right.length > 0)) {
+          setLeftItems(cloud.left)
+          setRightItems(cloud.right)
+          setIsLoaded(true)
+          return
         }
       }
-    } catch (error) {
-      // ignore persistence errors
-    } finally {
+
+      // 2. Fallback to Local
+      const local = readBrainDumpStorage()
+      if (local.left.length > 0 || local.right.length > 0) {
+        // Robust UUID Generator
+        const generateUUID = () => {
+          if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = (Math.random() * 16) | 0,
+              v = c == 'x' ? r : (r & 0x3) | 0x8
+            return v.toString(16)
+          })
+        }
+
+        // Sanitize IDs
+        const sanitize = (list: BrainDumpItem[]) =>
+          list.map((item) => {
+            const isValidUUID =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)
+            return isValidUUID ? item : { ...item, id: generateUUID() }
+          })
+
+        setLeftItems(sanitize(local.left))
+        setRightItems(sanitize(local.right))
+      } else {
+        // Migration Logic (Legacy)
+        try {
+          // Migration from v2 (single list)
+          const storedV2 = window.localStorage.getItem('focus-lab-brain-dump-list-v2')
+          if (storedV2) {
+            const items: BrainDumpItem[] = JSON.parse(storedV2)
+            // Fix IDs on migration
+            const fixedItems = items.map((i) => ({ ...i, id: crypto.randomUUID() }))
+            const mid = Math.ceil(fixedItems.length / 2)
+            setLeftItems(fixedItems.slice(0, mid))
+            setRightItems(fixedItems.slice(mid))
+          } else {
+            // Migration from v1 (string array)
+            const storedV1 = window.localStorage.getItem('focus-lab-brain-dump-list')
+            if (storedV1) {
+              const oldItems: string[] = JSON.parse(storedV1)
+              const migrated = oldItems.map((item) => {
+                const isImage = item.startsWith('data:image')
+                return {
+                  id: crypto.randomUUID(), // Use real UUID
+                  text: isImage ? '' : item,
+                  image: isImage ? item : undefined,
+                }
+              })
+              const mid = Math.ceil(migrated.length / 2)
+              setLeftItems(migrated.slice(0, mid))
+              setRightItems(migrated.slice(mid))
+            }
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }
       setIsLoaded(true)
     }
-  }, [])
+
+    init()
+  }, [user])
 
   // Persist data
   useEffect(() => {
     if (!isLoaded) return
-    try {
-      window.localStorage.setItem('focus-lab-brain-dump-left', JSON.stringify(leftItems))
-      window.localStorage.setItem('focus-lab-brain-dump-right', JSON.stringify(rightItems))
-    } catch (error) {
-      // ignore persistence errors
+    const save = async () => {
+      await saveBrainDump({ left: leftItems, right: rightItems }, user)
     }
-  }, [leftItems, rightItems, isLoaded])
+    const timeout = setTimeout(save, 1000) // Debounce save
+    return () => clearTimeout(timeout)
+  }, [leftItems, rightItems, isLoaded, user])
 
   const handleClearAll = () => {
     if (
@@ -2569,11 +2678,8 @@ const BrainDumpWidget = () => {
   const handleAdd = () => {
     if (!inputValue.trim() && !pendingImage) return
 
-    const newItem: BrainDumpItem = {
-      id: Math.random().toString(36).substring(7),
-      text: inputValue.trim(),
-      image: pendingImage || undefined,
-    }
+    // Use helper to ensure valid UUID
+    const newItem = createBrainDumpItem(inputValue.trim(), pendingImage || undefined)
 
     // Add to the shorter column
     if (leftItems.length <= rightItems.length) {
@@ -2919,45 +3025,48 @@ const ArrowLaunchIcon = ({ className }: { className?: string }) => (
 
 const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
   const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
   const defaultOptions = useMemo(() => t.focusLab.widgets.dopamineMenu.defaultOptions, [t])
   const [options, setOptions] = useState(defaultOptions)
   const [newOption, setNewOption] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [isSpinning, setIsSpinning] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
-  const storageKey = `focus-lab-dopamine-options-${lang}`
-  const legacyKey = 'focus-lab-dopamine-options'
 
-  // Load options from localStorage
+  // Load options
   useEffect(() => {
-    try {
-      const savedForLocale = window.localStorage.getItem(storageKey)
-      const legacyOptions = window.localStorage.getItem(legacyKey)
-      const savedOptions = savedForLocale || legacyOptions
-      if (savedOptions) {
-        setOptions(JSON.parse(savedOptions))
-        if (!savedForLocale && legacyOptions) {
-          window.localStorage.setItem(storageKey, legacyOptions)
+    const init = async () => {
+      // 1. Cloud
+      if (user) {
+        const cloud = await fetchCloudDopamine(user)
+        if (cloud && cloud.length > 0) {
+          setOptions(cloud)
+          setIsLoaded(true)
+          return
         }
+      }
+
+      // 2. Local
+      const local = readDopamineStorage(lang)
+      if (local) {
+        setOptions(local)
       } else {
         setOptions(defaultOptions)
       }
-    } catch (error) {
-      console.error('Failed to load dopamine options:', error)
-    } finally {
       setIsLoaded(true)
     }
-  }, [storageKey, defaultOptions])
+    init()
+  }, [lang, defaultOptions, user])
 
-  // Save options to localStorage
+  // Save options
   useEffect(() => {
     if (!isLoaded) return
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(options))
-    } catch (error) {
-      console.error('Failed to save dopamine options:', error)
+    const save = async () => {
+      await saveDopamine(options, lang, user)
     }
-  }, [options, storageKey, isLoaded])
+    const timeout = setTimeout(save, 1000)
+    return () => clearTimeout(timeout)
+  }, [options, lang, isLoaded, user])
 
   const handleSpin = () => {
     if (options.length === 0) return

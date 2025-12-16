@@ -9,6 +9,7 @@ import GoogleAnalytics from '@/components/GoogleAnalytics'
 import MicrosoftClarity from '@/components/MicrosoftClarity'
 import siteMetadata from '@/data/siteMetadata'
 import { LanguageProvider } from '@/context/LanguageContext'
+import { AuthProvider } from '@/context/AuthContext'
 import { isLocale, locales, Locale } from '@/lib/i18n'
 import { getDictionary } from '@/data/locale/dictionary'
 import { SearchProviderClient } from '@/components/SearchProviderClient'
@@ -33,18 +34,20 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   return (
     <LanguageProvider locale={locale} dictionary={dictionary}>
-      <Suspense fallback={null}>
-        <GoogleAnalytics />
-        <MicrosoftClarity />
-      </Suspense>
-      <Analytics />
-      <SectionContainer>
-        <SearchProviderClient searchConfig={siteMetadata.search as SearchConfig}>
-          <Header />
-          <main className="mb-auto">{children}</main>
-        </SearchProviderClient>
-        <Footer />
-      </SectionContainer>
+      <AuthProvider>
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+          <MicrosoftClarity />
+        </Suspense>
+        <Analytics />
+        <SectionContainer>
+          <SearchProviderClient searchConfig={siteMetadata.search as SearchConfig}>
+            <Header />
+            <main className="mb-auto">{children}</main>
+          </SearchProviderClient>
+          <Footer />
+        </SectionContainer>
+      </AuthProvider>
     </LanguageProvider>
   )
 }
