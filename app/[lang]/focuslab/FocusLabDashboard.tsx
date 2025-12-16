@@ -2,7 +2,16 @@
 
 import Image from 'next/image'
 import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
-import { ReactNode, useEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
+import {
+  ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { ToDoWidget } from '@/components/focus-lab/ToDoWidget'
 import {
@@ -10,6 +19,8 @@ import {
   readToDoStorage,
   writeToDoStorage,
 } from '@/components/focus-lab/todoStorage'
+import { AnalyticsModal } from '@/components/focus-lab/AnalyticsModal'
+import { saveSession } from '@/components/focus-lab/focusStorage'
 
 // Context for passing drag controls to children
 const DragHandleContext = createContext<DragControls | null>(null)
@@ -388,6 +399,7 @@ const FocusLabMobileGrid = ({
 }: {
   focusedTask?: FocusedTaskState
   onStartFocus?: (task: string) => void
+  externalCommand?: string | null
 }) => {
   return (
     <div className="flex flex-col gap-5 pb-16">
@@ -411,8 +423,10 @@ export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [isTipOpen, setIsTipOpen] = useState(true)
   const [showGroupModal, setShowGroupModal] = useState(false)
+  const [showAnalytics, setShowAnalytics] = useState(false)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
   const [focusedTask, setFocusedTask] = useState<FocusedTaskState>(null)
+  const [externalCommand, setExternalCommand] = useState<string | null>(null)
   const { t, language: lang } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -462,6 +476,29 @@ export const FocusLabDashboard = () => {
       document.removeEventListener('keydown', handleKey)
     }
   }, [showGroupModal])
+
+  // Register Service Worker for external commands
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/focus-sw.js')
+        .then((reg) => {
+          console.log('Focus Lab SW registered', reg)
+        })
+        .catch((err) => {
+          console.error('Focus Lab SW failed', err)
+        })
+
+      // Listen for messages
+      const handler = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'FOCUS_LAB_ACTION') {
+          setExternalCommand(event.data.action)
+        }
+      }
+      navigator.serviceWorker.addEventListener('message', handler)
+      return () => navigator.serviceWorker.removeEventListener('message', handler)
+    }
+  }, [])
 
   // Lock scroll in Focus Mode
   useEffect(() => {
@@ -577,6 +614,9 @@ export const FocusLabDashboard = () => {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
       </AnimatePresence>
       <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
         <motion.div
@@ -697,6 +737,22 @@ export const FocusLabDashboard = () => {
                         </>
                       )}
                     </span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowAnalytics(true)}
+                    className={`${CONTROL_BUTTON_BASE} border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="mr-2 h-4 w-4"
+                    >
+                      <path d="M18 20V10M12 20V4M6 20v-6" />
+                    </svg>
+                    {lang === 'zh' ? '统计' : 'Stats'}
                   </button>
 
                   <button
@@ -826,6 +882,8 @@ export const FocusLabDashboard = () => {
                     containerWidth={containerWidth}
                     focusedTask={focusedTask}
                     onStartFocus={(task) => setFocusedTask({ text: task, timestamp: Date.now() })}
+                    externalCommand={externalCommand}
+                    onCommandHandled={() => setExternalCommand(null)}
                   />
                 )}
               </motion.div>
@@ -837,7 +895,7 @@ export const FocusLabDashboard = () => {
   )
 }
 
-export const FocusLabGrid = ({
+const FocusLabGrid = ({
   isFocusMode = false,
   focusedCardIds = new Set(),
   onToggleFocus = () => {},
@@ -845,6 +903,8 @@ export const FocusLabGrid = ({
   preset,
   focusedTask,
   onStartFocus,
+  externalCommand,
+  onCommandHandled,
 }: {
   isFocusMode?: boolean
   focusedCardIds?: Set<string>
@@ -853,6 +913,8 @@ export const FocusLabGrid = ({
   preset: LayoutPreset
   focusedTask?: FocusedTaskState
   onStartFocus?: (task: string) => void
+  externalCommand?: string | null
+  onCommandHandled?: () => void
 }) => {
   const presetConfig = GRID_PRESETS[preset]
   const [layout, setLayout] = useState<GridItem[]>(() => cloneLayout(presetConfig.layout))
@@ -970,6 +1032,8 @@ export const FocusLabGrid = ({
                   onToggleFocus={() => onToggleFocus(item.id)}
                   onDelete={() => handleRemoveWidget(item.id)}
                   focusedTask={focusedTask}
+                  externalCommand={externalCommand}
+                  onCommandHandled={onCommandHandled}
                 />
               )}
               {item.id === 'brain' && (
@@ -1156,7 +1220,7 @@ const DraggableResizableItem = ({
   )
 }
 
-export function SonicShieldCard({
+function SonicShieldCard({
   onToggleFocus,
   onDelete,
   className,
@@ -1179,16 +1243,20 @@ export function SonicShieldCard({
   )
 }
 
-export function TimerCard({
+function TimerCard({
   onToggleFocus,
   onDelete,
   className,
   focusedTask,
+  externalCommand,
+  onCommandHandled,
 }: {
   onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
   focusedTask?: FocusedTaskState
+  externalCommand?: string | null
+  onCommandHandled?: () => void
 }) {
   const { t } = useTranslation()
   const [dailyFocusMinutes, setDailyFocusMinutes] = useState(0)
@@ -1269,12 +1337,17 @@ export function TimerCard({
       onDelete={onDelete}
       className={className}
     >
-      <TimerWidget dailyFocusMinutes={dailyFocusMinutes} onTimerComplete={handleTimerComplete} />
+      <TimerWidget
+        onTimerComplete={handleTimerComplete}
+        focusedTask={focusedTask}
+        externalCommand={externalCommand}
+        onCommandHandled={onCommandHandled}
+      />
     </WidgetCard>
   )
 }
 
-export function TaskBreakerCard({
+function TaskBreakerCard({
   onToggleFocus,
   onDelete,
   className,
@@ -1297,7 +1370,7 @@ export function TaskBreakerCard({
   )
 }
 
-export function BrainDumpCard({
+function BrainDumpCard({
   onToggleFocus,
   onDelete,
   className,
@@ -1320,7 +1393,7 @@ export function BrainDumpCard({
   )
 }
 
-export function ToDoCard({
+function ToDoCard({
   cols,
   onToggleFocus,
   onDelete,
@@ -1347,7 +1420,7 @@ export function ToDoCard({
   )
 }
 
-export function DopamineMenuCard({
+function DopamineMenuCard({
   cols,
   onToggleFocus,
   onDelete,
@@ -1650,9 +1723,15 @@ const SonicShieldWidget = () => {
 const TimerWidget = ({
   onTimerComplete,
   dailyFocusMinutes = 0,
+  focusedTask,
+  externalCommand,
+  onCommandHandled,
 }: {
   onTimerComplete?: (minutes: number) => void
   dailyFocusMinutes?: number
+  focusedTask?: FocusedTaskState
+  externalCommand?: string | null
+  onCommandHandled?: () => void
 }) => {
   const { t, language: lang } = useTranslation()
   const [activePreset, setActivePreset] = useState<TimerPreset>('focus')
@@ -1669,6 +1748,8 @@ const TimerWidget = ({
   const [showDailyFocus, setShowDailyFocus] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  const [startTime, setStartTime] = useState<number | null>(null)
+
   // Initialize Audio
   useEffect(() => {
     audioRef.current = new Audio('/static/sounds/alarm.mp3')
@@ -1681,6 +1762,20 @@ const TimerWidget = ({
       setPermission(Notification.permission)
     }
   }, [])
+
+  const handleSessionComplete = useCallback(
+    (durationMinutes: number) => {
+      // Record the session
+      saveSession({
+        id: crypto.randomUUID(),
+        taskName: focusedTask?.text || null,
+        startTime: startTime || Date.now() - durationMinutes * 60 * 1000,
+        durationMinutes: durationMinutes,
+        completed: true,
+      })
+    },
+    [focusedTask, startTime]
+  )
 
   const requestPermission = () => {
     if (typeof Notification !== 'undefined') {
@@ -1766,6 +1861,7 @@ const TimerWidget = ({
       const minutes = Math.floor(durationSeconds / 60)
       if (minutes > 0) {
         onTimerComplete?.(minutes)
+        handleSessionComplete(minutes)
       }
     } else if (timeLeft === 0) {
       setIsRunning(false)
@@ -1779,7 +1875,43 @@ const TimerWidget = ({
     onTimerComplete,
     t,
     customMinutes,
+    startTime,
+    focusedTask,
+    permission,
+    handleSessionComplete,
+    lang,
   ])
+
+  // Handle External Commands
+  useEffect(() => {
+    if (!externalCommand) return
+
+    if (externalCommand === 'start-focus') {
+      // Start a standard 25m focus
+      setActivePreset('focus') // 25m
+      setIsDone(false)
+      setIsRunning(true)
+      setStartTime(Date.now())
+    } else if (externalCommand === 'start-break-5') {
+      setActivePreset('short') // 5m
+      setIsDone(false)
+      setIsRunning(true)
+      setStartTime(Date.now())
+    } else if (externalCommand === 'start-break-15') {
+      setActivePreset('long') // 15m (actually custom, but preset key is 'long')
+      // Assuming 'long' preset logic uses '15' in timerPresets or customMinutes
+      // Let's force it to 15 if needed or just switch preset
+      // In original code: long: { duration: 15 * 60 }, unless it was changed to custom
+      // We can just rely on the preset switching logic
+      setIsDone(false)
+      setIsRunning(true)
+      setStartTime(Date.now())
+    } else if (externalCommand === 'stop') {
+      setIsRunning(false)
+    }
+
+    onCommandHandled?.()
+  }, [externalCommand, onCommandHandled, setActivePreset, setIsRunning, setStartTime])
 
   const handleStartPause = () => {
     if (isDone) {
@@ -1796,6 +1928,12 @@ const TimerWidget = ({
       }
       setIsRunning(true)
       return
+    }
+
+    if (!isRunning) {
+      setStartTime(Date.now())
+    } else {
+      setStartTime(null) // Paused
     }
 
     if (timeLeft === 0) {
@@ -1823,6 +1961,13 @@ const TimerWidget = ({
       const diff = getSecondsUntilTarget(targetTime)
       setTargetDuration(diff)
       setTimeLeft(diff)
+    }
+  }
+
+  const adjustTime = () => {
+    setTimeLeft((prev) => prev + 5 * 60)
+    if (activePreset === 'long') {
+      setCustomMinutes((prev) => Math.min(prev + 5, 120))
     }
   }
 
@@ -2064,7 +2209,17 @@ const TimerWidget = ({
             </>
           )}
         </button>
-        <div className="w-20" /> {/* Spacer for balance (matches Reset button width) */}
+        {/* Adjusted Time Button +5m */}
+        {isRunning && (
+          <button
+            type="button"
+            onClick={adjustTime}
+            className="flex h-10 w-20 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+          >
+            +5m
+          </button>
+        )}
+        {!isRunning && <div className="w-20" />} {/* Spacer for balance when not running */}
       </div>
     </div>
   )
