@@ -217,7 +217,7 @@ export const ToDoWidget = ({
                       }}
                       className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-600"
                       aria-label="Focus on this task"
-                      title={lang === 'en' ? 'Focus on this task' : '专注此任务'}
+                      title={t.focusLab.widgets.todo.focusTooltip}
                       onPointerDown={(e) => e.stopPropagation()}
                     >
                       <svg
@@ -230,8 +230,10 @@ export const ToDoWidget = ({
                         className="h-4 w-4"
                       >
                         <circle cx="12" cy="12" r="10" />
-                        <circle cx="12" cy="12" r="6" />
-                        <circle cx="12" cy="12" r="2" />
+                        <line x1="22" y1="12" x2="18" y2="12" />
+                        <line x1="6" y1="12" x2="2" y2="12" />
+                        <line x1="12" y1="6" x2="12" y2="2" />
+                        <line x1="12" y1="22" x2="12" y2="18" />
                       </svg>
                     </button>
                   )}

@@ -31,7 +31,7 @@ export const dictionary = {
         },
         actionable: {
           title: 'Immediate Action',
-          desc: 'More than just a score. Based on your results, we match you with white noise, Pomodoro timers, and other relief tools.',
+          desc: 'More than just a score. Based on your results, we match you with white noise, Focus timers, and other relief tools.',
         },
       },
       resourceHub: {
@@ -115,7 +115,7 @@ export const dictionary = {
         eyebrow: 'Focus Lab',
         title: 'Your Immersive ADHD Workspace',
         description:
-          'A "focus sanctuary" designed for the hyperactive brain. No more switching between apps—white noise, Pomodoro timer, and task breakdown tools are all integrated here.\nThis is your personal mission control to block distractions and regain control.',
+          'A "focus sanctuary" designed for the hyperactive brain. No more switching between apps—white noise, Focus Timer, and task breakdown tools are all integrated here.\nThis is your personal mission control to block distractions and regain control.',
       },
       loading: {
         title: 'Loading Focus Lab',
@@ -130,7 +130,7 @@ export const dictionary = {
           volume: 'Vol',
         },
         timer: {
-          title: 'Pomodoro Timer',
+          title: 'Focus Timer',
           subtitle: 'Customizable timer with Countdown and Target Time modes.',
           presets: {
             focus: 'Focus · 25m',
@@ -138,12 +138,19 @@ export const dictionary = {
             long: 'Long Break · 15m',
           },
           countdown: 'COUNTDOWN',
-          targetTime: 'TARGET TIME',
+          stopwatch: 'STOPWATCH',
           set: 'Set',
           reset: 'Reset',
           pause: 'PAUSE',
           start: 'START',
-          done: 'Congrats! Another Focus Finished',
+          resume: 'RESUME',
+          endSession: 'End Session',
+          done: 'Focus Complete!',
+          decisionPrompt: {
+            continueFocus: 'Continue Focus',
+            plusFive: '+5m',
+            takeBreak: 'Break 5m',
+          },
           todayFocus: 'Today: {minutes}m',
           tipTitle: 'Click title to toggle task name',
           tipCustom: 'Double-click custom timer to edit',
@@ -205,14 +212,23 @@ export const dictionary = {
           ],
         },
         todo: {
-          title: 'To Do List',
-          subtitle: 'Track your daily tasks.',
-          placeholder: 'Add a task...',
-          emptyTitle: 'No tasks for today',
-          emptySubtitle: 'Add a task above',
+          title: "Today's Tasks",
+          subtitle:
+            'Your daily "must-do" list. Click the target icon on a task to load it into the Focus Timer.',
+          placeholder: 'Add a new task...',
+          emptyTitle: 'No tasks yet',
+          emptySubtitle: 'Add a task to get started',
+          focusTooltip: 'Focus on this task',
         },
       },
       controls: {
+        resetModal: {
+          title: 'Reset Dashboard Layout?',
+          description:
+            'Your data (tasks, notes, etc.) will be preserved, but widget positions will be reset.',
+          confirm: 'Reset Layout',
+          cancel: 'Cancel',
+        },
         focusMode: 'Focus Mode',
         exitFocus: 'Exit Focus',
         resetLayout: 'Reset Layout',
@@ -264,9 +280,9 @@ export const dictionary = {
             'For many ADHD brains, silence is actually distracting. Every small sound becomes a potential interruption. Our White Noise player provides a range of "auditory masking" options including White Noise, Rain, Insects, Summer Night, Thunder, Waves, and Wind. These create a consistent sound blanket that covers up distracting background noises, reducing the cognitive load required to filter them out.',
         },
         pomodoro: {
-          title: '2. Pomodoro Timer: Conquer Time Blindness',
+          title: '2. Focus Timer: Conquer Time Blindness',
           content:
-            '"Time Blindness" is a common struggle where the passage of time feels abstract. The Pomodoro Timer externalizes time, making it visible and concrete. Working in short bursts (like 25 minutes) with guaranteed breaks helps maintain dopamine levels and prevents burnout.',
+            '"Time Blindness" is a common struggle where the passage of time feels abstract. The Focus Timer externalizes time, making it visible and concrete. Working in short bursts (like 25 minutes) with guaranteed breaks helps maintain dopamine levels and prevents burnout.',
         },
         taskBreaker: {
           title: '3. AI Task Breaker: Reduce Executive Dysfunction',
@@ -801,13 +817,19 @@ export const dictionary = {
         eyebrow: 'Focus Lab',
         title: '你的 ADHD 沉浸式工作台',
         description:
-          '专为多动大脑设计的“专注避难所”。无需在不同 App 间来回切换，这里集成了注意力中转站、今日待办、白噪音、番茄钟和AI任务拆解等工具。\n这就是你的私人任务控制中心，帮你屏蔽干扰，找回掌控感。',
+          '专为多动大脑设计的“专注避难所”。无需在不同 App 间来回切换，这里集成了注意力中转站、今日待办、白噪音、专注时钟和AI任务拆解等工具。\n这就是你的私人任务控制中心，帮你屏蔽干扰，找回掌控感。',
       },
       loading: {
         title: '正在加载 Focus Lab',
         description: '正在搭建你的无干扰工作台...',
       },
       controls: {
+        resetModal: {
+          title: '重置布局？',
+          description: '您的数据（任务、便签等）将被保留，但卡片位置将被重置。',
+          confirm: '重置',
+          cancel: '取消',
+        },
         focusMode: '专注模式',
         exitFocus: '退出专注',
         resetLayout: '重置布局',
@@ -846,7 +868,7 @@ export const dictionary = {
           volume: '音量',
         },
         timer: {
-          title: '番茄钟',
+          title: '专注时钟',
           subtitle: '支持倒计时和目标时间模式的可自定义计时器',
           presets: {
             focus: '专注 · 25分钟',
@@ -854,12 +876,19 @@ export const dictionary = {
             long: '长休息 · 15分钟',
           },
           countdown: '倒计时',
-          targetTime: '目标时间',
+          stopwatch: '正向计时',
           set: '设置',
           reset: '重置',
           pause: '暂停',
           start: '开始',
-          done: '恭喜！又完成了一次专注',
+          resume: '继续',
+          endSession: '结束专注',
+          done: '又完成了一次专注',
+          decisionPrompt: {
+            continueFocus: '继续专注',
+            plusFive: '再来5m',
+            takeBreak: '休息5m',
+          },
           todayFocus: '今日专注：{minutes}分钟',
           tipTitle: '点击标题切换任务显示',
           tipCustom: '双击自定义计时器进行编辑',
@@ -922,10 +951,11 @@ export const dictionary = {
         },
         todo: {
           title: '今日待办',
-          subtitle: '追踪你的每日任务',
-          placeholder: '添加任务...',
-          emptyTitle: '今天没有需要完成的事情',
-          emptySubtitle: '在上方添加任务',
+          subtitle: '每日核心任务清单。点击任务右侧的瞄准图标，即可将其载入专注时钟。',
+          placeholder: '添加新任务...',
+          emptyTitle: '暂无任务',
+          emptySubtitle: '添加任务开始新的一天',
+          focusTooltip: '专注此任务',
         },
       },
       sounds: {
@@ -948,9 +978,9 @@ export const dictionary = {
             '对于许多 ADHD 大脑来说，死寂实际上是分心的。每一个细小的声音都可能成为干扰。我们的白噪音播放器提供一系列“听觉掩蔽”选项，包括白噪音、雨声、昆虫声、夏夜、雷声、海浪和风声。它们创造了一层持续的声音毯子，覆盖住令人分心的背景噪音，减少过滤噪音所需的认知负荷。',
         },
         pomodoro: {
-          title: '2. 番茄钟：战胜时间盲区',
+          title: '2. 专注时钟：战胜时间盲区',
           content:
-            '“时间盲区”是一个常见的挣扎，时间的流逝感觉很抽象。番茄钟将时间外化，使其可见且具体。短时间爆发式工作（如 25 分钟）并保证休息，有助于维持多巴胺水平并防止倦怠。',
+            '“时间盲区”是一个常见的挣扎，时间的流逝感觉很抽象。专注时钟将时间外化，使其可见且具体。短时间爆发式工作（如 25 分钟）并保证休息，有助于维持多巴胺水平并防止倦怠。',
         },
         taskBreaker: {
           title: '3. AI 任务拆解：减少执行功能障碍',

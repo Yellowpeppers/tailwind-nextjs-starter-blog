@@ -7,8 +7,9 @@ import { useTranslation } from '@/context/LanguageContext'
 
 // Helper to format duration
 const formatDuration = (minutes: number) => {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
+  const rounded = Math.round(minutes)
+  const h = Math.floor(rounded / 60)
+  const m = rounded % 60
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
 }
@@ -509,7 +510,7 @@ export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
                     >
                       <div className="flex flex-col gap-1">
                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {session.taskName || (lang === 'zh' ? '自由专注' : 'General Focus')}
+                          {session.taskName || (lang === 'zh' ? '专注记录' : 'Focus Session')}
                         </span>
                         <span className="text-xs text-gray-500">
                           {new Date(session.startTime).toLocaleTimeString([], {

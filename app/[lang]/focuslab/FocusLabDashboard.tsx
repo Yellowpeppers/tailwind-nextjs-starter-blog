@@ -341,18 +341,18 @@ type GridItem = {
 
 const INITIAL_LAYOUT: GridItem[] = [
   // Left Column (3 units)
-  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 2, minH: 5 },
-  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 2, minH: 5 },
+  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
+  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
 
   // Middle Left (ToDo - 3 units)
-  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 2, minH: 5 },
+  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 3, minH: 5 },
 
   // Middle Right (Brain Dump - 5 units)
   { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 4, minH: 5 },
 
   // Right Column (3 units)
-  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 2, minH: 5 },
-  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 5 },
+  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
+  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
 ]
 
 const TRIPLE_LAYOUT: GridItem[] = [
@@ -396,15 +396,23 @@ type FocusedTaskState = { text: string; timestamp: number } | null
 const FocusLabMobileGrid = ({
   focusedTask,
   onStartFocus,
+  externalCommand,
+  onCommandHandled,
 }: {
   focusedTask?: FocusedTaskState
   onStartFocus?: (task: string) => void
   externalCommand?: string | null
+  onCommandHandled?: () => void
 }) => {
   return (
     <div className="flex flex-col gap-5 pb-16">
       <SonicShieldCard className="h-auto" />
-      <TimerCard className="h-auto" focusedTask={focusedTask} />
+      <TimerCard
+        className="h-auto"
+        focusedTask={focusedTask}
+        externalCommand={externalCommand}
+        onCommandHandled={onCommandHandled}
+      />
       <BrainDumpCard className="h-auto" />
       <ToDoCard className="h-auto" onStartFocus={onStartFocus} />
       <TaskBreakerCard className="h-auto" />
@@ -423,6 +431,7 @@ export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [isTipOpen, setIsTipOpen] = useState(true)
   const [showGroupModal, setShowGroupModal] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
   const [focusedTask, setFocusedTask] = useState<FocusedTaskState>(null)
@@ -740,39 +749,10 @@ export const FocusLabDashboard = () => {
                   </button>
 
                   <button
-                    onClick={() => setShowAnalytics(true)}
-                    className={`${CONTROL_BUTTON_BASE} border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="mr-2 h-4 w-4"
-                    >
-                      <path d="M18 20V10M12 20V4M6 20v-6" />
-                    </svg>
-                    {lang === 'zh' ? '统计' : 'Stats'}
-                  </button>
-
-                  <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
-                      if (
-                        window.confirm(
-                          lang === 'en'
-                            ? 'Reset dashboard layout? Your data (tasks, notes, etc.) will be preserved.'
-                            : '重置卡片布局？您的数据（任务、便签等）将被保留。'
-                        )
-                      ) {
-                        const legacyKeys = ['focus-lab-layout-v1']
-                        const presetKeys = Object.keys(GRID_PRESETS) as LayoutPreset[]
-                        ;[...legacyKeys, ...presetKeys.map((p) => getLayoutStorageKey(p))].forEach(
-                          (key) => window.localStorage.removeItem(key)
-                        )
-                        window.location.reload()
-                      }
+                      setShowResetConfirm(true)
                     }}
                     className={`${CONTROL_BUTTON_BASE} group border-primary-500 text-primary-600 hover:bg-primary-50 bg-white dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800`}
                   >
@@ -790,6 +770,78 @@ export const FocusLabDashboard = () => {
                     </svg>
                     {t.focusLab.controls.resetLayout}
                   </button>
+
+                  <AnimatePresence>
+                    {showResetConfirm && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                        onClick={() => setShowResetConfirm(false)}
+                      >
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">
+                            {t.focusLab.controls.resetModal?.title || 'Reset Layout?'}
+                          </h3>
+                          <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+                            {t.focusLab.controls.resetModal?.description ||
+                              'Your layout will be reset to default.'}
+                          </p>
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => setShowResetConfirm(false)}
+                              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                            >
+                              {t.focusLab.controls.resetModal?.cancel || 'Cancel'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                const legacyKeys = ['focus-lab-layout-v1']
+                                const presetKeys = Object.keys(GRID_PRESETS) as LayoutPreset[]
+                                ;[
+                                  ...legacyKeys,
+                                  ...presetKeys.map((p) => getLayoutStorageKey(p)),
+                                ].forEach((key) => window.localStorage.removeItem(key))
+                                window.location.reload()
+                              }}
+                              className="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-md transition-colors active:scale-95"
+                            >
+                              {t.focusLab.controls.resetModal?.confirm || 'Reset'}
+                            </button>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Stats Button with Flowing Light Border */}
+                  <div className="group relative flex items-center justify-center">
+                    {/* Flowing Border Container */}
+                    <div className="from-primary-500 via-primary-200 to-primary-500 dark:from-primary-800 dark:via-primary-300 dark:to-primary-800 animate-border-flow absolute -inset-[2px] rounded-full bg-gradient-to-r bg-[length:200%_auto] opacity-80 blur-[2px] transition duration-1000 group-hover:opacity-100"></div>
+
+                    <button
+                      onClick={() => setShowAnalytics(true)}
+                      className={`${CONTROL_BUTTON_BASE} relative border-transparent bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="mr-2 h-4 w-4"
+                      >
+                        <path d="M18 20V10M12 20V4M6 20v-6" />
+                      </svg>
+                      {lang === 'zh' ? '统计' : 'Stats'}
+                    </button>
+                  </div>
 
                   {isFocusMode && (
                     <>
@@ -871,7 +923,12 @@ export const FocusLabDashboard = () => {
                 {isMobile ? (
                   <FocusLabMobileGrid
                     focusedTask={focusedTask}
-                    onStartFocus={(task) => setFocusedTask({ text: task, timestamp: Date.now() })}
+                    onStartFocus={(task) => {
+                      setFocusedTask({ text: task, timestamp: Date.now() })
+                      // setExternalCommand('start-focus') // Removed auto-start
+                    }}
+                    externalCommand={externalCommand}
+                    onCommandHandled={() => setExternalCommand(null)}
                   />
                 ) : (
                   <FocusLabGrid
@@ -881,7 +938,10 @@ export const FocusLabDashboard = () => {
                     onToggleFocus={toggleCardFocus}
                     containerWidth={containerWidth}
                     focusedTask={focusedTask}
-                    onStartFocus={(task) => setFocusedTask({ text: task, timestamp: Date.now() })}
+                    onStartFocus={(task) => {
+                      setFocusedTask({ text: task, timestamp: Date.now() })
+                      // setExternalCommand('start-focus') // Removed auto-start
+                    }}
                     externalCommand={externalCommand}
                     onCommandHandled={() => setExternalCommand(null)}
                   />
@@ -1259,7 +1319,7 @@ function TimerCard({
   onCommandHandled?: () => void
 }) {
   const { t } = useTranslation()
-  const [dailyFocusMinutes, setDailyFocusMinutes] = useState(0)
+
   const [showTaskTitle, setShowTaskTitle] = useState(true)
 
   useEffect(() => {
@@ -1267,40 +1327,6 @@ function TimerCard({
       setShowTaskTitle(true)
     }
   }, [focusedTask])
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem('focus-lab-daily-focus')
-    if (stored) {
-      try {
-        const { date, minutes } = JSON.parse(stored)
-        const today = new Date().toDateString()
-        if (date === today) {
-          setDailyFocusMinutes(minutes)
-        } else {
-          // Reset for new day
-          setDailyFocusMinutes(0)
-          window.localStorage.setItem(
-            'focus-lab-daily-focus',
-            JSON.stringify({ date: today, minutes: 0 })
-          )
-        }
-      } catch (e) {
-        console.error('Failed to parse daily focus', e)
-      }
-    }
-  }, [])
-
-  const handleTimerComplete = (minutes: number) => {
-    setDailyFocusMinutes((prev) => {
-      const newMinutes = prev + minutes
-      const today = new Date().toDateString()
-      window.localStorage.setItem(
-        'focus-lab-daily-focus',
-        JSON.stringify({ date: today, minutes: newMinutes })
-      )
-      return newMinutes
-    })
-  }
 
   return (
     <WidgetCard
@@ -1338,7 +1364,6 @@ function TimerCard({
       className={className}
     >
       <TimerWidget
-        onTimerComplete={handleTimerComplete}
         focusedTask={focusedTask}
         externalCommand={externalCommand}
         onCommandHandled={onCommandHandled}
@@ -1444,6 +1469,15 @@ function DopamineMenuCard({
     </WidgetCard>
   )
 }
+
+type TimerState =
+  | 'idle'
+  | 'focusing'
+  | 'paused-focusing'
+  | 'focus-completed'
+  | 'break'
+  | 'paused-break'
+  | 'break-completed'
 
 type TimerPreset = 'focus' | 'short' | 'long'
 
@@ -1722,13 +1756,11 @@ const SonicShieldWidget = () => {
 
 const TimerWidget = ({
   onTimerComplete,
-  dailyFocusMinutes = 0,
   focusedTask,
   externalCommand,
   onCommandHandled,
 }: {
   onTimerComplete?: (minutes: number) => void
-  dailyFocusMinutes?: number
   focusedTask?: FocusedTaskState
   externalCommand?: string | null
   onCommandHandled?: () => void
@@ -1738,81 +1770,94 @@ const TimerWidget = ({
   const [customMinutes, setCustomMinutes] = useState(15)
   const [isEditingCustom, setIsEditingCustom] = useState(false)
   const [isCustomChanged, setIsCustomChanged] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration)
-  const [isRunning, setIsRunning] = useState(false)
-  const [timerMode, setTimerMode] = useState<'countdown' | 'target'>('countdown')
-  const [targetTime, setTargetTime] = useState('')
-  const [targetDuration, setTargetDuration] = useState(0)
-  const [isDone, setIsDone] = useState(false)
+
+  // Timer Core State
+  const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration) // Seconds. Countdown: remaining. Stopwatch: elapsed.
+  const [timerState, setTimerState] = useState<TimerState>('idle')
+  const [timerMode, setTimerMode] = useState<'countdown' | 'stopwatch'>('countdown')
+  const [totalAllocatedDuration, setTotalAllocatedDuration] = useState(timerPresets.focus.duration) // For accurate countdown accounting
+
   const [permission, setPermission] = useState<NotificationPermission>('default')
-  const [showDailyFocus, setShowDailyFocus] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [startTime, setStartTime] = useState<number | null>(null) // Timestamp when current session started (for storage)
 
-  const [startTime, setStartTime] = useState<number | null>(null)
+  // -- Helpers --
+  const isRunning = timerState === 'focusing' || timerState === 'break'
+  const isPaused = timerState === 'paused-focusing' || timerState === 'paused-break'
+  const isCompleted = timerState === 'focus-completed' || timerState === 'break-completed'
 
-  // Initialize Audio
+  // Initialize Audio & Permissions
   useEffect(() => {
     audioRef.current = new Audio('/static/sounds/alarm.mp3')
     audioRef.current.load()
-  }, [])
-
-  // Check permission on mount
-  useEffect(() => {
     if (typeof Notification !== 'undefined') {
       setPermission(Notification.permission)
     }
   }, [])
 
+  // -- Data Recording --
   const handleSessionComplete = useCallback(
-    (durationMinutes: number) => {
-      // Record the session
-      saveSession({
-        id: crypto.randomUUID(),
-        taskName: focusedTask?.text || null,
-        startTime: startTime || Date.now() - durationMinutes * 60 * 1000,
-        durationMinutes: durationMinutes,
-        completed: true,
-      })
+    (durationMinutes: number, completed: boolean = true) => {
+      try {
+        const id =
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `session-${Date.now()}-${Math.random()}`
+        // Calculate a reasonable start time if missing
+        const finalStartTime = startTime || Date.now() - durationMinutes * 60 * 1000
+
+        // Ensure even small sessions are recorded if manual "End", but maybe filter extremely short accidentals (< 10s)
+        // unless it's a "completed" session.
+        if (durationMinutes < 0.1 && !completed) return
+
+        console.log('Saving Session:', {
+          id,
+          durationMinutes,
+          completed,
+          finalStartTime,
+          task: focusedTask?.text,
+        })
+
+        saveSession({
+          id,
+          taskName: focusedTask?.text || null, // Ensure unnamed sessions are recorded
+          startTime: finalStartTime,
+          durationMinutes: durationMinutes,
+          completed: completed,
+        })
+      } catch (e) {
+        console.error('Error in handleSessionComplete:', e)
+      }
     },
     [focusedTask, startTime]
   )
 
-  const requestPermission = () => {
-    if (typeof Notification !== 'undefined') {
-      Notification.requestPermission().then((p) => {
-        setPermission(p)
-      })
-    }
-  }
+  // -- Timer Logic --
 
+  // Reset/Init when mode/preset changes (Only if Idle)
   useEffect(() => {
+    if (timerState !== 'idle') return
+
     if (timerMode === 'countdown') {
-      if (activePreset === 'long') {
-        setTimeLeft(customMinutes * 60)
-      } else {
-        setTimeLeft(timerPresets[activePreset].duration)
-      }
-      setTargetDuration(0)
-      setIsRunning(false)
-      setIsDone(false)
+      const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    } else {
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
     }
-  }, [activePreset, timerMode, customMinutes])
+  }, [activePreset, timerMode, customMinutes, timerState])
 
-  useEffect(() => {
-    if (timerMode === 'target' && targetTime) {
-      const diff = getSecondsUntilTarget(targetTime)
-      setTimeLeft(diff)
-      setTargetDuration(diff)
-      setIsRunning(false)
-      setIsDone(false)
-    }
-  }, [timerMode, targetTime])
-
+  // Tick
   useEffect(() => {
     if (!isRunning) return
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
+        if (timerMode === 'stopwatch') {
+          return prev + 1
+        }
+        // Countdown
         if (prev <= 1) {
           clearInterval(interval)
           return 0
@@ -1822,12 +1867,15 @@ const TimerWidget = ({
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isRunning])
+  }, [isRunning, timerMode])
 
+  // Handle Completion (Countdown only)
   useEffect(() => {
-    if (timeLeft === 0 && isRunning) {
-      setIsRunning(false)
-      setIsDone(true)
+    if (timerMode === 'countdown' && timeLeft === 0 && isRunning) {
+      // Transition to completed
+      if (timerState === 'focusing') setTimerState('focus-completed')
+      else if (timerState === 'break') setTimerState('break-completed')
+      else setTimerState('focus-completed') // fallback
 
       // Play Alarm
       if (audioRef.current) {
@@ -1835,300 +1883,206 @@ const TimerWidget = ({
         audioRef.current.play().catch((e) => console.error('Failed to play alarm:', e))
       }
 
-      // Notification
-      if (typeof Notification !== 'undefined') {
-        const options = {
+      // Notify
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification(timerState === 'focusing' ? 'Focus Session Complete!' : 'Break Over!', {
           icon: '/static/images/logo.png',
-        }
-        if (Notification.permission === 'granted') {
-          new Notification(t.focusLab.widgets.timer.done, options)
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-              new Notification(t.focusLab.widgets.timer.done, options)
-            }
-          })
-        }
+        })
       }
 
-      // Update Daily Focus
-      const durationSeconds =
-        timerMode === 'countdown'
-          ? activePreset === 'long'
-            ? customMinutes * 60
-            : timerPresets[activePreset].duration
-          : targetDuration
-      const minutes = Math.floor(durationSeconds / 60)
-      if (minutes > 0) {
-        onTimerComplete?.(minutes)
-        handleSessionComplete(minutes)
+      // Record Data (Full Allocated Duration) - Only for Focus sessions
+      if (timerState === 'focusing') {
+        const minutes = totalAllocatedDuration / 60
+        handleSessionComplete(Math.round(minutes), true)
       }
-    } else if (timeLeft === 0) {
-      setIsRunning(false)
     }
-  }, [
-    timeLeft,
-    isRunning,
-    timerMode,
-    activePreset,
-    targetDuration,
-    onTimerComplete,
-    t,
-    customMinutes,
-    startTime,
-    focusedTask,
-    permission,
-    handleSessionComplete,
-    lang,
-  ])
+  }, [timeLeft, isRunning, timerMode, timerState, totalAllocatedDuration, handleSessionComplete])
 
-  // Handle External Commands
-  useEffect(() => {
-    if (!externalCommand) return
+  // -- Actions --
+  const startTimer = () => {
+    setStartTime(Date.now())
+    if (timerState === 'idle') {
+      setTimerState(timerMode === 'stopwatch' || activePreset === 'focus' ? 'focusing' : 'break')
+    } else if (isPaused) {
+      // Resume
+      if (timerState === 'paused-focusing') setTimerState('focusing')
+      if (timerState === 'paused-break') setTimerState('break')
+    }
+  }
 
-    if (externalCommand === 'start-focus') {
-      // Start a standard 25m focus
-      setActivePreset('focus') // 25m
-      setIsDone(false)
-      setIsRunning(true)
-      setStartTime(Date.now())
-    } else if (externalCommand === 'start-break-5') {
-      setActivePreset('short') // 5m
-      setIsDone(false)
-      setIsRunning(true)
-      setStartTime(Date.now())
-    } else if (externalCommand === 'start-break-15') {
-      setActivePreset('long') // 15m (actually custom, but preset key is 'long')
-      // Assuming 'long' preset logic uses '15' in timerPresets or customMinutes
-      // Let's force it to 15 if needed or just switch preset
-      // In original code: long: { duration: 15 * 60 }, unless it was changed to custom
-      // We can just rely on the preset switching logic
-      setIsDone(false)
-      setIsRunning(true)
-      setStartTime(Date.now())
-    } else if (externalCommand === 'stop') {
-      setIsRunning(false)
+  const pauseTimer = () => {
+    // Check if we need to set startTime to null or keep it?
+    // Actually, when pausing, we should probably conceptually "stop" the clock.
+    // But for "elapsed" calculation in stopwatch, we just pause the tick.
+    if (timerState === 'focusing') setTimerState('paused-focusing')
+    if (timerState === 'break') setTimerState('paused-break')
+  }
+
+  const endSession = () => {
+    // Triggered manually by user (during Pause)
+    // If coming from PAUSED state (or running), we need to save what we have done so far.
+
+    let minutes = 0
+    if (timerMode === 'stopwatch') {
+      minutes = timeLeft / 60
+    } else {
+      // Countdown: Allocated - Left
+      // If we end early, we record what was done.
+      minutes = Math.max(0, totalAllocatedDuration - timeLeft) / 60
     }
 
-    onCommandHandled?.()
-  }, [externalCommand, onCommandHandled, setActivePreset, setIsRunning, setStartTime])
-
-  const handleStartPause = () => {
-    if (isDone) {
-      // Reset if done
-      setIsDone(false)
-      if (timerMode === 'countdown') {
-        setTimeLeft(
-          activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
-        )
-      } else if (timerMode === 'target' && targetTime) {
-        const next = getSecondsUntilTarget(targetTime)
-        setTargetDuration(next)
-        setTimeLeft(next)
-      }
-      setIsRunning(true)
-      return
+    // Only save if significant (> 1s to allow short tests, but user asked for reliability. Let's say > 10s)
+    if (minutes * 60 >= 10) {
+      handleSessionComplete(Math.round(minutes), false) // completed=false
     }
 
-    if (!isRunning) {
+    // Reset to Idle
+    setTimerState('idle')
+    if (timerMode === 'countdown') {
+      const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    } else {
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    }
+  }
+
+  const extendSession = () => {
+    // +5 Min
+    if (isCompleted) {
+      // Post-completion extension
+      setTimerState('focusing')
+      setTimeLeft(5 * 60)
+      setTotalAllocatedDuration(5 * 60)
       setStartTime(Date.now())
     } else {
-      setStartTime(null) // Paused
-    }
-
-    if (timeLeft === 0) {
+      // Mid-session extension
+      setTimeLeft((prev) => prev + 300)
       if (timerMode === 'countdown') {
-        setTimeLeft(
-          activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
-        )
-      } else if (timerMode === 'target' && targetTime) {
-        const next = getSecondsUntilTarget(targetTime)
-        setTargetDuration(next)
-        setTimeLeft(next)
+        setTotalAllocatedDuration((prev) => prev + 300)
       }
     }
-    setIsRunning((prev) => !prev)
   }
 
-  const handleReset = () => {
-    setIsRunning(false)
-    setIsDone(false)
-    if (timerMode === 'countdown') {
-      setTimeLeft(
-        activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
-      )
-    } else if (timerMode === 'target' && targetTime) {
-      const diff = getSecondsUntilTarget(targetTime)
-      setTargetDuration(diff)
-      setTimeLeft(diff)
-    }
+  const continueNewSession = () => {
+    // Start fresh loop
+    setTimerState('focusing')
+    const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+    setTimeLeft(d)
+    setTotalAllocatedDuration(d)
+    setStartTime(Date.now())
   }
 
-  const adjustTime = () => {
-    setTimeLeft((prev) => prev + 5 * 60)
-    if (activePreset === 'long') {
-      setCustomMinutes((prev) => Math.min(prev + 5, 120))
-    }
-  }
-
+  // -- UI Helpers --
   const minutes = Math.floor(timeLeft / 60)
   const seconds = timeLeft % 60
   const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  const fullDuration =
-    timerMode === 'countdown'
-      ? activePreset === 'long'
-        ? customMinutes * 60
-        : timerPresets[activePreset].duration
-      : targetDuration || Math.max(timeLeft, 1)
-  const safeFullDuration = fullDuration > 0 ? fullDuration : 1
-  const progress = Math.min(Math.max(timeLeft / safeFullDuration, 0), 1)
+
+  const progress =
+    timerMode === 'stopwatch'
+      ? 1
+      : Math.min(Math.max(timeLeft / (totalAllocatedDuration || 1), 0), 1)
+
   const radius = 40
   const circumference = 2 * Math.PI * radius
-  const rawOffset = circumference * (1 - progress)
-  const dashOffset = Number.isNaN(rawOffset) ? 0 : rawOffset
-  const todayFocusText = t.focusLab.widgets.timer.todayFocus.replace(
-    '{minutes}',
-    dailyFocusMinutes.toString()
-  )
-  const circleDisplay = showDailyFocus
-    ? todayFocusText
-    : isDone
-      ? t.focusLab.widgets.timer.done
-      : display
-  const circleTextClass = showDailyFocus
-    ? 'px-3 text-center text-sm font-semibold leading-tight text-gray-700 dark:text-gray-100'
-    : isDone
-      ? 'text-center text-xl font-bold text-green-500'
-      : 'font-mono text-3xl font-bold tracking-tighter text-gray-800 dark:text-white'
+  const dashOffset = circumference * (1 - progress)
 
+  const circleTextClass = isCompleted
+    ? timerState === 'focus-completed'
+      ? 'text-center text-xl font-bold text-green-500'
+      : 'text-center text-xl font-bold text-primary-500'
+    : 'font-mono text-3xl font-bold tracking-tighter text-gray-800 dark:text-white'
+
+  // -- Render --
   return (
     <div className="relative flex h-full flex-col items-center justify-between py-0.5">
-      {/* Top Controls */}
-      <div className="flex w-full flex-col items-center gap-1">
-        <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1 dark:border dark:border-gray-700 dark:bg-gray-800">
-          {(['countdown', 'target'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setTimerMode(mode)}
-              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-all ${
-                timerMode === mode
-                  ? 'text-primary-600 bg-white shadow-sm dark:bg-gray-600 dark:text-white'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
-              }`}
-            >
-              {mode === 'countdown'
-                ? t.focusLab.widgets.timer.countdown
-                : t.focusLab.widgets.timer.targetTime}
-            </button>
-          ))}
-        </div>
+      {/* Top Controls: Mode & Presets (Only in Idle) */}
+      <div className="flex min-h-[64px] w-full flex-col items-center gap-1">
+        {timerState === 'idle' && (
+          <>
+            <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1 dark:border dark:border-gray-700 dark:bg-gray-800">
+              {(['countdown', 'stopwatch'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setTimerMode(mode)}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-all ${
+                    timerMode === mode
+                      ? 'text-primary-600 bg-white shadow-sm dark:bg-gray-600 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {mode === 'countdown'
+                    ? t.focusLab.widgets.timer.countdown
+                    : t.focusLab.widgets.timer.stopwatch}
+                </button>
+              ))}
+            </div>
 
-        {/* Presets or Target Input */}
-        <div className="flex h-8 w-full items-center justify-center">
-          {timerMode === 'countdown' ? (
-            <div className="flex justify-center gap-2">
-              {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => {
-                if (preset === 'long') {
-                  return (
-                    <div
-                      key={preset}
-                      className={`relative flex items-center justify-center rounded-full px-2 transition-all ${
-                        activePreset === 'long'
-                          ? 'bg-primary-500 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
-                      }`}
-                    >
-                      {isEditingCustom ? (
-                        <>
-                          <input
-                            type="number"
-                            min="1"
-                            max="120"
-                            value={customMinutes}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value) || 0
-                              setCustomMinutes(val)
-                            }}
-                            onBlur={() => {
-                              const clamped = Math.max(1, Math.min(120, customMinutes))
-                              setCustomMinutes(clamped)
-                              setIsEditingCustom(false)
-                              setIsCustomChanged(true)
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+            {/* Presets (Countdown Only) */}
+            {timerMode === 'countdown' ? (
+              <div className="mt-2 flex justify-center gap-2">
+                {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => {
+                  if (preset === 'long') {
+                    return (
+                      <div
+                        key={preset}
+                        className={`relative flex items-center justify-center rounded-full px-2 transition-all ${activePreset === 'long' ? 'bg-primary-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
+                      >
+                        {isEditingCustom ? (
+                          <>
+                            <input
+                              type="number"
+                              min="1"
+                              max="120"
+                              value={customMinutes}
+                              onChange={(e) => setCustomMinutes(parseInt(e.target.value) || 0)}
+                              onBlur={() => {
+                                setCustomMinutes(Math.max(1, Math.min(120, customMinutes)))
                                 setIsEditingCustom(false)
                                 setIsCustomChanged(true)
-                              }
+                              }}
+                              onKeyDown={(e) => e.key === 'Enter' && setIsEditingCustom(false)}
+                              className="w-8 appearance-none border-none bg-transparent p-0 text-center text-sm font-bold text-white outline-none"
+                            />
+                            <span className="ml-0.5 text-xs font-medium">m</span>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setActivePreset('long')}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation()
+                              setIsEditingCustom(true)
                             }}
-                            className="w-8 appearance-none border-none bg-transparent p-0 text-center text-sm font-bold text-white outline-none focus:outline-none [&::-webkit-inner-spin-button]:appearance-none"
-                            // eslint-disable-next-line jsx-a11y/no-autofocus
-                            autoFocus
-                          />
-                          <span className="ml-0.5 text-xs font-medium">m</span>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setActivePreset('long')}
-                          onDoubleClick={(e) => {
-                            e.stopPropagation()
-                            setIsEditingCustom(true)
-                          }}
-                          title="Double click to edit duration"
-                          className="h-full w-full truncate px-2 py-1 text-sm font-bold"
-                        >
-                          {isCustomChanged
-                            ? `${customMinutes}m`
-                            : lang === 'zh'
-                              ? '自定义'
-                              : 'Custom'}
-                        </button>
-                      )}
-                    </div>
+                            className="h-full w-full truncate px-2 py-1 text-sm font-bold"
+                          >
+                            {customMinutes}m
+                          </button>
+                        )}
+                      </div>
+                    )
+                  }
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setActivePreset(preset)}
+                      className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${activePreset === preset ? 'bg-primary-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
+                    >
+                      {preset === 'focus' ? '25m' : '5m'}
+                    </button>
                   )
-                }
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setActivePreset(preset)}
-                    className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${
-                      activePreset === preset
-                        ? 'bg-primary-500 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
-                    }`}
-                  >
-                    {preset === 'focus' ? '25m' : '5m'}
-                  </button>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="flex justify-center gap-2">
-              <input
-                type="time"
-                value={targetTime}
-                onChange={(event) => setTargetTime(event.target.value)}
-                className="focus:border-primary-300 focus:ring-primary-100 h-8 rounded-md border border-gray-200 bg-transparent px-2 text-xs font-semibold text-gray-800 focus:ring-2 focus:outline-none dark:border-gray-700 dark:text-gray-100"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (!targetTime) return
-                  const diff = getSecondsUntilTarget(targetTime)
-                  setTargetDuration(diff)
-                  setTimeLeft(diff)
-                  setIsRunning(false)
-                }}
-                className="bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 rounded-md px-3 py-1 text-xs font-bold tracking-wider uppercase"
-              >
-                {t.focusLab.widgets.timer.set}
-              </button>
-            </div>
-          )}
-        </div>
+                })}
+              </div>
+            ) : (
+              <div className="mt-2 text-xs font-medium text-gray-400">
+                {lang === 'zh' ? '点击开始正向计时' : 'Click Start to begin count up'}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Progress Ring */}
@@ -2154,72 +2108,132 @@ const TimerWidget = ({
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
               strokeLinecap="round"
-              className={`${isDone ? 'text-green-500' : 'text-primary-500'} transition-all duration-500 ease-in-out`}
+              className={`${isCompleted ? 'text-green-500' : 'text-primary-500'} transition-all duration-500 ease-in-out`}
             />
           </svg>
-          <button
-            type="button"
-            onClick={() => setShowDailyFocus((prev) => !prev)}
-            className="focus-visible:ring-primary-400 absolute inset-0 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2"
-            aria-label={
-              showDailyFocus
-                ? t.focusLab.widgets.timer.accessibility.showTimer
-                : t.focusLab.widgets.timer.accessibility.showDailyFocus
-            }
-          >
-            <span className={circleTextClass}>{circleDisplay}</span>
-          </button>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className={circleTextClass}>
+              {isCompleted ? t.focusLab.widgets.timer.done : display}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Bottom Actions */}
-      <div className="flex w-full items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => {
-            playClickSound()
-            handleReset()
-          }}
-          className="flex h-10 w-20 items-center justify-center rounded-full text-xs font-bold tracking-wider text-gray-400 uppercase transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100"
-          aria-label="Reset Timer"
-        >
-          {t.focusLab.widgets.timer.reset}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            playClickSound()
-            handleStartPause()
-          }}
-          className={`flex h-10 items-center justify-center gap-2 rounded-full px-6 text-xs font-bold whitespace-nowrap text-white shadow-lg transition-all active:scale-95 ${
-            isRunning
-              ? 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
-              : isDone
-                ? 'bg-green-500 shadow-green-200 hover:bg-green-600 dark:shadow-none'
-                : 'bg-primary-500 shadow-primary-200 hover:bg-primary-600 dark:shadow-none'
-          }`}
-        >
-          {isRunning ? (
-            <>
-              <PauseIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.pause}
-            </>
-          ) : (
-            <>
-              <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.start}
-            </>
-          )}
-        </button>
-        {/* Adjusted Time Button +5m */}
-        {isRunning && (
+      <div className="flex min-h-[60px] w-full flex-col items-center justify-center gap-3">
+        {/* State: IDLE */}
+        {timerState === 'idle' && (
           <button
             type="button"
-            onClick={adjustTime}
-            className="flex h-10 w-20 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+            onClick={() => {
+              playClickSound()
+              startTimer()
+            }}
+            className="bg-primary-500 shadow-primary-200 hover:bg-primary-600 flex h-10 w-32 items-center justify-center gap-2 rounded-full text-white shadow-lg transition-all active:scale-95 dark:shadow-none"
           >
-            +5m
+            <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.start}
           </button>
         )}
-        {!isRunning && <div className="w-20" />} {/* Spacer for balance when not running */}
+
+        {/* State: RUNNING */}
+        {isRunning && (
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                pauseTimer()
+              }}
+              className="flex h-10 w-32 items-center justify-center gap-2 rounded-full bg-gray-900 text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+            >
+              <PauseIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.pause}
+            </button>
+            {/* Quick Add 5m (Countdown Only) */}
+            {timerMode === 'countdown' && (
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound()
+                  extendSession()
+                }}
+                title="+5 Minutes"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+              >
+                +5
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* State: PAUSED */}
+        {isPaused && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                endSession()
+              }}
+              className="flex h-10 items-center justify-center rounded-full bg-gray-100 px-4 text-xs font-bold text-gray-500 transition hover:bg-red-50 hover:text-red-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-red-400"
+            >
+              {t.focusLab.widgets.timer.endSession || 'End'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                startTimer()
+              }}
+              className="bg-primary-500 hover:bg-primary-600 flex h-10 w-32 items-center justify-center gap-2 rounded-full text-white shadow-lg transition-all active:scale-95"
+            >
+              <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.resume || 'Resume'}
+            </button>
+          </div>
+        )}
+
+        {/* State: COMPLETED */}
+        {isCompleted && (
+          <div className="animate-in slide-in-from-bottom-2 fade-in flex w-full flex-col gap-2">
+            <div className="flex w-full gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound()
+                  continueNewSession()
+                }}
+                className="bg-primary-600 shadow-primary-200 hover:bg-primary-700 flex-1 rounded-xl px-3 py-2 text-sm font-bold text-white shadow-lg transition-all active:scale-95 dark:shadow-none"
+              >
+                {t.focusLab.widgets.timer.decisionPrompt?.continueFocus || 'Start New'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound()
+                  extendSession()
+                }}
+                className="border-primary-200 text-primary-600 hover:bg-primary-50 dark:text-primary-400 flex-1 rounded-xl border bg-white px-3 py-2 text-sm font-bold shadow-sm transition-all active:scale-95 dark:border-gray-700 dark:bg-gray-800"
+              >
+                +5 Min
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                // Forced Break Mode
+                setTimerMode('countdown') // Validate break is always countdown
+                setActivePreset('short')
+                setTimerState('break')
+                setTimeLeft(timerPresets.short.duration)
+                setTotalAllocatedDuration(timerPresets.short.duration)
+                setStartTime(Date.now())
+              }}
+              className="w-full rounded-xl bg-gray-100 px-3 py-2 text-xs font-bold text-gray-500 transition-all hover:bg-gray-200 active:scale-95 dark:bg-gray-800 dark:text-gray-400"
+            >
+              {t.focusLab.widgets.timer.decisionPrompt?.takeBreak || 'End Session'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
