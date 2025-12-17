@@ -5,18 +5,34 @@ import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { debounce, merge, cloneDeep } from 'lodash'
 
+type GridItem = {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  minW?: number
+  minH?: number
+}
+
+type ActiveTrack = {
+  id: string
+  volume: number
+  isPlaying: boolean
+}
+
 export type Settings = {
   theme?: {
     mode?: string
     color?: string
   }
   focus_lab?: {
-    layout?: Record<string, unknown[]> // desktop, mobile, etc.
+    layout?: Record<string, GridItem[]> // desktop, mobile, etc.
     hide_headers?: boolean
     sound?: {
       enabled?: boolean
       master_volume?: number
-      active_tracks?: Record<string, unknown>
+      active_tracks?: Record<string, ActiveTrack>
     }
     timer?: {
       custom_duration?: number
