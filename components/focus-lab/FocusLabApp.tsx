@@ -1,0 +1,3374 @@
+'use client'
+
+import Image from 'next/image'
+import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
+import {
+  ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react'
+import { useTranslation } from '@/context/LanguageContext'
+import { FocusStation } from '@/components/focus-lab/FocusStation'
+import DataMigrationModal from '@/components/focus-lab/DataMigrationModal'
+import {
+  syncLocalToCloud,
+  createFocusItem,
+  readStationStorage,
+  saveStationItems,
+  fetchCloudItems,
+  STATION_STORAGE_KEY,
+} from '@/components/focus-lab/focusStationStorage'
+import { AnalyticsModal } from '@/components/focus-lab/AnalyticsModal'
+import { saveSession, syncFocusHistory, getHistory } from '@/components/focus-lab/focusStorage'
+import { useAuth } from '@/context/AuthContext'
+
+import AuthModal from '@/components/auth/AuthModal'
+import { syncToDo, readToDoStorage, TODO_STORAGE_KEY } from '@/components/focus-lab/todoStorage'
+import {
+  BrainDumpItem,
+  createBrainDumpItem,
+  fetchCloudBrainDump,
+  readBrainDumpStorage,
+  saveBrainDump,
+  syncBrainDump,
+} from '@/components/focus-lab/brainDumpStorage'
+import {
+  fetchCloudDopamine,
+  readDopamineStorage,
+  saveDopamine,
+  syncDopamine,
+} from '@/components/focus-lab/dopamineStorage'
+import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
+import { debounce } from 'lodash'
+
+// Context for passing drag controls to children
+const DragHandleContext = createContext<DragControls | null>(null)
+
+// --- Helper Functions ---
+
+const playClickSound = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+  const oscillator = audioContext.createOscillator()
+  const gainNode = audioContext.createGain()
+
+  oscillator.type = 'sine'
+  oscillator.frequency.setValueAtTime(800, audioContext.currentTime) // High pitch beep
+  oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1) // Drop pitch
+
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+
+  oscillator.start()
+  oscillator.stop(audioContext.currentTime + 0.1)
+}
+
+// --- Shared Components ---
+
+const SegmentedControl = <T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
+}) => {
+  return (
+    <div className="flex h-8 w-full min-w-max rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+      {options.map((option) => {
+        const isActive = value === option.value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`relative flex-1 rounded-md px-3 text-xs font-bold tracking-wider whitespace-nowrap uppercase transition-all ${
+              isActive
+                ? 'text-primary-600 dark:text-primary-400 bg-white shadow-sm dark:bg-gray-700'
+                : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+            }`}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// --- Data & Types ---
+
+type SoundOption = {
+  id: string
+  name: string
+  path: string
+  detail: string
+}
+
+const SOUND_LIBRARY: SoundOption[] = []
+
+const SoundVisualizer = ({ activeCount }: { activeCount: number }) => {
+  if (activeCount === 0) {
+    return (
+      <div className="flex h-12 items-center justify-center gap-1 opacity-30" aria-hidden="true">
+        <div className="h-1 w-12 rounded-full bg-gray-300 dark:bg-gray-600" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-12 items-center justify-center gap-1" aria-hidden="true">
+      {Array.from({ length: 10 }).map((_, index) => (
+        <motion.div
+          key={index}
+          className="bg-primary-500/80 w-1.5 rounded-full"
+          animate={{
+            height: [12, 32 + Math.random() * 16, 12],
+            opacity: [0.5, 1, 0.5],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 0.8 + Math.random() * 0.5,
+            delay: index * 0.05,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+type ActiveTrack = {
+  id: string
+  volume: number
+  isPlaying: boolean
+}
+
+// --- Widget Card Component ---
+
+type WidgetCardProps = {
+  title: ReactNode
+  subtitle: ReactNode
+  children: ReactNode
+  onHeaderClick?: () => void
+  onDelete?: () => void
+  className?: string
+}
+
+const WidgetCard = ({
+  title,
+  subtitle,
+  children,
+  onHeaderClick,
+  onDelete,
+  badge,
+  className = '',
+}: WidgetCardProps & { badge?: ReactNode }) => {
+  const [showInfo, setShowInfo] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const infoRef = useRef<HTMLDivElement>(null)
+  const deleteRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (infoRef.current && !infoRef.current.contains(event.target as Node)) {
+        setShowInfo(false)
+      }
+      if (deleteRef.current && !deleteRef.current.contains(event.target as Node)) {
+        setShowDeleteConfirm(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const dragControls = useContext(DragHandleContext)
+
+  const dragStartPosition = useRef({ x: 0, y: 0 })
+
+  return (
+    <motion.section
+      layout
+      className={`group flex h-full flex-col rounded-[32px] border border-gray-200/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-shadow duration-300 sm:p-6 dark:border-gray-700/80 dark:bg-gray-900 ${className}`}
+    >
+      <div
+        className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
+        onPointerDown={(e) => {
+          dragStartPosition.current = { x: e.clientX, y: e.clientY }
+          dragControls?.start(e)
+        }}
+        onClick={(e) => {
+          const dist = Math.sqrt(
+            Math.pow(e.clientX - dragStartPosition.current.x, 2) +
+              Math.pow(e.clientY - dragStartPosition.current.y, 2)
+          )
+          if (dist < 5) {
+            onHeaderClick?.()
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onHeaderClick?.()
+          }
+        }}
+      >
+        <div className="flex items-center gap-2">
+          {/* Drag Handle (only visible when not focused) */}
+          {/* <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
+            </svg>
+          </div> */}
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+            {badge && <div>{badge}</div>}
+          </div>
+          {/* Info Button */}
+          <div className="relative" ref={infoRef}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowInfo(!showInfo)
+              }}
+              className={`transition-colors ${
+                showInfo
+                  ? 'text-primary-500 dark:text-primary-400'
+                  : 'text-gray-300 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300'
+              }`}
+              aria-label="Toggle description"
+            >
+              <InfoIcon className="h-4 w-4" />
+            </button>
+            <AnimatePresence>
+              {showInfo && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 z-50 mt-2 w-56 origin-top-left"
+                >
+                  <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
+                    <div className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+                      {subtitle}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Delete Button - Moved to Right */}
+        {onDelete && (
+          <div className="relative" ref={deleteRef}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowDeleteConfirm(!showDeleteConfirm)
+              }}
+              className={`transition-colors ${
+                showDeleteConfirm
+                  ? 'text-red-500 dark:text-red-400'
+                  : 'text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400'
+              }`}
+              aria-label="Remove widget"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <AnimatePresence>
+              {showDeleteConfirm && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full right-0 z-50 mt-2 w-64 origin-top-right"
+                >
+                  <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
+                    <h4 className="mb-1 text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {t.focusLab.controls.delete.confirm}
+                    </h4>
+                    <p className="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      {t.focusLab.controls.delete.desc}
+                    </p>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDeleteConfirm(false)
+                        }}
+                        className="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"
+                      >
+                        {t.focusLab.controls.delete.cancel}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDeleteConfirm(false)
+                          onDelete()
+                        }}
+                        className="rounded-lg bg-red-500 px-2 py-1 text-xs font-bold text-white hover:bg-red-600"
+                      >
+                        {t.focusLab.controls.delete.confirmBtn}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Focus Toggle Removed for now */}
+      </div>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
+    </motion.section>
+  )
+}
+
+// --- Grid System ---
+
+type GridItem = {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  minW?: number
+  minH?: number
+}
+
+const INITIAL_LAYOUT: GridItem[] = [
+  // Left Column (3 units)
+  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
+  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
+
+  // Middle Left (ToDo - 3 units)
+  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 3, minH: 5 },
+
+  // Middle Right (Brain Dump - 5 units)
+  { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 4, minH: 5 },
+
+  // Right Column (3 units)
+  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
+  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
+]
+
+const TRIPLE_LAYOUT: GridItem[] = [
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'dopamine', x: 8, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'todo', x: 0, y: 5, w: 6, h: 10, minW: 4, minH: 5 },
+  { id: 'brain', x: 6, y: 5, w: 6, h: 10, minW: 4, minH: 5 },
+  { id: 'breaker', x: 0, y: 15, w: 6, h: 5, minW: 3, minH: 5 },
+]
+
+const DOUBLE_LAYOUT: GridItem[] = [
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'todo', x: 0, y: 5, w: 4, h: 10, minW: 4, minH: 5 },
+  { id: 'dopamine', x: 4, y: 5, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'breaker', x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'brain', x: 0, y: 15, w: 8, h: 10, minW: 4, minH: 5 },
+]
+
+type LayoutPreset = 'desktop' | 'triple' | 'double'
+
+const GRID_PRESETS: Record<LayoutPreset, { columns: number; layout: GridItem[] }> = {
+  desktop: { columns: 14, layout: INITIAL_LAYOUT },
+  triple: { columns: 12, layout: TRIPLE_LAYOUT },
+  double: { columns: 8, layout: DOUBLE_LAYOUT },
+}
+
+const cloneLayout = (items: GridItem[]) => items.map((item) => ({ ...item }))
+
+const getPresetForWidth = (width: number): LayoutPreset => {
+  if (width >= 1200) return 'desktop'
+  if (width >= 900) return 'triple'
+  return 'double'
+}
+
+const getLayoutStorageKey = (preset: LayoutPreset) => `focus-lab-layout-${preset}-v1`
+
+type FocusedTaskState = { text: string; timestamp: number } | null
+
+const FocusLabMobileGrid = ({
+  focusedTask,
+  onStartFocus,
+  externalCommand,
+  onCommandHandled,
+}: {
+  focusedTask?: FocusedTaskState
+  onStartFocus?: (task: string) => void
+  externalCommand?: string | null
+  onCommandHandled?: () => void
+}) => {
+  return (
+    <div className="flex flex-col gap-5 pb-16">
+      <SonicShieldCard className="h-auto" />
+      <TimerCard
+        className="h-auto"
+        focusedTask={focusedTask}
+        externalCommand={externalCommand}
+        onCommandHandled={onCommandHandled}
+      />
+      <BrainDumpCard className="h-auto" />
+      <ToDoCard className="h-auto" onStartFocus={onStartFocus} />
+      <TaskBreakerCard className="h-auto" />
+      <DopamineMenuCard className="h-auto" />
+    </div>
+  )
+}
+
+const COL_WIDTH = 54
+const ROW_HEIGHT = 54
+const GAP = 22
+const CONTROL_BUTTON_BASE =
+  'relative flex h-12 px-5 min-w-[150px] items-center justify-center rounded-full border text-sm font-semibold transition-all text-center'
+
+export const FocusLabApp = () => {
+  const [isFocusMode, setIsFocusMode] = useState(false)
+  const [isTipOpen, setIsTipOpen] = useState(true)
+  const [showGroupModal, setShowGroupModal] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showAnalytics, setShowAnalytics] = useState(false)
+  const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
+  const [focusedTask, setFocusedTask] = useState<FocusedTaskState>(null)
+  const [externalCommand, setExternalCommand] = useState<string | null>(null)
+  const { t, language: lang } = useTranslation()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+  const [activePreset, setActivePreset] = useState<LayoutPreset>('desktop')
+
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authTrigger, setAuthTrigger] = useState<'generic' | 'stats'>('generic')
+  const { user } = useAuth()
+
+  const headerPadding = 0
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const measuredWidth = containerRef.current.offsetWidth
+        setContainerWidth(measuredWidth)
+      }
+      const width = window.innerWidth
+      setIsMobile(width < 540)
+      setActivePreset(getPresetForWidth(width))
+    }
+
+    updateDimensions()
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions()
+    })
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
+    window.addEventListener('resize', updateDimensions)
+
+    return () => {
+      window.removeEventListener('resize', updateDimensions)
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  /* Sync / Migration Logic */
+  const [showMigrationModal, setShowMigrationModal] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('focus-lab-migration-asked'))
+        return
+
+      const station = readStationStorage()
+      const todo = readToDoStorage()
+      const brain = readBrainDumpStorage()
+      const dopamine = readDopamineStorage(lang)
+      // History is less critical to "Move", but good to check.
+      // Actually history sync is safe to just run in verify.
+
+      const hasLocal =
+        station.length > 0 ||
+        todo.length > 0 ||
+        brain.left.length > 0 ||
+        brain.right.length > 0 ||
+        (dopamine && dopamine.length > 0)
+
+      if (hasLocal) {
+        setShowMigrationModal(true)
+        sessionStorage.setItem('focus-lab-migration-asked', 'true')
+      }
+    }
+  }, [user, lang])
+
+  const handleMigrate = async () => {
+    if (!user) return
+    setIsMigrating(true)
+    try {
+      // 1. Focus Station / ToDo (Same storage)
+      // Fetch cloud, merge local, save, clear local
+      const cloudStation = await fetchCloudItems(user)
+      const localStation = readStationStorage() // Guest
+      const localLegacyTodo = readToDoStorage() // Legacy Guest key
+
+      let merged = [...(cloudStation || [])]
+      let hasChanges = false
+
+      if (localStation.length > 0) {
+        merged = [...merged, ...localStation]
+        hasChanges = true
+        window.localStorage.removeItem(STATION_STORAGE_KEY)
+      }
+
+      if (localLegacyTodo.length > 0) {
+        // Convert legacy items
+        const convertedLegacy = localLegacyTodo.map((t) => createFocusItem('text', t.text))
+        // Preserve completed status if possible (createFocusItem defaults to false)
+        // We might need to map manualy
+        const mappedLegacy = localLegacyTodo.map((t) => ({
+          id: t.id, // Keep ID if valid UUID? createFocusItem generates new one. Let's keep it if possible or gen new.
+          // createFocusItem generates valid one.
+          type: 'text' as const,
+          content: t.text,
+          completed: t.completed,
+          position: Date.now(),
+        }))
+
+        merged = [...merged, ...mappedLegacy]
+        hasChanges = true
+        window.localStorage.removeItem(TODO_STORAGE_KEY)
+      }
+
+      if (hasChanges) {
+        await saveStationItems(merged, user)
+      }
+
+      // 2. Brain Dump
+      const cloudBrain = await fetchCloudBrainDump(user)
+      const localBrain = readBrainDumpStorage() // Guest
+      if (localBrain.left.length > 0 || localBrain.right.length > 0) {
+        const mergedLeft = [...(cloudBrain?.left || []), ...localBrain.left]
+        const mergedRight = [...(cloudBrain?.right || []), ...localBrain.right]
+        await saveBrainDump({ left: mergedLeft, right: mergedRight }, user)
+        // Clear local keys (v2 and v1)
+        window.localStorage.removeItem('focus-lab-brain-dump-list-v2')
+        window.localStorage.removeItem('focus-lab-brain-dump-list')
+      }
+
+      // 3. Dopamine
+      const cloudDopamine = await fetchCloudDopamine(user)
+      const localDopamine = readDopamineStorage(lang) // Guest
+      if (localDopamine && localDopamine.length > 0) {
+        // Merge unique options
+        const set = new Set([...(cloudDopamine || []), ...localDopamine])
+        await saveDopamine(Array.from(set), lang, user)
+        window.localStorage.removeItem(`focus-lab-dopamine-menu-${lang}`)
+      }
+
+      // 4. History (Always safe to sync)
+      await syncFocusHistory(user)
+
+      // 5. Force UI to reload?
+      // The components (FocusStation etc) have useEffect([user]) which loads.
+      // But we just updated the cloud data. The components might have loaded "empty cloud" and sat there.
+      // We need to trigger a reload or they wait for next refresh?
+      // Since we updated cloud, components need to re-fetch.
+      // Simplest way: window.location.reload() or rely on SWR?
+      // We are not using SWR.
+      // We can rely on `window.location.reload()` for simplicity ensure fresh state.
+      window.location.reload()
+    } catch (e) {
+      console.error('Migration failed:', e)
+      alert(t.focusLab.errors?.migrationFailed || 'Migration failed. Please try again.')
+    } finally {
+      setIsMigrating(false)
+      setShowMigrationModal(false)
+    }
+  }
+
+  const handleCancelMigration = () => {
+    setShowMigrationModal(false)
+    // Optional: Clear guest data if user explicitely says "Start Fresh"?
+    // Or just keep it hidden. Current behavior: Keep it hidden (User mode sees empty).
+    // If they logout, it's still there. That's fine.
+  }
+
+  useEffect(() => {
+    if (!showGroupModal) return
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowGroupModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [showGroupModal])
+
+  // Register Service Worker for external commands
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/focus-sw.js')
+        .then((reg) => {
+          console.log('Focus Lab SW registered', reg)
+        })
+        .catch((err) => {
+          console.error('Focus Lab SW failed', err)
+        })
+
+      // Listen for messages
+      const handler = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'FOCUS_LAB_ACTION') {
+          setExternalCommand(event.data.action)
+        }
+      }
+      navigator.serviceWorker.addEventListener('message', handler)
+      return () => navigator.serviceWorker.removeEventListener('message', handler)
+    }
+  }, [])
+
+  // Lock scroll in Focus Mode
+  useEffect(() => {
+    if (isFocusMode) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isFocusMode])
+
+  useEffect(() => {
+    if (isFocusMode) {
+      setIsTipOpen(true)
+    } else {
+      setIsTipOpen(false)
+      setShowGroupModal(false)
+    }
+  }, [isFocusMode])
+
+  const activePresetConfig = GRID_PRESETS[activePreset]
+  const backgroundColumnWidth =
+    containerWidth > 0
+      ? Math.max(
+          40,
+          (containerWidth - (activePresetConfig.columns - 1) * GAP) / activePresetConfig.columns
+        )
+      : COL_WIDTH
+
+  const toggleCardFocus = (id: string) => {
+    setFocusedCardIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  return (
+    <>
+      <AnimatePresence>
+        {showGroupModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setShowGroupModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              className="relative w-full max-w-md rounded-3xl border border-gray-100 bg-white/95 p-6 text-center shadow-2xl backdrop-blur dark:border-gray-700 dark:bg-gray-950/90"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="focuslab-group-modal-title"
+              aria-describedby="focuslab-group-modal-desc"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setShowGroupModal(false)}
+                className="absolute top-4 right-4 rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                aria-label={t.focusLab.controls.groupModal.close}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+              <h3
+                id="focuslab-group-modal-title"
+                className="text-xl font-bold text-gray-900 dark:text-gray-100"
+              >
+                {t.focusLab.controls.groupModal.title}
+              </h3>
+              <p
+                id="focuslab-group-modal-desc"
+                className="mt-2 text-sm text-gray-500 dark:text-gray-400"
+              >
+                {t.focusLab.controls.groupModal.description}
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Image
+                  src="/static/images/wechat-group-qr.JPG"
+                  alt={t.focusLab.controls.groupModal.qrAlt}
+                  width={320}
+                  height={320}
+                  className="h-auto w-full max-w-[260px] rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700"
+                  sizes="(max-width: 640px) 80vw, 320px"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGroupModal(false)}
+                className="mt-6 inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              >
+                {t.focusLab.controls.groupModal.close}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
+      </AnimatePresence>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onGuestContinue={
+          authTrigger === 'stats'
+            ? undefined
+            : () => {
+                setShowAuthModal(false)
+                setShowAnalytics(true)
+              }
+        }
+      />
+      <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
+        <motion.div
+          layout
+          transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
+          className={`${
+            isFocusMode
+              ? 'fixed inset-0 z-[100] h-screen w-screen overflow-y-scroll bg-white/95 backdrop-blur-sm dark:bg-gray-950/95'
+              : 'relative h-full w-full'
+          }`}
+        >
+          {/* Global Grid Background - Only visible on non-mobile viewports and not in Focus Mode */}
+          {!isMobile && !isFocusMode && (
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+              <div
+                className="h-full w-full"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  height: '100%',
+                  backgroundImage: `
+                linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
+              `,
+                  backgroundSize: `${backgroundColumnWidth + GAP}px ${ROW_HEIGHT + GAP}px`,
+                  backgroundPosition: 'center -16px',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Inner Wide Container */}
+          <div className="mx-auto h-full max-w-[1800px] px-4 sm:px-6 lg:px-8">
+            <div className="h-full w-full" ref={containerRef}>
+              {/* Intro Section - Moved to parent for performance */}
+
+              {/* Dashboard Controls Header */}
+              <div
+                className={`relative z-[100] flex flex-wrap items-center gap-4 transition-all duration-500 ${isFocusMode ? 'mt-6 mb-12' : 'mb-8 pt-0'}`}
+                style={{ paddingLeft: headerPadding }}
+              >
+                <AnimatePresence mode="popLayout">
+                  {/* Logo Section - Always Visible */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex items-center gap-3 border-gray-200 pr-0 sm:border-r sm:pr-6 dark:border-gray-700"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f172a] text-white shadow-sm dark:bg-white dark:text-gray-900">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        className="h-6 w-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                      Focus Lab
+                    </span>
+                  </motion.div>
+                </AnimatePresence>
+
+                <div className="flex flex-wrap items-center gap-3 sm:ml-6">
+                  <button
+                    onClick={() => setIsFocusMode(!isFocusMode)}
+                    className={`${CONTROL_BUTTON_BASE} ${
+                      isFocusMode
+                        ? 'border-transparent text-white'
+                        : 'border-transparent text-white'
+                    }`}
+                  >
+                    <>
+                      <motion.span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-full"
+                        style={{
+                          background:
+                            'linear-gradient(120deg, var(--color-primary-200), var(--color-primary-400), var(--color-primary-500), var(--color-primary-300))',
+                          backgroundSize: '220% 220%',
+                        }}
+                        animate={{
+                          backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                        }}
+                        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </>
+                    <span className={`relative z-10 flex items-center gap-2 text-white`}>
+                      {isFocusMode ? (
+                        <>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                          </svg>
+                          {t.focusLab.controls.exitFocus}
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                          </svg>
+                          {t.focusLab.controls.focusMode}
+                        </>
+                      )}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setShowResetConfirm(true)
+                    }}
+                    className={`${CONTROL_BUTTON_BASE} group border-primary-500 text-primary-600 hover:bg-primary-50 bg-white dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800`}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 transition-transform group-hover:-rotate-180"
+                    >
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                    </svg>
+                    {t.focusLab.controls.resetLayout}
+                  </button>
+
+                  <AnimatePresence>
+                    {showResetConfirm && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                        onClick={() => setShowResetConfirm(false)}
+                      >
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">
+                            {t.focusLab.controls.resetModal?.title || 'Reset Layout?'}
+                          </h3>
+                          <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+                            {t.focusLab.controls.resetModal?.description ||
+                              'Your layout will be reset to default.'}
+                          </p>
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => setShowResetConfirm(false)}
+                              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                            >
+                              {t.focusLab.controls.resetModal?.cancel || 'Cancel'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                const legacyKeys = ['focus-lab-layout-v1']
+                                const presetKeys = Object.keys(GRID_PRESETS) as LayoutPreset[]
+                                ;[
+                                  ...legacyKeys,
+                                  ...presetKeys.map((p) => getLayoutStorageKey(p)),
+                                ].forEach((key) => window.localStorage.removeItem(key))
+                                window.location.reload()
+                              }}
+                              className="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-md transition-colors active:scale-95"
+                            >
+                              {t.focusLab.controls.resetModal?.confirm || 'Reset'}
+                            </button>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Stats Button with Flowing Light Border */}
+                  <div className="group relative flex items-center justify-center">
+                    {/* Flowing Border Container */}
+                    <div className="from-primary-500 via-primary-200 to-primary-500 dark:from-primary-800 dark:via-primary-300 dark:to-primary-800 animate-border-flow absolute -inset-[2px] rounded-full bg-gradient-to-r bg-[length:200%_auto] opacity-80 blur-[2px] transition duration-1000 group-hover:opacity-100"></div>
+
+                    <button
+                      onClick={() => {
+                        if (user) {
+                          setShowAnalytics(true)
+                        } else {
+                          setAuthTrigger('stats')
+                          setShowAuthModal(true)
+                        }
+                      }}
+                      className={`${CONTROL_BUTTON_BASE} relative border-transparent bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="mr-2 h-4 w-4"
+                      >
+                        <path d="M18 20V10M12 20V4M6 20v-6" />
+                      </svg>
+                      {lang === 'zh' ? '统计' : 'Stats'}
+                    </button>
+                  </div>
+
+                  {isFocusMode && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsTipOpen((prev) => !prev)}
+                        aria-expanded={isTipOpen}
+                        className={`${CONTROL_BUTTON_BASE} border-primary-500 text-primary-600 flex-none justify-between dark:bg-gray-900 dark:text-white ${
+                          isTipOpen ? 'bg-primary-50 dark:bg-gray-800' : 'bg-white'
+                        }`}
+                      >
+                        <span className="mx-auto font-semibold">
+                          {isTipOpen
+                            ? t.focusLab.controls.tipToggle.hide
+                            : t.focusLab.controls.tipToggle.show}
+                        </span>
+                        <span className={`transition-transform ${isTipOpen ? 'rotate-90' : ''}`}>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                        </span>
+                      </button>
+
+                      {lang === 'zh' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowGroupModal(true)}
+                          aria-haspopup="dialog"
+                          aria-expanded={showGroupModal}
+                          className={`${CONTROL_BUTTON_BASE} border-primary-500 text-primary-600 hover:bg-primary-50 bg-white dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-4 w-4"
+                          >
+                            <path d="M5 5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5l-4 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+                            <path d="M8 10h8M8 14h5" />
+                          </svg>
+                          {t.focusLab.controls.joinGroup}
+                        </button>
+                      )}
+
+                      <AnimatePresence initial={false}>
+                        {isTipOpen && (
+                          <motion.div
+                            key="focus-tip-banner"
+                            layout
+                            initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                            className="inline-flex max-w-full shrink-0 items-center rounded-2xl border border-gray-200/80 bg-white/90 px-4 text-xs text-gray-600 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200"
+                            style={{ minHeight: '48px' }}
+                          >
+                            <p className="text-left leading-relaxed">{t.focusLab.controls.tip}</p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Grid Section */}
+              <motion.div
+                layout
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+                className={`transition-all duration-500 ${isFocusMode ? 'relative z-[95]' : 'mt-10'}`}
+              >
+                {isMobile ? (
+                  <FocusLabMobileGrid
+                    focusedTask={focusedTask}
+                    onStartFocus={(task) => {
+                      setFocusedTask({ text: task, timestamp: Date.now() })
+                      // setExternalCommand('start-focus') // Removed auto-start
+                    }}
+                    externalCommand={externalCommand}
+                    onCommandHandled={() => setExternalCommand(null)}
+                  />
+                ) : (
+                  <FocusLabGrid
+                    preset={activePreset}
+                    isFocusMode={isFocusMode}
+                    focusedCardIds={focusedCardIds}
+                    onToggleFocus={toggleCardFocus}
+                    containerWidth={containerWidth}
+                    focusedTask={focusedTask}
+                    onStartFocus={(task) => {
+                      setFocusedTask({ text: task, timestamp: Date.now() })
+                      // setExternalCommand('start-focus') // Removed auto-start
+                    }}
+                    externalCommand={externalCommand}
+                    onCommandHandled={() => setExternalCommand(null)}
+                  />
+                )}
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </>
+  )
+}
+
+const FocusLabGrid = ({
+  isFocusMode = false,
+  focusedCardIds = new Set(),
+  onToggleFocus = () => {},
+  containerWidth,
+  preset,
+  focusedTask,
+  onStartFocus,
+  externalCommand,
+  onCommandHandled,
+}: {
+  isFocusMode?: boolean
+  focusedCardIds?: Set<string>
+  onToggleFocus?: (id: string) => void
+  containerWidth: number
+  preset: LayoutPreset
+  focusedTask?: FocusedTaskState
+  onStartFocus?: (task: string) => void
+  externalCommand?: string | null
+  onCommandHandled?: () => void
+}) => {
+  const { settings, updateSettings, isLoaded } = useFocusSettingsContext()
+  const presetConfig = GRID_PRESETS[preset]
+  const [layout, setLayout] = useState<GridItem[]>(() => cloneLayout(presetConfig.layout))
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Sync from Settings (Cloud -> Local)
+  useEffect(() => {
+    if (isLoaded) {
+      const savedLayout = settings.focus_lab?.layout?.[preset]
+      if (Array.isArray(savedLayout) && savedLayout.length > 0) {
+        setLayout(savedLayout)
+      } else {
+        // Only reset to default if we have literally nothing in settings (first load)
+        // or if we switched presets and that preset is empty
+        // But we want to preserve local changes if cloud is empty?
+        // No, if cloud is empty, we use default.
+        setLayout(cloneLayout(presetConfig.layout))
+      }
+    }
+  }, [isLoaded, preset, settings.focus_lab?.layout, presetConfig.layout])
+
+  // Debounced Save
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const saveLayout = useCallback(
+    debounce((newLayout: GridItem[], currentPreset: string) => {
+      updateSettings(`focus_lab.layout.${currentPreset}`, newLayout)
+    }, 1000),
+    [updateSettings]
+  )
+
+  const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false)
+
+  // Width calculation moved to parent
+
+  // Auto-centering logic removed to ensure strict left alignment
+
+  const columns = presetConfig.columns
+  const totalGapsWidth = Math.max(0, (columns - 1) * GAP)
+  const baseWidth = columns * COL_WIDTH + totalGapsWidth
+  const safeContainerWidth = containerWidth > 0 ? containerWidth : baseWidth
+  const availableWidth = Math.max(0, safeContainerWidth - totalGapsWidth)
+  const colWidth = columns > 0 ? availableWidth / columns : COL_WIDTH
+  const contentWidth = safeContainerWidth
+  const gridOffset = 0
+
+  // Helper to snap to grid
+  const snapToGrid = (value: number, unitSize: number) => {
+    return Math.round(value / unitSize) * unitSize
+  }
+
+  const updateLayout = (id: string, newProps: Partial<GridItem>) => {
+    setLayout((prev) => {
+      const next = prev.map((item) => (item.id === id ? { ...item, ...newProps } : item))
+      saveLayout(next, preset)
+      return next
+    })
+  }
+
+  const handleRemoveWidget = (id: string) => {
+    setLayout((prev) => {
+      const next = prev.filter((item) => item.id !== id)
+      saveLayout(next, preset)
+      return next
+    })
+  }
+
+  const visibleItems =
+    isFocusMode && focusedCardIds.size > 0 ? layout.filter((i) => focusedCardIds.has(i.id)) : layout
+
+  const containerHeight =
+    (layout.length > 0 ? Math.max(...layout.map((i) => i.y + i.h)) : 0) * (ROW_HEIGHT + GAP) +
+    (isFocusMode ? 20 : 100)
+
+  return (
+    <div
+      className={`relative w-full transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
+      style={{ height: containerHeight }}
+    >
+      <div
+        className="absolute top-0 h-full transition-all duration-500 ease-out"
+        style={{
+          left: gridOffset,
+          width: contentWidth,
+        }}
+      >
+        {containerWidth > 0 &&
+          layout.map((item) => (
+            <DraggableResizableItem
+              key={item.id}
+              item={item}
+              colWidth={colWidth}
+              onUpdate={(newProps) => updateLayout(item.id, newProps)}
+              isActive={activeId === item.id}
+              onActivate={() => setActiveId(item.id)}
+              onInteractionStart={() => setIsDraggingOrResizing(true)}
+              onInteractionEnd={() => setIsDraggingOrResizing(false)}
+              isFocusMode={isFocusMode}
+              isFocused={focusedCardIds.has(item.id)}
+              hasFocusedCards={focusedCardIds.size > 0}
+            >
+              {item.id === 'sonic' && (
+                <SonicShieldCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'timer' && (
+                <TimerCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                  focusedTask={focusedTask}
+                  externalCommand={externalCommand}
+                  onCommandHandled={onCommandHandled}
+                />
+              )}
+              {item.id === 'brain' && (
+                <BrainDumpCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'todo' && (
+                <ToDoCard
+                  className="h-full w-full"
+                  cols={item.w}
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                  onStartFocus={onStartFocus}
+                />
+              )}
+              {item.id === 'breaker' && (
+                <TaskBreakerCard
+                  className="h-full w-full"
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+              {item.id === 'dopamine' && (
+                <DopamineMenuCard
+                  className="h-full w-full"
+                  cols={item.w}
+                  onToggleFocus={() => onToggleFocus(item.id)}
+                  onDelete={() => handleRemoveWidget(item.id)}
+                />
+              )}
+            </DraggableResizableItem>
+          ))}
+      </div>
+    </div>
+  )
+}
+
+const DraggableResizableItem = ({
+  item,
+  colWidth,
+  onUpdate,
+  children,
+  isActive,
+  onActivate,
+  onInteractionStart,
+  onInteractionEnd,
+  isFocusMode,
+  isFocused,
+  hasFocusedCards,
+}: {
+  item: GridItem
+  colWidth: number
+  onUpdate: (props: Partial<GridItem>) => void
+  children: ReactNode
+  isActive: boolean
+  onActivate: () => void
+  onInteractionStart: () => void
+  onInteractionEnd: () => void
+  isFocusMode?: boolean
+  isFocused?: boolean
+  hasFocusedCards?: boolean
+}) => {
+  const [isResizing, setIsResizing] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const isResizingRef = useRef(false)
+
+  // Calculate pixel positions
+  const x = item.x * (colWidth + GAP)
+  const y = item.y * (ROW_HEIGHT + GAP)
+  const width = item.w * colWidth + (item.w - 1) * GAP
+  const height = item.h * ROW_HEIGHT + (item.h - 1) * GAP
+
+  // Manual Resize Logic
+  useEffect(() => {
+    if (!isResizing) return
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const deltaX = e.clientX - startPosRef.current.x
+      const deltaY = e.clientY - startPosRef.current.y
+
+      const newWidth = startSizeRef.current.w + deltaX
+      const newHeight = startSizeRef.current.h + deltaY
+
+      const gridW = Math.max(item.minW || 3, Math.round(newWidth / (colWidth + GAP)))
+      const gridH = Math.max(item.minH || 3, Math.round(newHeight / (ROW_HEIGHT + GAP)))
+
+      onUpdate({ w: gridW, h: gridH })
+    }
+
+    const handlePointerUp = () => {
+      setIsResizing(false)
+      isResizingRef.current = false
+      onInteractionEnd()
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+    }
+  }, [isResizing, colWidth, onUpdate, onInteractionEnd, item.minW, item.minH])
+
+  const startPosRef = useRef({ x: 0, y: 0 })
+  const startSizeRef = useRef({ w: 0, h: 0 })
+
+  const dragControls = useDragControls()
+
+  return (
+    <motion.div
+      drag={!isResizing}
+      dragControls={dragControls}
+      dragListener={false}
+      dragMomentum={false}
+      dragElastic={0}
+      onDragStart={() => {
+        onInteractionStart()
+        setIsDragging(true)
+      }}
+      onDragEnd={(e, info) => {
+        setIsDragging(false)
+        onInteractionEnd()
+        const endX = x + info.offset.x
+        const endY = y + info.offset.y
+        const gridX = Math.round(endX / (colWidth + GAP)) // Allow negative X for centered grid
+        const gridY = Math.max(0, Math.round(endY / (ROW_HEIGHT + GAP)))
+        onUpdate({ x: gridX, y: gridY })
+      }}
+      initial={false}
+      animate={{
+        x,
+        y,
+        width,
+        height,
+        zIndex: isActive ? 50 : 10,
+        filter:
+          isFocusMode && hasFocusedCards && !isFocused
+            ? 'blur(4px) grayscale(0.5)'
+            : 'blur(0px) grayscale(0)',
+        opacity: isFocusMode && hasFocusedCards && !isFocused ? 0.4 : 1,
+      }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      onPointerDown={onActivate}
+      className="absolute rounded-[32px] shadow-sm"
+    >
+      <div className="relative h-full w-full">
+        <DragHandleContext.Provider value={dragControls}>{children}</DragHandleContext.Provider>
+
+        {/* Resize Handle (Diagonal Arrow) */}
+        {/* Resize Handle (Diagonal Arrow) */}
+        <div
+          className="absolute right-2 bottom-2 z-50 cursor-nwse-resize p-1.5 opacity-50 transition-opacity hover:opacity-100"
+          onPointerDown={(e) => {
+            e.stopPropagation() // Prevent drag start on the item
+            e.preventDefault()
+            setIsResizing(true)
+            isResizingRef.current = true
+            onInteractionStart()
+            startPosRef.current = { x: e.clientX, y: e.clientY }
+            startSizeRef.current = { w: width, h: height }
+          }}
+        >
+          <div className="rounded-full bg-white/90 p-1 shadow-sm ring-1 ring-black/5 backdrop-blur-md dark:bg-gray-800/90 dark:ring-white/10">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5 text-gray-500 dark:text-gray-500"
+            >
+              <path d="M15 9l6 6" />
+              <path d="M9 15l6 6" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function SonicShieldCard({
+  onToggleFocus,
+  onDelete,
+  className,
+}: {
+  onToggleFocus?: () => void
+  onDelete?: () => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <WidgetCard
+      title={t.focusLab.widgets.sonicShield.title}
+      subtitle={t.focusLab.widgets.sonicShield.subtitle}
+      onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
+      className={className}
+    >
+      <SonicShieldWidget />
+    </WidgetCard>
+  )
+}
+
+function TimerCard({
+  onToggleFocus,
+  onDelete,
+  className,
+  focusedTask,
+  externalCommand,
+  onCommandHandled,
+}: {
+  onToggleFocus?: () => void
+  onDelete?: () => void
+  className?: string
+  focusedTask?: FocusedTaskState
+  externalCommand?: string | null
+  onCommandHandled?: () => void
+}) {
+  const { t } = useTranslation()
+
+  const [showTaskTitle, setShowTaskTitle] = useState(true)
+
+  useEffect(() => {
+    if (focusedTask) {
+      setShowTaskTitle(true)
+    }
+  }, [focusedTask])
+
+  return (
+    <WidgetCard
+      title={
+        focusedTask ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowTaskTitle(!showTaskTitle)
+            }}
+            className={`block max-w-[200px] truncate text-left transition-colors ${
+              showTaskTitle
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-900 hover:text-gray-600 dark:text-gray-100 dark:hover:text-gray-300'
+            }`}
+            title={showTaskTitle && focusedTask ? focusedTask.text : t.focusLab.widgets.timer.title}
+          >
+            {showTaskTitle && focusedTask ? focusedTask.text : t.focusLab.widgets.timer.title}
+          </button>
+        ) : (
+          t.focusLab.widgets.timer.title
+        )
+      }
+      subtitle={
+        <div className="flex flex-col gap-2">
+          <span>{t.focusLab.widgets.timer.subtitle}</span>
+          <div className="border-t border-gray-100 pt-2 text-[10px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            <p>• {t.focusLab.widgets.timer.tipTitle || 'Click title to toggle task name'}</p>
+            <p>• {t.focusLab.widgets.timer.tipCustom || 'Double-click custom timer to edit'}</p>
+          </div>
+        </div>
+      }
+      onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
+      className={className}
+    >
+      <TimerWidget
+        focusedTask={focusedTask}
+        externalCommand={externalCommand}
+        onCommandHandled={onCommandHandled}
+      />
+    </WidgetCard>
+  )
+}
+
+function TaskBreakerCard({
+  onToggleFocus,
+  onDelete,
+  className,
+}: {
+  onToggleFocus?: () => void
+  onDelete?: () => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <WidgetCard
+      title={t.focusLab.widgets.taskBreaker.title}
+      subtitle={t.focusLab.widgets.taskBreaker.subtitle}
+      onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
+      className={className}
+    >
+      <TaskBreakerWidget />
+    </WidgetCard>
+  )
+}
+
+function BrainDumpCard({
+  onToggleFocus,
+  onDelete,
+  className,
+}: {
+  onToggleFocus?: () => void
+  onDelete?: () => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <WidgetCard
+      title={t.focusLab.widgets.brainDump.title}
+      subtitle={t.focusLab.widgets.brainDump.subtitle}
+      onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
+      className={className}
+    >
+      <BrainDumpWidget />
+    </WidgetCard>
+  )
+}
+
+function ToDoCard({
+  cols,
+  onToggleFocus,
+  onDelete,
+  className,
+  onStartFocus,
+}: {
+  cols?: number
+  onToggleFocus?: () => void
+  onDelete?: () => void
+  className?: string
+  onStartFocus?: (task: string) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <WidgetCard
+      title={t.focusLab.widgets.todo.title}
+      subtitle={t.focusLab.widgets.todo.subtitle}
+      onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
+      className={className}
+    >
+      <FocusStation cols={cols} onStartFocus={onStartFocus} />
+    </WidgetCard>
+  )
+}
+
+function DopamineMenuCard({
+  cols,
+  onToggleFocus,
+  onDelete,
+  className,
+}: {
+  cols?: number
+  onToggleFocus?: () => void
+  onDelete?: () => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <WidgetCard
+      title={t.focusLab.widgets.dopamineMenu.title}
+      subtitle={t.focusLab.widgets.dopamineMenu.subtitle}
+      onHeaderClick={onToggleFocus}
+      onDelete={onDelete}
+      className={className}
+    >
+      <DopamineMenuWidget cols={cols} />
+    </WidgetCard>
+  )
+}
+
+type TimerState =
+  | 'idle'
+  | 'focusing'
+  | 'paused-focusing'
+  | 'focus-completed'
+  | 'break'
+  | 'paused-break'
+  | 'break-completed'
+
+type TimerPreset = 'focus' | 'short' | 'long'
+
+const timerPresets: Record<TimerPreset, { label: string; duration: number }> = {
+  focus: { label: 'Focus · 25m', duration: 25 * 60 },
+  short: { label: 'Short Break · 5m', duration: 5 * 60 },
+  long: { label: 'Long Break · 15m', duration: 15 * 60 },
+}
+
+const SonicShieldWidget = () => {
+  const { t } = useTranslation()
+  const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
+  const tSounds = t.focusLab.sounds
+  const [customSounds, setCustomSounds] = useState<SoundOption[]>([])
+  const [activeTracks, setActiveTracks] = useState<Record<string, ActiveTrack>>({})
+  const [masterVolume, setMasterVolume] = useState(0.8)
+  const audioRefs = useRef<Record<string, HTMLAudioElement>>({})
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Ref to prevent saving immediately after loading from context
+  const isRemoteUpdate = useRef(false)
+
+  // Load settings from Context
+  useEffect(() => {
+    if (isSettingsLoaded) {
+      const soundSettings = settings.focus_lab?.sound
+      if (soundSettings) {
+        isRemoteUpdate.current = true
+        if (soundSettings.active_tracks) setActiveTracks(soundSettings.active_tracks)
+        if (typeof soundSettings.master_volume === 'number')
+          setMasterVolume(soundSettings.master_volume)
+        setTimeout(() => {
+          isRemoteUpdate.current = false
+        }, 50)
+      }
+      setIsLoaded(true)
+    }
+  }, [isSettingsLoaded, settings.focus_lab?.sound])
+
+  // Debounced Save
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const saveSoundSettings = useCallback(
+    debounce((tracks: Record<string, ActiveTrack>, volume: number) => {
+      updateSettings('focus_lab.sound', {
+        active_tracks: tracks,
+        master_volume: volume,
+      })
+    }, 1000),
+    [updateSettings]
+  )
+
+  // Auto-save on change (explicitly called in handlers normally, but for volume/tracks we can use useEffect here
+  // because the update frequency is lower than resize, AND we want to capture all logic paths)
+  // BUT we must avoid the loop.
+  // The loop happens if updateSettings -> settings change -> useEffect loads -> setState -> useEffect saves.
+  // To avoid loop: Only save if state differs from settings?
+  // Or just use handlers.
+  // Let's use handlers wrapper.
+
+  const updateActiveTracks = (
+    callback: (prev: Record<string, ActiveTrack>) => Record<string, ActiveTrack>
+  ) => {
+    setActiveTracks((prev) => {
+      const next = callback(prev)
+      saveSoundSettings(next, masterVolume)
+      return next
+    })
+  }
+
+  const updateMasterVolume = (vol: number) => {
+    setMasterVolume(vol)
+    saveSoundSettings(activeTracks, vol)
+  }
+
+  // Save settings to context when activeTracks or masterVolume change, but not if it was a remote update
+  useEffect(() => {
+    if (isLoaded && !isRemoteUpdate.current && isSettingsLoaded) {
+      saveSoundSettings(activeTracks, masterVolume)
+    }
+  }, [activeTracks, masterVolume, isLoaded, saveSoundSettings, isSettingsLoaded])
+
+  useEffect(() => {
+    const fetchCustomSounds = async () => {
+      try {
+        const response = await fetch('/api/sounds')
+        if (response.ok) {
+          const data = await response.json()
+          const BRAINWAVE_SOUNDS = new Set(['alpha', 'beta', 'delta', 'gamma', 'theta'])
+          const NOISE_SOUNDS = ['white-noise', 'pink', 'brown']
+
+          const newSounds = data.sounds
+            .map((file: string) => ({
+              id: `custom-${file}`,
+              name: file.replace(/\.[^/.]+$/, ''),
+              path: `/static/sounds/custom/${file}`,
+              detail: 'Custom sound',
+            }))
+            .sort((a: { name: string }, b: { name: string }) => {
+              // 1. Brainwaves always last
+              const isABrainwave = BRAINWAVE_SOUNDS.has(a.name)
+              const isBBrainwave = BRAINWAVE_SOUNDS.has(b.name)
+              if (isABrainwave && !isBBrainwave) return 1
+              if (!isABrainwave && isBBrainwave) return -1
+              if (isABrainwave && isBBrainwave) return a.name.localeCompare(b.name)
+
+              // 2. Noises (White, Pink, Brown) come after Nature sounds
+              const aNoiseIndex = NOISE_SOUNDS.indexOf(a.name)
+              const bNoiseIndex = NOISE_SOUNDS.indexOf(b.name)
+
+              // If both are noises, sort by specific order
+              if (aNoiseIndex !== -1 && bNoiseIndex !== -1) {
+                return aNoiseIndex - bNoiseIndex
+              }
+
+              // If one is noise and other is nature, Noise comes last (after nature)
+              if (aNoiseIndex !== -1 && bNoiseIndex === -1) return 1
+              if (aNoiseIndex === -1 && bNoiseIndex !== -1) return -1
+
+              // 3. Nature sounds sorted alphabetically
+              return a.name.localeCompare(b.name)
+            })
+
+          setCustomSounds(newSounds)
+        }
+      } catch (error) {
+        console.error('Failed to fetch custom sounds:', error)
+      }
+    }
+    fetchCustomSounds()
+  }, [])
+
+  const allSounds = [...SOUND_LIBRARY, ...customSounds]
+
+  const toggleTrack = (soundId: string) => {
+    setActiveTracks((prev) => {
+      if (prev[soundId]) {
+        const next = { ...prev }
+        delete next[soundId]
+        return next
+      }
+      return {
+        ...prev,
+        [soundId]: { id: soundId, volume: 0.5, isPlaying: true },
+      }
+    })
+  }
+
+  const updateTrackVolume = (soundId: string, volume: number) => {
+    setActiveTracks((prev) => ({
+      ...prev,
+      [soundId]: { ...prev[soundId], volume },
+    }))
+  }
+
+  const toggleMasterPlayback = () => {
+    const isAnyPlaying = Object.values(activeTracks).some((t) => t.isPlaying)
+    setActiveTracks((prev) => {
+      const next = { ...prev }
+      Object.keys(next).forEach((key) => {
+        next[key] = { ...next[key], isPlaying: !isAnyPlaying }
+      })
+      return next
+    })
+  }
+
+  // Sync Audio Elements
+  useEffect(() => {
+    Object.values(activeTracks).forEach((track) => {
+      const audio = audioRefs.current[track.id]
+      if (audio) {
+        audio.volume = track.volume * masterVolume
+        if (track.isPlaying) {
+          audio.play().catch(() => {})
+        } else {
+          audio.pause()
+        }
+      }
+    })
+  }, [activeTracks, masterVolume])
+
+  const activeCount = Object.keys(activeTracks).length
+  const isGlobalPlaying = activeCount > 0 && Object.values(activeTracks).some((t) => t.isPlaying)
+
+  return (
+    <div className="flex h-full flex-col gap-4">
+      {/* Visualizer & Master Control */}
+      <div className="relative flex min-h-[80px] shrink-0 items-center justify-between rounded-2xl bg-white px-5 py-3 text-gray-900 shadow-sm ring-1 ring-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:ring-gray-800">
+        {/* Visualizer Area */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-2">
+          <SoundVisualizer activeCount={isGlobalPlaying ? activeCount : 0} />
+          <div className="text-xs font-medium opacity-60">
+            {activeCount === 0
+              ? t.focusLab.widgets.sonicShield.selectSounds
+              : `${activeCount} ${t.focusLab.widgets.sonicShield.active}`}
+          </div>
+        </div>
+
+        {/* Vertical Master Volume */}
+        <div className="group flex h-full flex-col items-center justify-center gap-2 border-l border-gray-100 pl-4 dark:border-gray-700">
+          <div
+            className="relative h-14 w-1.5 cursor-pointer rounded-full bg-gray-100 py-1 transition-all hover:w-2 dark:bg-gray-800"
+            onPointerDown={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const handleMove = (moveEvent: PointerEvent) => {
+                const height = rect.height
+                const bottom = rect.bottom
+                const clientY = moveEvent.clientY
+                // Calculate percentage from bottom (0 to 1)
+                const percentage = Math.max(0, Math.min(1, (bottom - clientY) / height))
+                setMasterVolume(percentage)
+              }
+
+              handleMove(e.nativeEvent) // Set initial value on click
+
+              const handleUp = () => {
+                window.removeEventListener('pointermove', handleMove)
+                window.removeEventListener('pointerup', handleUp)
+              }
+
+              window.addEventListener('pointermove', handleMove)
+              window.addEventListener('pointerup', handleUp)
+            }}
+          >
+            <div
+              className="group-hover:bg-primary-500 dark:group-hover:bg-primary-400 absolute bottom-0 w-full rounded-full bg-gray-300 transition-all dark:bg-gray-600"
+              style={{ height: `${masterVolume * 100}%` }}
+            />
+            {/* Thumb indicator on hover */}
+            <div
+              className="absolute left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-gray-200"
+              style={{ bottom: `calc(${masterVolume * 100}% - 6px)` }}
+            />
+          </div>
+          <span className="text-[9px] font-bold tracking-widest uppercase opacity-40">
+            {t.focusLab.widgets.sonicShield.volume}
+          </span>
+        </div>
+      </div>
+
+      {/* Sound Grid */}
+      <div className="scrollbar-none flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {allSounds.map((sound) => {
+            const isActive = !!activeTracks[sound.id]
+            const track = activeTracks[sound.id]
+
+            return (
+              <div
+                key={sound.id}
+                className={`group relative flex flex-col justify-between rounded-xl border p-2.5 transition-all ${
+                  isActive
+                    ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+                    : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800'
+                }`}
+              >
+                <button
+                  onClick={() => toggleTrack(sound.id)}
+                  className="flex flex-1 flex-col items-start text-left"
+                >
+                  <span
+                    className={`text-xs font-bold ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
+                  >
+                    {tSounds[sound.name as keyof typeof tSounds] || sound.name}
+                  </span>
+                </button>
+
+                {isActive && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 mt-3">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={track.volume}
+                      onChange={(e) => updateTrackVolume(sound.id, parseFloat(e.target.value))}
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400 h-1 w-full cursor-pointer rounded-full"
+                    />
+                  </div>
+                )}
+
+                {/* Hidden Audio Element */}
+                {isActive && (
+                  <audio
+                    ref={(el) => {
+                      if (el) audioRefs.current[sound.id] = el
+                      else delete audioRefs.current[sound.id]
+                    }}
+                    loop
+                    preload="auto"
+                    src={sound.path}
+                    className="hidden"
+                  >
+                    <track
+                      kind="captions"
+                      src="data:text/vtt;base64,V0VCVlRVCg=="
+                      label="English"
+                    />
+                  </audio>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const TimerWidget = ({
+  onTimerComplete,
+  focusedTask,
+  externalCommand,
+  onCommandHandled,
+}: {
+  onTimerComplete?: (minutes: number) => void
+  focusedTask?: FocusedTaskState
+  externalCommand?: string | null
+  onCommandHandled?: () => void
+}) => {
+  const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
+  const [activePreset, setActivePreset] = useState<TimerPreset>('focus')
+  const [customMinutes, setCustomMinutes] = useState(15)
+  const [isEditingCustom, setIsEditingCustom] = useState(false)
+  const [isCustomChanged, setIsCustomChanged] = useState(false)
+
+  // Timer Core State
+  const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration) // Seconds. Countdown: remaining. Stopwatch: elapsed.
+  const [timerState, setTimerState] = useState<TimerState>('idle')
+  const [timerMode, setTimerMode] = useState<'countdown' | 'stopwatch'>('countdown')
+  const [totalAllocatedDuration, setTotalAllocatedDuration] = useState(timerPresets.focus.duration) // For accurate countdown accounting
+
+  const [permission, setPermission] = useState<NotificationPermission>('default')
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [startTime, setStartTime] = useState<number | null>(null) // Timestamp when current session started (for storage)
+
+  // -- Helpers --
+  const isRunning = timerState === 'focusing' || timerState === 'break'
+  const isPaused = timerState === 'paused-focusing' || timerState === 'paused-break'
+  const isCompleted = timerState === 'focus-completed' || timerState === 'break-completed'
+
+  // Initialize Audio & Permissions
+  useEffect(() => {
+    audioRef.current = new Audio('/static/sounds/alarm.mp3')
+    audioRef.current.load()
+    if (typeof Notification !== 'undefined') {
+      setPermission(Notification.permission)
+    }
+  }, [])
+
+  // -- Data Recording --
+  const handleSessionComplete = useCallback(
+    (durationMinutes: number, completed: boolean = true) => {
+      try {
+        const id =
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `session-${Date.now()}-${Math.random()}`
+        // Calculate a reasonable start time if missing
+        const finalStartTime = startTime || Date.now() - durationMinutes * 60 * 1000
+
+        // Ensure even small sessions are recorded if manual "End", but maybe filter extremely short accidentals (< 10s)
+        // unless it's a "completed" session.
+        if (durationMinutes < 0.1 && !completed) return
+
+        console.log('Saving Session:', {
+          id,
+          durationMinutes,
+          completed,
+          finalStartTime,
+          task: focusedTask?.text,
+        })
+
+        saveSession(
+          {
+            id,
+            taskName: focusedTask?.text || null, // Ensure unnamed sessions are recorded
+            startTime: finalStartTime,
+            durationMinutes: durationMinutes,
+            completed: completed,
+          },
+          user
+        )
+      } catch (e) {
+        console.error('Error in handleSessionComplete:', e)
+      }
+    },
+    [focusedTask, startTime, user]
+  )
+
+  // -- Timer Logic --
+
+  // Reset/Init when mode/preset changes (Only if Idle)
+  useEffect(() => {
+    if (timerState !== 'idle') return
+
+    if (timerMode === 'countdown') {
+      const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    } else {
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    }
+  }, [activePreset, timerMode, customMinutes, timerState])
+
+  // Tick
+  useEffect(() => {
+    if (!isRunning) return
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (timerMode === 'stopwatch') {
+          return prev + 1
+        }
+        // Countdown
+        if (prev <= 1) {
+          clearInterval(interval)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [isRunning, timerMode])
+
+  // Handle Completion (Countdown only)
+  useEffect(() => {
+    if (timerMode === 'countdown' && timeLeft === 0 && isRunning) {
+      // Transition to completed
+      if (timerState === 'focusing') setTimerState('focus-completed')
+      else if (timerState === 'break') setTimerState('break-completed')
+      else setTimerState('focus-completed') // fallback
+
+      // Play Alarm
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0
+        audioRef.current.play().catch((e) => console.error('Failed to play alarm:', e))
+      }
+
+      // Notify
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification(timerState === 'focusing' ? 'Focus Session Complete!' : 'Break Over!', {
+          icon: '/static/images/logo.png',
+        })
+      }
+
+      // Record Data (Full Allocated Duration) - Only for Focus sessions
+      if (timerState === 'focusing') {
+        const minutes = totalAllocatedDuration / 60
+        handleSessionComplete(Math.round(minutes), true)
+      }
+    }
+  }, [timeLeft, isRunning, timerMode, timerState, totalAllocatedDuration, handleSessionComplete])
+
+  // -- Actions --
+  const startTimer = () => {
+    setStartTime(Date.now())
+    if (timerState === 'idle') {
+      setTimerState(timerMode === 'stopwatch' || activePreset === 'focus' ? 'focusing' : 'break')
+    } else if (isPaused) {
+      // Resume
+      if (timerState === 'paused-focusing') setTimerState('focusing')
+      if (timerState === 'paused-break') setTimerState('break')
+    }
+  }
+
+  const pauseTimer = () => {
+    // Check if we need to set startTime to null or keep it?
+    // Actually, when pausing, we should probably conceptually "stop" the clock.
+    // But for "elapsed" calculation in stopwatch, we just pause the tick.
+    if (timerState === 'focusing') setTimerState('paused-focusing')
+    if (timerState === 'break') setTimerState('paused-break')
+  }
+
+  const endSession = () => {
+    // Triggered manually by user (during Pause)
+    // If coming from PAUSED state (or running), we need to save what we have done so far.
+
+    let minutes = 0
+    if (timerMode === 'stopwatch') {
+      minutes = timeLeft / 60
+    } else {
+      // Countdown: Allocated - Left
+      // If we end early, we record what was done.
+      minutes = Math.max(0, totalAllocatedDuration - timeLeft) / 60
+    }
+
+    // Only save if significant (> 1s to allow short tests, but user asked for reliability. Let's say > 10s)
+    if (minutes * 60 >= 10) {
+      handleSessionComplete(Math.round(minutes), false) // completed=false
+    }
+
+    // Reset to Idle
+    setTimerState('idle')
+    if (timerMode === 'countdown') {
+      const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    } else {
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    }
+  }
+
+  const extendSession = () => {
+    // +5 Min
+    if (isCompleted) {
+      // Post-completion extension
+      setTimerState('focusing')
+      setTimeLeft(5 * 60)
+      setTotalAllocatedDuration(5 * 60)
+      setStartTime(Date.now())
+    } else {
+      // Mid-session extension
+      setTimeLeft((prev) => prev + 300)
+      if (timerMode === 'countdown') {
+        setTotalAllocatedDuration((prev) => prev + 300)
+      }
+    }
+  }
+
+  const continueNewSession = () => {
+    // Start fresh loop
+    setTimerState('focusing')
+    const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+    setTimeLeft(d)
+    setTotalAllocatedDuration(d)
+    setStartTime(Date.now())
+  }
+
+  // -- UI Helpers --
+  const minutes = Math.floor(timeLeft / 60)
+  const seconds = timeLeft % 60
+  const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+
+  const progress =
+    timerMode === 'stopwatch'
+      ? 1
+      : Math.min(Math.max(timeLeft / (totalAllocatedDuration || 1), 0), 1)
+
+  const radius = 40
+  const circumference = 2 * Math.PI * radius
+  const dashOffset = circumference * (1 - progress)
+
+  const circleTextClass = isCompleted
+    ? timerState === 'focus-completed'
+      ? 'text-center text-xl font-bold text-green-500'
+      : 'text-center text-xl font-bold text-primary-500'
+    : 'font-mono text-3xl font-bold tracking-tighter text-gray-800 dark:text-white'
+
+  // -- Render --
+  return (
+    <div className="relative flex h-full flex-col items-center justify-between py-0.5">
+      {/* Top Controls: Mode & Presets (Only in Idle) */}
+      <div className="flex min-h-[64px] w-full flex-col items-center gap-1">
+        {timerState === 'idle' && (
+          <>
+            <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1 dark:border dark:border-gray-700 dark:bg-gray-800">
+              {(['countdown', 'stopwatch'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setTimerMode(mode)}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-all ${
+                    timerMode === mode
+                      ? 'text-primary-600 bg-white shadow-sm dark:bg-gray-600 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {mode === 'countdown'
+                    ? t.focusLab.widgets.timer.countdown
+                    : t.focusLab.widgets.timer.stopwatch}
+                </button>
+              ))}
+            </div>
+
+            {/* Presets (Countdown Only) */}
+            {timerMode === 'countdown' ? (
+              <div className="mt-2 flex justify-center gap-2">
+                {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => {
+                  if (preset === 'long') {
+                    return (
+                      <div
+                        key={preset}
+                        className={`relative flex items-center justify-center rounded-full px-2 transition-all ${activePreset === 'long' ? 'bg-primary-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
+                      >
+                        {isEditingCustom ? (
+                          <>
+                            <input
+                              type="number"
+                              min="1"
+                              max="120"
+                              value={customMinutes}
+                              onChange={(e) => setCustomMinutes(parseInt(e.target.value) || 0)}
+                              onBlur={() => {
+                                setCustomMinutes(Math.max(1, Math.min(120, customMinutes)))
+                                setIsEditingCustom(false)
+                                setIsCustomChanged(true)
+                              }}
+                              onKeyDown={(e) => e.key === 'Enter' && setIsEditingCustom(false)}
+                              className="w-8 appearance-none border-none bg-transparent p-0 text-center text-sm font-bold text-white outline-none"
+                            />
+                            <span className="ml-0.5 text-xs font-medium">m</span>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setActivePreset('long')}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation()
+                              setIsEditingCustom(true)
+                            }}
+                            className="h-full w-full truncate px-2 py-1 text-sm font-bold"
+                          >
+                            {customMinutes}m
+                          </button>
+                        )}
+                      </div>
+                    )
+                  }
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setActivePreset(preset)}
+                      className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${activePreset === preset ? 'bg-primary-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
+                    >
+                      {preset === 'focus' ? '25m' : '5m'}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="mt-2 text-xs font-medium text-gray-400">
+                {lang === 'zh' ? '点击开始正向计时' : 'Click Start to begin count up'}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Progress Ring */}
+      <div className="relative flex flex-1 items-center justify-center">
+        <div className="relative h-38 w-38">
+          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 128 128">
+            <circle
+              cx="64"
+              cy="64"
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-gray-100 dark:text-gray-800"
+            />
+            <circle
+              cx="64"
+              cy="64"
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="4"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              className={`${isCompleted ? 'text-green-500' : 'text-primary-500'} transition-all duration-500 ease-in-out`}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className={circleTextClass}>
+              {isCompleted ? t.focusLab.widgets.timer.done : display}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Actions */}
+      <div className="flex min-h-[60px] w-full flex-col items-center justify-center gap-3">
+        {/* State: IDLE */}
+        {timerState === 'idle' && (
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound()
+              startTimer()
+            }}
+            className="bg-primary-500 shadow-primary-200 hover:bg-primary-600 flex h-10 w-32 items-center justify-center gap-2 rounded-full text-white shadow-lg transition-all active:scale-95 dark:shadow-none"
+          >
+            <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.start}
+          </button>
+        )}
+
+        {/* State: RUNNING */}
+        {isRunning && (
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                pauseTimer()
+              }}
+              className="flex h-10 w-32 items-center justify-center gap-2 rounded-full bg-gray-900 text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+            >
+              <PauseIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.pause}
+            </button>
+            {/* Quick Add 5m (Countdown Only) */}
+            {timerMode === 'countdown' && (
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound()
+                  extendSession()
+                }}
+                title="+5 Minutes"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+              >
+                +5
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* State: PAUSED */}
+        {isPaused && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                endSession()
+              }}
+              className="flex h-10 items-center justify-center rounded-full bg-gray-100 px-4 text-xs font-bold text-gray-500 transition hover:bg-red-50 hover:text-red-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-red-400"
+            >
+              {t.focusLab.widgets.timer.endSession || 'End'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                startTimer()
+              }}
+              className="bg-primary-500 hover:bg-primary-600 flex h-10 w-32 items-center justify-center gap-2 rounded-full text-white shadow-lg transition-all active:scale-95"
+            >
+              <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.resume || 'Resume'}
+            </button>
+          </div>
+        )}
+
+        {/* State: COMPLETED */}
+        {isCompleted && (
+          <div className="animate-in slide-in-from-bottom-2 fade-in flex w-full flex-col gap-2">
+            <div className="flex w-full gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound()
+                  continueNewSession()
+                }}
+                className="bg-primary-600 shadow-primary-200 hover:bg-primary-700 flex-1 rounded-xl px-3 py-2 text-sm font-bold text-white shadow-lg transition-all active:scale-95 dark:shadow-none"
+              >
+                {t.focusLab.widgets.timer.decisionPrompt?.continueFocus || 'Start New'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound()
+                  extendSession()
+                }}
+                className="border-primary-200 text-primary-600 hover:bg-primary-50 dark:text-primary-400 flex-1 rounded-xl border bg-white px-3 py-2 text-sm font-bold shadow-sm transition-all active:scale-95 dark:border-gray-700 dark:bg-gray-800"
+              >
+                +5 Min
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound()
+                // Forced Break Mode
+                setTimerMode('countdown') // Validate break is always countdown
+                setActivePreset('short')
+                setTimerState('break')
+                setTimeLeft(timerPresets.short.duration)
+                setTotalAllocatedDuration(timerPresets.short.duration)
+                setStartTime(Date.now())
+              }}
+              className="w-full rounded-xl bg-gray-100 px-3 py-2 text-xs font-bold text-gray-500 transition-all hover:bg-gray-200 active:scale-95 dark:bg-gray-800 dark:text-gray-400"
+            >
+              {t.focusLab.widgets.timer.decisionPrompt?.takeBreak || 'End Session'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const getSecondsUntilTarget = (timeStr: string) => {
+  if (!timeStr) return 0
+  const [hours, minutes] = timeStr.split(':').map((value) => parseInt(value, 10))
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0
+  const now = new Date()
+  const target = new Date()
+  target.setHours(hours, minutes, 0, 0)
+  if (target <= now) {
+    target.setDate(target.getDate() + 1)
+  }
+  return Math.max(Math.round((target.getTime() - now.getTime()) / 1000), 0)
+}
+
+const TaskBreakerWidget = () => {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  const [task, setTask] = useState('')
+  const [visibleSteps, setVisibleSteps] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isResultView, setIsResultView] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [hasTransferred, setHasTransferred] = useState(false)
+  const [transferStatus, setTransferStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const clearTimers = () => {
+    timeoutsRef.current.forEach((timer) => clearTimeout(timer))
+    timeoutsRef.current = []
+  }
+
+  useEffect(() => {
+    return () => clearTimers()
+  }, [])
+
+  const handleBreakDown = async () => {
+    if (!task.trim()) return
+    clearTimers()
+    setIsLoading(true)
+    setIsResultView(true)
+    setVisibleSteps([])
+    setError(null)
+    setHasTransferred(false)
+    setTransferStatus('idle')
+
+    try {
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch steps')
+      }
+
+      const data = await response.json()
+      const steps = data.steps || []
+
+      setIsLoading(false)
+      steps.forEach((step: string, index: number) => {
+        const timer = setTimeout(() => {
+          setVisibleSteps((prev) => [...prev, step])
+        }, index * 500)
+        timeoutsRef.current.push(timer)
+      })
+    } catch (err) {
+      setIsLoading(false)
+      setError(t.focusLab.widgets.taskBreaker.failed)
+      // Fallback to mock data if API fails (optional, but good for demo)
+      const fallbackSteps = t.focusLab.widgets.taskBreaker.mockSteps
+      fallbackSteps.forEach((step, index) => {
+        const timer = setTimeout(() => {
+          setVisibleSteps((prev) => [...prev, step])
+        }, index * 500)
+        timeoutsRef.current.push(timer)
+      })
+    }
+  }
+
+  const handleTransferToTodo = () => {
+    if (visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred) return
+    setIsTransferring(true)
+    try {
+      const existingItems = readStationStorage()
+      const newItems = visibleSteps.map((step) => createFocusItem('text', step))
+      // Combine and save. 'user' is available in component scope.
+      saveStationItems([...newItems, ...existingItems], user)
+      setTransferStatus('success')
+      setHasTransferred(true)
+    } catch (err) {
+      console.error('Failed to transfer AI steps to Focus Station:', err)
+      setTransferStatus('error')
+    } finally {
+      setIsTransferring(false)
+    }
+  }
+
+  const handleReset = () => {
+    clearTimers()
+    setTask('')
+    setVisibleSteps([])
+    setIsResultView(false)
+    setIsLoading(false)
+    setError(null)
+    setHasTransferred(false)
+    setTransferStatus('idle')
+    setIsTransferring(false)
+  }
+
+  if (isResultView) {
+    return (
+      <div className="flex h-full flex-col gap-4">
+        <div className="bg-primary-50 dark:bg-primary-900/20 flex flex-col gap-2 rounded-2xl p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-primary-600/80 dark:text-primary-400/80 text-xs font-bold tracking-wider uppercase">
+              {t.focusLab.widgets.taskBreaker.currentMission}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleTransferToTodo}
+                disabled={
+                  visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred
+                }
+                className="bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 dark:bg-primary-400 dark:hover:bg-primary-300 dark:disabled:bg-primary-700/60 flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-sm transition-all disabled:cursor-not-allowed"
+                aria-label={
+                  isTransferring
+                    ? t.focusLab.widgets.taskBreaker.transferInProgress
+                    : t.focusLab.widgets.taskBreaker.transferButton
+                }
+                title={t.focusLab.widgets.taskBreaker.transferButton}
+              >
+                {isTransferring ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+                ) : (
+                  <ArrowLaunchIcon className="h-4 w-4" />
+                )}
+                <span className="sr-only">
+                  {isTransferring
+                    ? t.focusLab.widgets.taskBreaker.transferInProgress
+                    : t.focusLab.widgets.taskBreaker.transferButton}
+                </span>
+              </button>
+              <button
+                onClick={handleReset}
+                className="hover:text-primary-600 dark:hover:text-primary-400 flex h-9 shrink-0 items-center rounded-xl bg-white px-3 text-[11px] font-semibold text-gray-600 shadow-sm transition-colors dark:bg-gray-800 dark:text-gray-300"
+              >
+                {t.focusLab.widgets.taskBreaker.newTask}
+              </button>
+            </div>
+          </div>
+          <p className="text-sm font-bold break-words text-gray-900 dark:text-gray-100">{task}</p>
+        </div>
+        {transferStatus !== 'idle' && (
+          <p
+            className={`text-xs font-semibold ${
+              transferStatus === 'success'
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-500 dark:text-red-400'
+            }`}
+          >
+            {transferStatus === 'success'
+              ? t.focusLab.widgets.taskBreaker.transferSuccess
+              : t.focusLab.widgets.taskBreaker.transferError}
+          </p>
+        )}
+
+        <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+          {isLoading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
+              <div className="border-primary-200 border-t-primary-500 h-8 w-8 animate-spin rounded-full border-4" />
+              <p className="text-xs font-medium">{t.focusLab.widgets.taskBreaker.summoning}</p>
+            </div>
+          ) : (
+            <ul className="space-y-2 p-2">
+              {visibleSteps.map((step, index) => (
+                <TaskStepItem key={`${step}-${index}`} step={step} />
+              ))}
+              {error && <p className="p-2 text-xs text-red-500">{error}</p>}
+            </ul>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full flex-col justify-center gap-4">
+      <div className="space-y-2 text-center">
+        <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 mx-auto flex h-10 w-10 items-center justify-center rounded-2xl">
+          <MagicIcon className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+          {t.focusLab.widgets.taskBreaker.overwhelmed}
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-300">
+          {t.focusLab.widgets.taskBreaker.description}
+        </p>
+      </div>
+
+      <textarea
+        value={task}
+        onChange={(event) => setTask(event.target.value)}
+        placeholder={t.focusLab.widgets.taskBreaker.placeholder}
+        className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-800"
+      />
+
+      <button
+        type="button"
+        onClick={handleBreakDown}
+        disabled={!task.trim()}
+        className="bg-primary-500 shadow-primary-200 hover:bg-primary-600 dark:bg-primary-500 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 font-bold text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:text-white dark:shadow-none"
+      >
+        {t.focusLab.widgets.taskBreaker.button}
+      </button>
+    </div>
+  )
+}
+
+const TaskStepItem = ({ step }: { step: string }) => {
+  const [isChecked, setIsChecked] = useState(false)
+
+  return (
+    <motion.li
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3 }}
+      onClick={() => setIsChecked(!isChecked)}
+      className="group flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+    >
+      <input
+        type="checkbox"
+        checked={isChecked}
+        onChange={() => {}} // Handled by parent onClick
+        className="text-primary-500 focus:ring-primary-500 pointer-events-none h-5 w-5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+      />
+      <span
+        className={`text-sm transition-all ${
+          isChecked
+            ? 'text-gray-400 line-through dark:text-gray-500'
+            : 'text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100'
+        }`}
+      >
+        {step}
+      </span>
+    </motion.li>
+  )
+}
+
+const BrainDumpWidget = () => {
+  const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
+  const [leftItems, setLeftItems] = useState<BrainDumpItem[]>([])
+  const [rightItems, setRightItems] = useState<BrainDumpItem[]>([])
+  const [inputValue, setInputValue] = useState('')
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
+
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Safety Ref to prevent leak
+  const dataOwnerId = useRef<string | undefined>(undefined)
+
+  // Load and migrate data
+  useEffect(() => {
+    const init = async () => {
+      const left: BrainDumpItem[] = []
+      const right: BrainDumpItem[] = []
+
+      // 1. Try Cloud First if User
+      if (user) {
+        const cloud = await fetchCloudBrainDump(user)
+        if (cloud && (cloud.left.length > 0 || cloud.right.length > 0)) {
+          setLeftItems(cloud.left)
+          setRightItems(cloud.right)
+          setIsLoaded(true)
+          dataOwnerId.current = user.id
+          return
+        }
+      }
+
+      // 2. Fallback to Local
+      const local = readBrainDumpStorage(user?.id)
+      if (local.left.length > 0 || local.right.length > 0) {
+        // ... (existing logic) ...
+        // We need to keep the existing sanitization logic here...
+        // Actually, to keep chunk size small, maybe I shouldn't rewrite the whole init function?
+        // But I need to set dataOwnerId.current!
+
+        // Let's use a smaller targeted replace if possible, or rewrite carefully.
+        // The existing code has a lot of logic inside local block.
+        // I will rewrite the whole `useEffect` for Init to be safe.
+
+        // Robust UUID Generator
+        const generateUUID = () => {
+          if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = (Math.random() * 16) | 0,
+              v = c == 'x' ? r : (r & 0x3) | 0x8
+            return v.toString(16)
+          })
+        }
+
+        // Sanitize IDs
+        const sanitize = (list: BrainDumpItem[]) =>
+          list.map((item) => {
+            const isValidUUID =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)
+            return isValidUUID ? item : { ...item, id: generateUUID() }
+          })
+
+        setLeftItems(sanitize(local.left))
+        setRightItems(sanitize(local.right))
+      } else {
+        // Migration Logic
+        try {
+          const storedV2 = window.localStorage.getItem('focus-lab-brain-dump-list-v2')
+          if (storedV2) {
+            const items: BrainDumpItem[] = JSON.parse(storedV2)
+            const fixedItems = items.map((i) => ({ ...i, id: crypto.randomUUID() }))
+            const mid = Math.ceil(fixedItems.length / 2)
+            setLeftItems(fixedItems.slice(0, mid))
+            setRightItems(fixedItems.slice(mid))
+          } else {
+            const storedV1 = window.localStorage.getItem('focus-lab-brain-dump-list')
+            if (storedV1) {
+              const oldItems: string[] = JSON.parse(storedV1)
+              const migrated = oldItems.map((item) => {
+                const isImage = item.startsWith('data:image')
+                return {
+                  id: crypto.randomUUID(),
+                  text: isImage ? '' : item,
+                  image: isImage ? item : undefined,
+                }
+              })
+              const mid = Math.ceil(migrated.length / 2)
+              setLeftItems(migrated.slice(0, mid))
+              setRightItems(migrated.slice(mid))
+            }
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }
+
+      dataOwnerId.current = user?.id
+      setIsLoaded(true)
+    }
+
+    init()
+  }, [user])
+
+  // Persist data
+  useEffect(() => {
+    if (!isLoaded) return
+
+    // Safety Guard
+    if (user?.id !== dataOwnerId.current) {
+      if (!user && dataOwnerId.current === undefined) {
+        // OK
+      } else {
+        return // Mismatch
+      }
+    }
+
+    const save = async () => {
+      await saveBrainDump({ left: leftItems, right: rightItems }, user)
+    }
+    const timeout = setTimeout(save, 1000) // Debounce save
+    return () => clearTimeout(timeout)
+  }, [leftItems, rightItems, isLoaded, user])
+
+  const handleClearAll = () => {
+    if (
+      window.confirm(
+        lang === 'en' ? 'Clear all notes? This cannot be undone.' : '清空所有便签？此操作无法撤销。'
+      )
+    ) {
+      setLeftItems([])
+      setRightItems([])
+    }
+  }
+
+  const handleAdd = () => {
+    if (!inputValue.trim() && !pendingImage) return
+
+    // Use helper to ensure valid UUID
+    const newItem = createBrainDumpItem(inputValue.trim(), pendingImage || undefined)
+
+    // Add to the shorter column
+    if (leftItems.length <= rightItems.length) {
+      setLeftItems((prev) => [newItem, ...prev])
+    } else {
+      setRightItems((prev) => [newItem, ...prev])
+    }
+
+    setInputValue('')
+    setPendingImage(null)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleAdd()
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items
+    for (const item of items) {
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault()
+        const blob = item.getAsFile()
+        if (blob) {
+          const reader = new FileReader()
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string
+            if (base64) {
+              setPendingImage(base64)
+            }
+          }
+          reader.readAsDataURL(blob)
+        }
+        return
+      }
+    }
+  }
+
+  const handleDelete = (id: string, column: 'left' | 'right') => {
+    if (column === 'left') {
+      setLeftItems((prev) => prev.filter((item) => item.id !== id))
+    } else {
+      setRightItems((prev) => prev.filter((item) => item.id !== id))
+    }
+  }
+
+  const handleMoveToOtherColumn = (item: BrainDumpItem, fromColumn: 'left' | 'right') => {
+    if (fromColumn === 'left') {
+      setLeftItems((prev) => prev.filter((i) => i.id !== item.id))
+      setRightItems((prev) => [item, ...prev])
+    } else {
+      setRightItems((prev) => prev.filter((i) => i.id !== item.id))
+      setLeftItems((prev) => [item, ...prev])
+    }
+  }
+
+  const renderCard = (item: BrainDumpItem, column: 'left' | 'right') => (
+    <Reorder.Item
+      key={item.id}
+      value={item}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`group relative mb-3 break-inside-avoid overflow-hidden rounded-xl shadow-sm transition-all hover:rotate-1 hover:shadow-md ${
+        item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
+      }`}
+    >
+      {/* Header Bar (Tape/Tag look) */}
+      <div
+        className={`h-3 w-full ${
+          item.image ? 'bg-gray-100 dark:bg-gray-700' : 'bg-yellow-200/50 dark:bg-yellow-900/50'
+        }`}
+      />
+
+      <div className="p-2.5 pt-2">
+        {item.image && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.image}
+              alt="Brain dump"
+              className="mb-2 w-full rounded-lg object-cover"
+            />
+          </>
+        )}
+        {item.text && (
+          <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+            {item.text}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="mt-2 flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={() => handleMoveToOtherColumn(item, column)}
+            className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 dark:text-gray-500"
+            title={t.focusLab.widgets.brainDump.accessibility.moveToOtherColumn}
+            aria-label={t.focusLab.widgets.brainDump.accessibility.moveToOtherColumn}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleDelete(item.id, column)}
+            className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
+            title={t.focusLab.widgets.brainDump.accessibility.deleteNote}
+            aria-label={t.focusLab.widgets.brainDump.accessibility.deleteNote}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M18 6L6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </Reorder.Item>
+  )
+
+  return (
+    <div className="flex h-full flex-col gap-4 overflow-hidden">
+      {/* Input Area */}
+      <div className="relative shrink-0 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={t.focusLab.widgets.brainDump.placeholder}
+              className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            />
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={!inputValue.trim() && !pendingImage}
+              className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
+              aria-label={t.focusLab.widgets.brainDump.accessibility.addThought}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            disabled={leftItems.length === 0 && rightItems.length === 0}
+            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:bg-gray-100 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            title={t.focusLab.widgets.brainDump.accessibility.clearBoard}
+            aria-label={t.focusLab.widgets.brainDump.accessibility.clearBoard}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Pending Image Preview */}
+        <AnimatePresence>
+          {pendingImage && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={pendingImage} alt="Preview" className="h-20 w-auto object-cover p-1" />
+              <button
+                type="button"
+                onClick={() => setPendingImage(null)}
+                className="absolute top-1 right-1 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                aria-label={t.focusLab.widgets.brainDump.accessibility.removeImage}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-3 w-3"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Two-Column Masonry Grid */}
+      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-1.5 dark:border-gray-700 dark:bg-gray-800/20 [&::-webkit-scrollbar]:hidden">
+        {leftItems.length === 0 && rightItems.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center text-gray-400">
+            <p className="text-sm">{t.focusLab.widgets.brainDump.emptyTitle}</p>
+            <p className="text-xs opacity-60">{t.focusLab.widgets.brainDump.emptySubtitle}</p>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3">
+            {/* Left Column */}
+            <Reorder.Group
+              axis="y"
+              values={leftItems}
+              onReorder={setLeftItems}
+              className="min-w-0 flex-1"
+            >
+              {leftItems.map((item) => renderCard(item, 'left'))}
+            </Reorder.Group>
+
+            {/* Right Column */}
+            <Reorder.Group
+              axis="y"
+              values={rightItems}
+              onReorder={setRightItems}
+              className="min-w-0 flex-1"
+            >
+              {rightItems.map((item) => renderCard(item, 'right'))}
+            </Reorder.Group>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const MagicIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3v3" />
+    <path d="M12 18v3" />
+    <path d="M5.22 5.22l2.12 2.12" />
+    <path d="M16.66 16.66l2.12 2.12" />
+    <path d="M3 12h3" />
+    <path d="M18 12h3" />
+    <path d="M5.22 18.78l2.12-2.12" />
+    <path d="M16.66 7.34l2.12-2.12" />
+    <path d="m14 9-5 5" />
+  </svg>
+)
+
+const PlayIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polygon points="7 4 20 12 7 20 7 4" />
+  </svg>
+)
+
+const PauseIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="6" y1="4" x2="6" y2="20" />
+    <line x1="18" y1="4" x2="18" y2="20" />
+  </svg>
+)
+
+const InfoIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+)
+
+const ArrowLaunchIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M7 17 17 7" />
+    <path d="M9 7h8v8" />
+  </svg>
+)
+
+const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
+  const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
+  const defaultOptions = useMemo(() => t.focusLab.widgets.dopamineMenu.defaultOptions, [t])
+  const [options, setOptions] = useState(defaultOptions)
+  const [newOption, setNewOption] = useState('')
+  const [selected, setSelected] = useState<string | null>(null)
+  const [isSpinning, setIsSpinning] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Safety Ref to prevent leak
+  const dataOwnerId = useRef<string | undefined>(undefined)
+
+  // Load options
+  useEffect(() => {
+    const init = async () => {
+      // 1. Cloud
+      if (user) {
+        const cloud = await fetchCloudDopamine(user)
+        if (cloud && cloud.length > 0) {
+          setOptions(cloud)
+          setIsLoaded(true)
+          dataOwnerId.current = user.id
+          return
+        }
+      }
+
+      // 2. Local
+      const local = readDopamineStorage(lang, user?.id)
+      if (local) {
+        setOptions(local)
+      } else {
+        setOptions(defaultOptions)
+      }
+      dataOwnerId.current = user?.id
+      setIsLoaded(true)
+    }
+    init()
+  }, [lang, defaultOptions, user])
+
+  // Save options
+  useEffect(() => {
+    if (!isLoaded) return
+
+    // Safety Guard
+    if (user?.id !== dataOwnerId.current) {
+      if (!user && dataOwnerId.current === undefined) {
+        // OK
+      } else {
+        return // Mismatch
+      }
+    }
+
+    const save = async () => {
+      await saveDopamine(options, lang, user)
+    }
+    const timeout = setTimeout(save, 1000)
+    return () => clearTimeout(timeout)
+  }, [options, lang, isLoaded, user])
+
+  const handleSpin = () => {
+    if (options.length === 0) return
+    setIsSpinning(true)
+    setSelected(null)
+
+    // Simulate spinning effect
+    let count = 0
+    const maxCount = 20
+    const interval = setInterval(() => {
+      setSelected(options[Math.floor(Math.random() * options.length)])
+      count++
+      if (count > maxCount) {
+        clearInterval(interval)
+        setIsSpinning(false)
+        // Final selection
+        const final = options[Math.floor(Math.random() * options.length)]
+        setSelected(final)
+      }
+    }, 100)
+  }
+
+  const addOption = () => {
+    if (newOption.trim()) {
+      setOptions([...options, newOption.trim()])
+      setNewOption('')
+    }
+  }
+
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex gap-2">
+        {/* Result Area */}
+        <div className="bg-primary-50 ring-primary-100 dark:bg-primary-900/20 dark:ring-primary-900/30 flex min-h-[80px] flex-1 flex-col items-center justify-center rounded-2xl p-2 text-center shadow-sm ring-1">
+          {selected ? (
+            <motion.div
+              key={selected}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-xl font-black tracking-tight text-gray-900 dark:text-white"
+            >
+              {selected}
+            </motion.div>
+          ) : (
+            <p className="text-primary-400/70 text-xs font-bold tracking-wider uppercase">
+              {isSpinning
+                ? t.focusLab.widgets.dopamineMenu.spinning
+                : t.focusLab.widgets.dopamineMenu.ready}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            playClickSound()
+            handleSpin()
+          }}
+          disabled={isSpinning || options.length === 0}
+          className="group/btn from-primary-400 to-primary-600 shadow-primary-500/30 hover:shadow-primary-500/50 dark:from-primary-500 dark:to-primary-700 relative flex w-20 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl bg-gradient-to-br p-2 text-xs font-bold text-white shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:shadow-none"
+        >
+          <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover/btn:opacity-100" />
+          {isSpinning ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          ) : (
+            <>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="relative z-10 h-5 w-5 drop-shadow-sm"
+              >
+                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+              </svg>
+              <span className="relative z-10 drop-shadow-sm">
+                {t.focusLab.widgets.dopamineMenu.button}
+              </span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Options List */}
+      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+        <div className="mb-2 flex gap-2 p-1">
+          <input
+            type="text"
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addOption()}
+            placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
+            className="focus:border-primary-500 focus:ring-primary-500 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+          />
+          <button
+            onClick={addOption}
+            className="bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/40 rounded-lg px-3 py-2 text-xs font-bold"
+          >
+            {t.focusLab.widgets.dopamineMenu.add}
+          </button>
+        </div>
+        <div className={`grid gap-2 px-1 ${cols >= 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {options.map((opt, idx) => (
+            <div
+              key={idx}
+              className="group hover:border-primary-100 dark:hover:border-primary-900/30 flex items-center justify-between rounded-lg border border-transparent bg-white px-2 py-1.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-800"
+            >
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{opt}</span>
+              <button
+                onClick={() => removeOption(idx)}
+                className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:text-gray-500"
+                aria-label={t.focusLab.widgets.dopamineMenu.accessibility.removeOption}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

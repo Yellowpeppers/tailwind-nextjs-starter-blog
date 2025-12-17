@@ -1,41 +1,17 @@
-import { genPageMetadata } from 'app/seo'
 import siteMetadata from '@/data/siteMetadata'
-import FocusLabInfo from '@/components/FocusLabInfo'
-import { FocusLabIntro } from '@/components/focus-lab/FocusLabIntro'
-import { FocusLabLazy } from './FocusLabLazy'
-import { resolveLocale } from '@/lib/i18n'
+import { FocusLabDashboard } from './FocusLabDashboard'
+import { genPageMetadata } from 'app/seo'
 
 const focusLabDescription =
   'A browser-based ADHD workspace. Features AI task breakdown, Brown Noise, Pomodoro timer, and "Body Doubling" tools to hack executive dysfunction.'
 
 export async function generateMetadata(props: { params: Promise<{ lang: string }> }) {
   const params = await props.params
-  const locale = resolveLocale(params.lang)
-  const baseMetadata = genPageMetadata({
+  return genPageMetadata({
     title: 'Focus Lab: Free ADHD Productivity Dashboard & Body Doubling Tools',
+    params: { lang: params.lang },
     description: focusLabDescription,
-    path: '/focuslab',
-    appendSiteName: false,
-    keywords: [
-      'adhd productivity dashboard',
-      'body doubling app',
-      'online adhd planner',
-      'brown noise generator',
-      'ai task breaker',
-      'focus lab',
-    ],
-    openGraph: {
-      images: [`${siteMetadata.siteUrl}/static/images/twitter-card.png`],
-    },
-    locale,
   })
-
-  return {
-    ...baseMetadata,
-    title: {
-      absolute: 'Focus Lab: Free ADHD Productivity Dashboard & Body Doubling Tools',
-    },
-  }
 }
 
 const focusLabSchema = {
@@ -71,15 +47,12 @@ export default function Projects() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(focusLabSchema) }}
       />
-      <div className="min-h-screen">
-        <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] w-screen">
-          <div className="mx-auto max-w-[1800px] px-4 py-12 sm:px-6 lg:px-8">
-            <FocusLabIntro />
-          </div>
-        </div>
-        <FocusLabLazy />
-        <FocusLabInfo />
-      </div>
+      {/* 
+         FocusLabDashboard manages the entire view: 
+         1. Landing Page (default)
+         2. Application Dashboard (lazy loaded)
+      */}
+      <FocusLabDashboard />
     </>
   )
 }
