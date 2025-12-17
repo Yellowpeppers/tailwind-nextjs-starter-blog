@@ -12,7 +12,9 @@ export type Settings = {
   }
   focus_lab?: {
     layout?: Record<string, unknown[]> // desktop, mobile, etc.
+    hide_headers?: boolean
     sound?: {
+      enabled?: boolean
       master_volume?: number
       active_tracks?: Record<string, unknown>
     }
@@ -29,6 +31,7 @@ const defaultSettings: Settings = {
   theme: { mode: 'system', color: 'blue' },
   focus_lab: {
     layout: {},
+    hide_headers: false,
     sound: { master_volume: 0.8, active_tracks: {} },
     timer: { custom_duration: 1500 },
   },

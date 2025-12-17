@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @plugin "@tailwindcss/forms";
 @plugin '@tailwindcss/typography';
+@plugin "@iconify/tailwind4";
 @source '../node_modules/pliny';
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -123,6 +124,7 @@
   --font-sans:
     var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-limelight: var(--font-limelight);
 
   /* Colors */
   /* Colors */

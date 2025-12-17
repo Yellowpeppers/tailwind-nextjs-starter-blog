@@ -24,10 +24,16 @@ import {
   STATION_STORAGE_KEY,
 } from '@/components/focus-lab/focusStationStorage'
 import { AnalyticsModal } from '@/components/focus-lab/AnalyticsModal'
-import { saveSession, syncFocusHistory, getHistory } from '@/components/focus-lab/focusStorage'
+import {
+  saveSession,
+  syncFocusHistory,
+  getHistory,
+  getTodayFocusMinutes,
+} from '@/components/focus-lab/focusStorage'
 import { useAuth } from '@/context/AuthContext'
 
 import AuthModal from '@/components/auth/AuthModal'
+import PlanComparisonModal from '@/components/auth/PlanComparisonModal'
 import { syncToDo, readToDoStorage, TODO_STORAGE_KEY } from '@/components/focus-lab/todoStorage'
 import {
   BrainDumpItem,
@@ -44,12 +50,28 @@ import {
   syncDopamine,
 } from '@/components/focus-lab/dopamineStorage'
 import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
-import { debounce } from 'lodash'
+import { useThemeColor, ThemeColor } from '@/context/ThemeColorContext'
+import { debounce, merge, cloneDeep, uniq } from 'lodash'
 
 // Context for passing drag controls to children
 const DragHandleContext = createContext<DragControls | null>(null)
 
 // --- Helper Functions ---
+
+// --- Helper Functions ---
+
+const getSecondsUntilTarget = (timeStr: string) => {
+  if (!timeStr) return 0
+  const [hours, minutes] = timeStr.split(':').map((value) => parseInt(value, 10))
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0
+  const now = new Date()
+  const target = new Date()
+  target.setHours(hours, minutes, 0, 0)
+  if (target <= now) {
+    target.setDate(target.getDate() + 1)
+  }
+  return Math.max(Math.round((target.getTime() - now.getTime()) / 1000), 0)
+}
 
 const playClickSound = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,6 +183,8 @@ type WidgetCardProps = {
   children: ReactNode
   onHeaderClick?: () => void
   onDelete?: () => void
+  badge?: ReactNode
+  customAction?: ReactNode
   className?: string
 }
 
@@ -171,13 +195,16 @@ const WidgetCard = ({
   onHeaderClick,
   onDelete,
   badge,
+  customAction,
   className = '',
-}: WidgetCardProps & { badge?: ReactNode }) => {
+}: WidgetCardProps) => {
   const [showInfo, setShowInfo] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const infoRef = useRef<HTMLDivElement>(null)
   const deleteRef = useRef<HTMLDivElement>(null)
+  const { settings } = useFocusSettingsContext()
   const { t } = useTranslation()
+  const hideHeaders = settings.focus_lab?.hide_headers
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -193,16 +220,15 @@ const WidgetCard = ({
   }, [])
 
   const dragControls = useContext(DragHandleContext)
-
   const dragStartPosition = useRef({ x: 0, y: 0 })
 
   return (
     <motion.section
       layout
-      className={`group flex h-full flex-col rounded-[32px] border border-gray-200/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-shadow duration-300 sm:p-6 dark:border-gray-700/80 dark:bg-gray-900 ${className}`}
+      className={`group relative flex h-full flex-col rounded-[32px] border border-gray-200 bg-white px-5 pt-4 pb-5 shadow-lg shadow-gray-200/50 backdrop-blur-none transition-shadow duration-300 sm:px-6 sm:pt-5 sm:pb-6 dark:border-gray-700 dark:bg-gray-900 ${className}`}
     >
       <div
-        className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
+        className={`flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing ${hideHeaders ? 'h-8' : ''}`}
         onPointerDown={(e) => {
           dragStartPosition.current = { x: e.clientX, y: e.clientY }
           dragControls?.start(e)
@@ -224,124 +250,96 @@ const WidgetCard = ({
           }
         }}
       >
-        <div className="flex items-center gap-2">
-          {/* Drag Handle (only visible when not focused) */}
-          {/* <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm8-14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm2 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
-            </svg>
-          </div> */}
+        {!hideHeaders && (
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
-            {badge && <div>{badge}</div>}
-          </div>
-          {/* Info Button */}
-          <div className="relative" ref={infoRef}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowInfo(!showInfo)
-              }}
-              className={`transition-colors ${
-                showInfo
-                  ? 'text-primary-500 dark:text-primary-400'
-                  : 'text-gray-300 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300'
-              }`}
-              aria-label="Toggle description"
-            >
-              <InfoIcon className="h-4 w-4" />
-            </button>
-            <AnimatePresence>
-              {showInfo && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 z-50 mt-2 w-56 origin-top-left"
-                >
-                  <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
-                    <div className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
-                      {subtitle}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Delete Button - Moved to Right */}
-        {onDelete && (
-          <div className="relative" ref={deleteRef}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowDeleteConfirm(!showDeleteConfirm)
-              }}
-              className={`transition-colors ${
-                showDeleteConfirm
-                  ? 'text-red-500 dark:text-red-400'
-                  : 'text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400'
-              }`}
-              aria-label="Remove widget"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
+            {/* Drag Handle (only visible when not focused) */}
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+              {badge && <div>{badge}</div>}
+            </div>
+            {/* Info Button */}
+            <div className="relative" ref={infoRef}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowInfo(!showInfo)
+                }}
+                className={`transition-colors ${
+                  showInfo
+                    ? 'text-primary-500 dark:text-primary-400'
+                    : 'text-gray-300 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300'
+                }`}
+                aria-label="Toggle description"
               >
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
-            <AnimatePresence>
-              {showDeleteConfirm && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute top-full right-0 z-50 mt-2 w-64 origin-top-right"
-                >
-                  <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
-                    <h4 className="mb-1 text-sm font-bold text-gray-900 dark:text-gray-100">
-                      {t.focusLab.controls.delete.confirm}
-                    </h4>
-                    <p className="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                      {t.focusLab.controls.delete.desc}
-                    </p>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowDeleteConfirm(false)
-                        }}
-                        className="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"
-                      >
-                        {t.focusLab.controls.delete.cancel}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowDeleteConfirm(false)
-                          onDelete()
-                        }}
-                        className="rounded-lg bg-red-500 px-2 py-1 text-xs font-bold text-white hover:bg-red-600"
-                      >
-                        {t.focusLab.controls.delete.confirmBtn}
-                      </button>
+                <InfoIcon className="h-4 w-4" />
+              </button>
+              <AnimatePresence>
+                {showInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full left-0 z-50 mt-2 w-56 origin-top-left"
+                  >
+                    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
+                      <div className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+                        {subtitle}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
+        )}
+
+        {/* Custom Action (e.g. Settings Flip) replaces Delete if provided, or sits beside it? User said "Replace". */}
+        {/* Custom Action (Absolute positioned to match padding to ignore flow height effects) */}
+        {customAction ? (
+          <div className="absolute top-4 right-5 z-20 sm:top-5 sm:right-6">{customAction}</div>
+        ) : (
+          onDelete && (
+            <div className="relative" ref={deleteRef}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowDeleteConfirm(!showDeleteConfirm)
+                }}
+                className={`transition-colors ${
+                  showDeleteConfirm
+                    ? 'text-red-500 dark:text-red-400'
+                    : 'text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400'
+                }`}
+                aria-label="Remove widget"
+              >
+                <MinusIcon className="h-4 w-4" />
+              </button>
+              {/* Delete Confirm */}
+              <AnimatePresence>
+                {showDeleteConfirm && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="absolute top-full right-0 z-10 mt-2 w-32 rounded-lg border border-gray-100 bg-white p-1 text-xs shadow-xl dark:border-gray-700 dark:bg-gray-800"
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete()
+                      }}
+                      className="w-full rounded-md bg-red-50 px-3 py-2 text-left font-medium text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                    >
+                      {t.focusLab.widgets.common.remove}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )
         )}
 
         {/* Focus Toggle Removed for now */}
@@ -428,6 +426,7 @@ const FocusLabMobileGrid = ({
   externalCommand?: string | null
   onCommandHandled?: () => void
 }) => {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-5 pb-16">
       <SonicShieldCard className="h-auto" />
@@ -451,10 +450,15 @@ const GAP = 22
 const CONTROL_BUTTON_BASE =
   'relative flex h-12 px-5 min-w-[150px] items-center justify-center rounded-full border text-sm font-semibold transition-all text-center'
 
-export const FocusLabApp = () => {
-  const [isFocusMode, setIsFocusMode] = useState(false)
+export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
+  // const [isFocusMode, setIsFocusMode] = useState(false) // Removed: Always in focus mode
+  const isFocusMode = true // Hardcoded to true for layout logic preservation if needed, or just refactor.
+  // Actually simpler to just keep the variable as true constant to minimize diff noise for now, or just replace usages.
+  // I will just replace usage or keep it constant.
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isTipOpen, setIsTipOpen] = useState(true)
   const [showGroupModal, setShowGroupModal] = useState(false)
+  const [showCustomizeMenu, setShowCustomizeMenu] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
@@ -469,13 +473,102 @@ export const FocusLabApp = () => {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authTrigger, setAuthTrigger] = useState<'generic' | 'stats'>('generic')
   const { user } = useAuth()
+  const isPro = user?.user_metadata?.plan === 'pro'
+  const { themeColor, setThemeColor } = useThemeColor()
+  const { settings, updateSettings } = useFocusSettingsContext()
+
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showPricingModal, setShowPricingModal] = useState(false)
+
+  const [dailyGoalHours, setDailyGoalHours] = useState(4.5)
+  const [isEditingGoal, setIsEditingGoal] = useState(false)
+  const [tempGoal, setTempGoal] = useState('4.5')
+  const goalInputRef = useRef<HTMLInputElement>(null)
+
+  const handleGoalSave = () => {
+    const val = parseFloat(tempGoal)
+    if (!isNaN(val) && val > 0) {
+      setDailyGoalHours(val)
+    }
+    setIsEditingGoal(false)
+  }
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditingGoal) {
+      goalInputRef.current?.focus()
+    }
+  }, [isEditingGoal])
+
+  // Real progress tracking
+  const [todayProgress, setTodayProgress] = useState(0)
+
+  // Fetch today's progress on mount and interval
+  useEffect(() => {
+    const fetchProgress = () => {
+      const minutes = getTodayFocusMinutes()
+      // Convert to hours with 1 decimal
+      setTodayProgress(Math.round((minutes / 60) * 10) / 10)
+    }
+
+    fetchProgress()
+    // Poll every minute to update chart
+    const interval = setInterval(fetchProgress, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const currentProgress = todayProgress
+  const progressPercentage = Math.min((currentProgress / dailyGoalHours) * 100, 100)
+  const isGoalReached = currentProgress >= dailyGoalHours
+
+  // Notification Logic
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationsEnabled(Notification.permission === 'granted')
+    }
+  }, [])
+
+  const handleToggleNotifications = () => {
+    if (!('Notification' in window)) {
+      alert('This browser does not support desktop notification')
+      return
+    }
+
+    if (notificationsEnabled) {
+      // User wants to disable
+      // We cannot revoke permission, but we can set our app state to false
+      // to stop sending notifications in logic (if implemented).
+      setNotificationsEnabled(false)
+      // Optional: Visual confirmation? No need, toggle switch moves.
+    } else {
+      // User wants to enable
+      if (Notification.permission === 'granted') {
+        setNotificationsEnabled(true)
+        new Notification('Focus Lab', { body: 'Notifications enabled!' })
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            setNotificationsEnabled(true)
+            new Notification('Focus Lab', { body: 'Notifications enabled!' })
+          } else {
+            setNotificationsEnabled(false)
+          }
+        })
+      } else {
+        // Denied
+        alert('Notifications are blocked. Please enable them in your browser settings.')
+      }
+    }
+  }
 
   const headerPadding = 0
 
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
-        const measuredWidth = containerRef.current.offsetWidth
+        const measuredWidth = containerRef.current.clientWidth
         setContainerWidth(measuredWidth)
       }
       const width = window.innerWidth
@@ -602,7 +695,6 @@ export const FocusLabApp = () => {
       // The components (FocusStation etc) have useEffect([user]) which loads.
       // But we just updated the cloud data. The components might have loaded "empty cloud" and sat there.
       // We need to trigger a reload or they wait for next refresh?
-      // Since we updated cloud, components need to re-fetch.
       // Simplest way: window.location.reload() or rely on SWR?
       // We are not using SWR.
       // We can rely on `window.location.reload()` for simplicity ensure fresh state.
@@ -712,6 +804,9 @@ export const FocusLabApp = () => {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
             onClick={() => setShowGroupModal(false)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Escape' && setShowGroupModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -724,12 +819,13 @@ export const FocusLabApp = () => {
               aria-labelledby="focuslab-group-modal-title"
               aria-describedby="focuslab-group-modal-desc"
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={() => setShowGroupModal(false)}
                 className="absolute top-4 right-4 rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
-                aria-label={t.focusLab.controls.groupModal.close}
+                aria-label={t.focusLab.groupModal.close}
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -745,18 +841,18 @@ export const FocusLabApp = () => {
                 id="focuslab-group-modal-title"
                 className="text-xl font-bold text-gray-900 dark:text-gray-100"
               >
-                {t.focusLab.controls.groupModal.title}
+                {t.focusLab.groupModal.title}
               </h3>
               <p
                 id="focuslab-group-modal-desc"
                 className="mt-2 text-sm text-gray-500 dark:text-gray-400"
               >
-                {t.focusLab.controls.groupModal.description}
+                {t.focusLab.groupModal.description}
               </p>
               <div className="mt-6 flex justify-center">
                 <Image
                   src="/static/images/wechat-group-qr.JPG"
-                  alt={t.focusLab.controls.groupModal.qrAlt}
+                  alt={t.focusLab.groupModal.qrAlt}
                   width={320}
                   height={320}
                   className="h-auto w-full max-w-[260px] rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700"
@@ -768,7 +864,7 @@ export const FocusLabApp = () => {
                 onClick={() => setShowGroupModal(false)}
                 className="mt-6 inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
               >
-                {t.focusLab.controls.groupModal.close}
+                {t.focusLab.groupModal.close}
               </button>
             </motion.div>
           </motion.div>
@@ -790,308 +886,612 @@ export const FocusLabApp = () => {
               }
         }
       />
-      <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
-        <motion.div
-          layout
-          transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
-          className={`${
-            isFocusMode
-              ? 'fixed inset-0 z-[100] h-screen w-screen overflow-y-scroll bg-white/95 backdrop-blur-sm dark:bg-gray-950/95'
-              : 'relative h-full w-full'
-          }`}
-        >
-          {/* Global Grid Background - Only visible on non-mobile viewports and not in Focus Mode */}
-          {!isMobile && !isFocusMode && (
-            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-              <div
-                className="h-full w-full"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  height: '100%',
-                  backgroundImage: `
-                linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
-              `,
-                  backgroundSize: `${backgroundColumnWidth + GAP}px ${ROW_HEIGHT + GAP}px`,
-                  backgroundPosition: 'center -16px',
-                }}
-              />
-            </div>
-          )}
 
-          {/* Inner Wide Container */}
-          <div className="mx-auto h-full max-w-[1800px] px-4 sm:px-6 lg:px-8">
-            <div className="h-full w-full" ref={containerRef}>
-              {/* Intro Section - Moved to parent for performance */}
+      {/* Settings Modal - Simple inline implementation for now */}
+      <AnimatePresence>
+        {showSettingsModal && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowSettingsModal(false)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Escape' && setShowSettingsModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Settings Header */}
+              <h2 className="mb-4 text-xl font-bold dark:text-white">
+                {t.focusLab.settings?.title || 'Settings'}
+              </h2>
 
-              {/* Dashboard Controls Header */}
-              <div
-                className={`relative z-[100] flex flex-wrap items-center gap-4 transition-all duration-500 ${isFocusMode ? 'mt-6 mb-12' : 'mb-8 pt-0'}`}
-                style={{ paddingLeft: headerPadding }}
-              >
-                <AnimatePresence mode="popLayout">
-                  {/* Logo Section - Always Visible */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="flex items-center gap-3 border-gray-200 pr-0 sm:border-r sm:pr-6 dark:border-gray-700"
+              <div className="space-y-4">
+                {/* Dark Mode */}
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <span className="font-medium dark:text-gray-200">
+                    {t.focusLab.settings?.darkMode || 'Dark Mode'}
+                  </span>
+                  <button
+                    onClick={() => document.documentElement.classList.toggle('dark')}
+                    className="rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f172a] text-white shadow-sm dark:bg-white dark:text-gray-900">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        className="h-6 w-6"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                        />
+                    {t.focusLab.settings?.on || 'Toggle'}
+                  </button>
+                </div>
+
+                {/* Hide Card Headers */}
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <span className="font-medium dark:text-gray-200">
+                    {t.focusLab.settings?.hideHeaders || 'Hide Card Headers'}
+                  </span>
+                  <button
+                    onClick={() =>
+                      updateSettings(
+                        'focus_lab.hide_headers',
+                        !(settings.focus_lab?.hide_headers ?? false)
+                      )
+                    }
+                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.hide_headers ?? false) ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
+                  >
+                    {(settings.focus_lab?.hide_headers ?? false)
+                      ? t.focusLab.settings?.on || 'On'
+                      : t.focusLab.settings?.off || 'Off'}
+                  </button>
+                </div>
+
+                {/* Notifications */}
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <span className="font-medium dark:text-gray-200">
+                    {t.focusLab.settings?.notifications || 'Notifications'}
+                  </span>
+                  <button
+                    onClick={handleToggleNotifications}
+                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${notificationsEnabled ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
+                  >
+                    {notificationsEnabled
+                      ? t.focusLab.settings?.on || 'On'
+                      : t.focusLab.settings?.off || 'Off'}
+                  </button>
+                </div>
+
+                {/* Sound Effects */}
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <span className="font-medium dark:text-gray-200">
+                    {t.focusLab.settings?.soundEffects || 'Sound Effects'}
+                  </span>
+                  <button
+                    onClick={() =>
+                      updateSettings(
+                        'focus_lab.sound.enabled',
+                        !(settings.focus_lab?.sound?.enabled ?? true)
+                      )
+                    }
+                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.sound?.enabled ?? true) ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
+                  >
+                    {(settings.focus_lab?.sound?.enabled ?? true)
+                      ? t.focusLab.settings?.on || 'On'
+                      : t.focusLab.settings?.off || 'Off'}
+                  </button>
+                </div>
+
+                {/* Theme Color */}
+                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <span className="mb-3 block font-medium dark:text-gray-200">
+                    {t.focusLab.settings?.themeColor || 'Theme Color'}
+                  </span>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { name: 'pink', color: '#db2777', label: 'Pink' },
+                      { name: 'blue', color: '#0B1F3B', label: 'Deep Navy Blue' },
+                      { name: 'green', color: '#0F6B61', label: 'Cool Ink Green' },
+                      { name: 'yellow', color: '#C6A15B', label: 'Champagne Gold' },
+                      { name: 'violet', color: '#3B3A82', label: 'Misty Indigo' },
+                      { name: 'orange', color: '#B85C4A', label: 'Terracotta Orange' },
+                      { name: 'red', color: '#7A8F86', label: 'Sage Green' },
+                      { name: 'slate', color: '#1F2933', label: 'Graphite Gray' },
+                    ].map(({ name, color, label }) => (
+                      <button
+                        key={name}
+                        onClick={() => {
+                          setThemeColor(name as ThemeColor)
+                          updateSettings('theme.color', name)
+                        }}
+                        className={`h-8 w-full rounded-md ring-2 ring-offset-2 ring-offset-white transition-all hover:scale-105 dark:ring-offset-gray-800 ${
+                          themeColor === name
+                            ? 'scale-105 ring-gray-400 dark:ring-gray-400'
+                            : 'opacity-80 ring-transparent hover:opacity-100'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={label}
+                        aria-label={`Set theme to ${label}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="mt-6 w-full rounded-lg bg-gray-100 py-2 font-semibold transition hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Pricing Modal */}
+      <AnimatePresence>
+        <PlanComparisonModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
+      </AnimatePresence>
+
+      <div className="fixed inset-0 z-[100] flex h-full w-full overflow-hidden bg-gray-50 transition-all duration-500 dark:bg-gray-950">
+        {/* Sidebar - Visible only in Desktop */}
+        {!isMobile && (
+          <motion.aside
+            initial={{ width: 256, opacity: 1 }}
+            animate={{
+              width: isSidebarOpen ? 256 : 0,
+              opacity: isSidebarOpen ? 1 : 0,
+              transition: { duration: 0.3, ease: 'easeInOut' },
+            }}
+            className="relative z-30 flex flex-none flex-col overflow-hidden border-r border-gray-200 bg-gray-50/50 pb-6 text-gray-900 backdrop-blur-xl dark:border-gray-800 dark:bg-gray-900/50 dark:text-white"
+          >
+            <div className="flex h-full w-[256px] flex-col">
+              {/* Sidebar Header: User Profile */}
+              <div className="flex h-16 items-center justify-between border-b border-gray-200/50 px-4 dark:border-gray-800/50">
+                <button
+                  className="ml-2 flex cursor-pointer items-center gap-3 overflow-hidden text-left transition-opacity hover:opacity-80"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-xs font-bold text-white shadow-inner">
+                    {user ? user.user_metadata?.full_name?.charAt(0) || 'U' : 'G'}
+                  </div>
+                  <div className="flex flex-col truncate">
+                    <span className="truncate text-sm leading-tight font-semibold text-gray-900 dark:text-gray-100">
+                      {user ? user.user_metadata?.full_name || 'My Workspace' : 'Guest Space'}
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-500">
+                      {user ? 'Pro Member' : 'Free Plan'}
+                    </span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="h-4 w-4"
+                  >
+                    <path d="M18 16L14 12L18 8" />
+                    <path d="M6 6V18" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Sidebar Nav */}
+              <nav className="flex-1 space-y-2 px-4 py-8">
+                {/* Focus Lab Section */}
+                <div className="mb-2 px-2">
+                  <span className="text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                    Focus Tools
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setShowAnalytics(true)}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="group-hover:text-primary-500 h-5 w-5 text-gray-400 transition-colors"
+                  >
+                    <path d="M12 20V10M18 20V4M6 20v-6" />
+                  </svg>
+                  {lang === 'zh' ? '统计数据' : 'Stats'}
+                </button>
+
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="group-hover:text-primary-500 h-5 w-5 text-gray-400 transition-colors"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  {lang === 'zh' ? '会员档案' : 'Profile'}
+                </button>
+
+                <button
+                  onClick={() => setShowSettingsModal(true)}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="group-hover:text-primary-500 h-5 w-5 text-gray-400 transition-colors"
+                  >
+                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                  </svg>
+                  {lang === 'zh' ? '设置' : 'Settings'}
+                </button>
+              </nav>
+
+              {/* Upgrade Logic in Sidebar */}
+              {/* Upgrade Logic in Sidebar: Show for Guests OR Free Plan users */}
+              {!isPro && (
+                <div className="mb-4 px-4">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && setShowPricingModal(true)}
+                    className="group relative w-full cursor-pointer overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-4 text-left text-white shadow-lg"
+                    onClick={() => setShowPricingModal(true)}
+                  >
+                    <div className="absolute top-0 right-0 p-2 opacity-10">
+                      <svg className="h-16 w-16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-                      Focus Lab
-                    </span>
-                  </motion.div>
-                </AnimatePresence>
-
-                <div className="flex flex-wrap items-center gap-3 sm:ml-6">
-                  <button
-                    onClick={() => setIsFocusMode(!isFocusMode)}
-                    className={`${CONTROL_BUTTON_BASE} ${
-                      isFocusMode
-                        ? 'border-transparent text-white'
-                        : 'border-transparent text-white'
-                    }`}
-                  >
-                    <>
-                      <motion.span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-full"
-                        style={{
-                          background:
-                            'linear-gradient(120deg, var(--color-primary-200), var(--color-primary-400), var(--color-primary-500), var(--color-primary-300))',
-                          backgroundSize: '220% 220%',
-                        }}
-                        animate={{
-                          backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                        }}
-                        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    </>
-                    <span className={`relative z-10 flex items-center gap-2 text-white`}>
-                      {isFocusMode ? (
-                        <>
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="h-4 w-4"
-                          >
-                            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-                          </svg>
-                          {t.focusLab.controls.exitFocus}
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="h-4 w-4"
-                          >
-                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                          </svg>
-                          {t.focusLab.controls.focusMode}
-                        </>
-                      )}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      setShowResetConfirm(true)
-                    }}
-                    className={`${CONTROL_BUTTON_BASE} group border-primary-500 text-primary-600 hover:bg-primary-50 bg-white dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800`}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4 transition-transform group-hover:-rotate-180"
-                    >
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                      <path d="M3 3v5h5" />
-                    </svg>
-                    {t.focusLab.controls.resetLayout}
-                  </button>
-
-                  <AnimatePresence>
-                    {showResetConfirm && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-                        onClick={() => setShowResetConfirm(false)}
-                      >
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">
-                            {t.focusLab.controls.resetModal?.title || 'Reset Layout?'}
-                          </h3>
-                          <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-                            {t.focusLab.controls.resetModal?.description ||
-                              'Your layout will be reset to default.'}
-                          </p>
-                          <div className="flex justify-end gap-3">
-                            <button
-                              onClick={() => setShowResetConfirm(false)}
-                              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                            >
-                              {t.focusLab.controls.resetModal?.cancel || 'Cancel'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                const legacyKeys = ['focus-lab-layout-v1']
-                                const presetKeys = Object.keys(GRID_PRESETS) as LayoutPreset[]
-                                ;[
-                                  ...legacyKeys,
-                                  ...presetKeys.map((p) => getLayoutStorageKey(p)),
-                                ].forEach((key) => window.localStorage.removeItem(key))
-                                window.location.reload()
-                              }}
-                              className="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-md transition-colors active:scale-95"
-                            >
-                              {t.focusLab.controls.resetModal?.confirm || 'Reset'}
-                            </button>
-                          </div>
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Stats Button with Flowing Light Border */}
-                  <div className="group relative flex items-center justify-center">
-                    {/* Flowing Border Container */}
-                    <div className="from-primary-500 via-primary-200 to-primary-500 dark:from-primary-800 dark:via-primary-300 dark:to-primary-800 animate-border-flow absolute -inset-[2px] rounded-full bg-gradient-to-r bg-[length:200%_auto] opacity-80 blur-[2px] transition duration-1000 group-hover:opacity-100"></div>
-
-                    <button
-                      onClick={() => {
-                        if (user) {
-                          setShowAnalytics(true)
-                        } else {
-                          setAuthTrigger('stats')
-                          setShowAuthModal(true)
-                        }
-                      }}
-                      className={`${CONTROL_BUTTON_BASE} relative border-transparent bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="mr-2 h-4 w-4"
-                      >
-                        <path d="M18 20V10M12 20V4M6 20v-6" />
-                      </svg>
-                      {lang === 'zh' ? '统计' : 'Stats'}
+                    <h3 className="relative z-10 text-sm font-bold">
+                      {t.focusLab.upgradeCard?.title || 'Upgrade Plan'}
+                    </h3>
+                    <p className="relative z-10 mt-1 mb-3 text-xs text-indigo-100">
+                      {t.focusLab.upgradeCard?.subtitle || 'Compare Free vs Pro.'}
+                    </p>
+                    <button className="w-full rounded bg-white py-1.5 text-xs font-bold text-indigo-600 shadow-sm transition hover:bg-gray-50">
+                      {t.focusLab.upgradeCard?.button || 'View Options'}
                     </button>
                   </div>
+                </div>
+              )}
 
-                  {isFocusMode && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setIsTipOpen((prev) => !prev)}
-                        aria-expanded={isTipOpen}
-                        className={`${CONTROL_BUTTON_BASE} border-primary-500 text-primary-600 flex-none justify-between dark:bg-gray-900 dark:text-white ${
-                          isTipOpen ? 'bg-primary-50 dark:bg-gray-800' : 'bg-white'
-                        }`}
+              {/* Sidebar Footer */}
+              <div className="mt-auto space-y-6 px-6">
+                {/* Daily Goal Widget */}
+                <div
+                  className={`group relative overflow-hidden rounded-xl border p-4 transition-all duration-300 ${
+                    isGoalReached
+                      ? 'border-amber-200 bg-gradient-to-br from-yellow-100 to-amber-50 dark:border-amber-700/50 dark:from-yellow-900/30 dark:to-amber-900/20'
+                      : 'transaction-colors border-gray-100 bg-white hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800'
+                  }`}
+                >
+                  <div className="relative z-10 mb-2 flex items-end justify-between">
+                    <div className="flex flex-col">
+                      <span
+                        className={`text-xs font-medium ${isGoalReached ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}
                       >
-                        <span className="mx-auto font-semibold">
-                          {isTipOpen
-                            ? t.focusLab.controls.tipToggle.hide
-                            : t.focusLab.controls.tipToggle.show}
-                        </span>
-                        <span className={`transition-transform ${isTipOpen ? 'rotate-90' : ''}`}>
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="h-4 w-4"
-                          >
-                            <path d="M9 18l6-6-6-6" />
-                          </svg>
-                        </span>
-                      </button>
-
-                      {lang === 'zh' && (
+                        {isGoalReached
+                          ? 'Goal Reached! 🎉'
+                          : t.focusLab?.stats?.dailyGoal || 'Daily Goal'}
+                      </span>
+                      {isEditingGoal ? (
+                        <div className="mt-0.5 flex items-center gap-1">
+                          <input
+                            ref={goalInputRef}
+                            type="number"
+                            step="0.5"
+                            value={tempGoal}
+                            onChange={(e) => setTempGoal(e.target.value)}
+                            onBlur={handleGoalSave}
+                            onKeyDown={(e) => e.key === 'Enter' && handleGoalSave()}
+                            className="border-primary-500 w-12 border-b bg-transparent p-0 text-sm font-bold text-gray-900 focus:ring-0 dark:text-white"
+                          />
+                          <span className="text-xs text-gray-400">h</span>
+                        </div>
+                      ) : (
                         <button
-                          type="button"
-                          onClick={() => setShowGroupModal(true)}
-                          aria-haspopup="dialog"
-                          aria-expanded={showGroupModal}
-                          className={`${CONTROL_BUTTON_BASE} border-primary-500 text-primary-600 hover:bg-primary-50 bg-white dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800`}
+                          className="flex cursor-pointer items-baseline gap-1"
+                          onClick={() => {
+                            setTempGoal(dailyGoalHours.toString())
+                            setIsEditingGoal(true)
+                          }}
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="h-4 w-4"
+                          <span
+                            className={`text-sm font-bold ${isGoalReached ? 'text-amber-900 dark:text-amber-100' : 'text-gray-900 dark:text-white'}`}
                           >
-                            <path d="M5 5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5l-4 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
-                            <path d="M8 10h8M8 14h5" />
-                          </svg>
-                          {t.focusLab.controls.joinGroup}
+                            {currentProgress}h
+                          </span>
+                          <span className="text-xs text-gray-400">/ {dailyGoalHours}h</span>
                         </button>
                       )}
+                    </div>
 
-                      <AnimatePresence initial={false}>
-                        {isTipOpen && (
+                    {/* Edit Icon (visible on hover) */}
+                    {!isEditingGoal && (
+                      <button
+                        onClick={() => {
+                          setTempGoal(dailyGoalHours.toString())
+                          setIsEditingGoal(true)
+                        }}
+                        className="rounded-md p-1 text-gray-400 opacity-0 transition-colors group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-3.5 w-3.5"
+                        >
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="relative z-10 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPercentage}%` }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className={`h-full rounded-full ${isGoalReached ? 'bg-amber-500' : 'from-primary-400 to-primary-600 bg-gradient-to-r'}`}
+                    />
+                  </div>
+
+                  {/* Background Glow for Success */}
+                  {isGoalReached && (
+                    <div className="absolute inset-0 z-0 bg-yellow-400/10 blur-xl" />
+                  )}
+                </div>
+
+                {/* Exit Focus Button */}
+                <button
+                  onClick={onExit}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-transparent bg-gray-100 py-3 text-sm font-semibold text-gray-600 transition-all hover:bg-gray-200 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="h-4 w-4"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                  {t.focusLab.controls.exitFocus || 'Exit Focus'}
+                </button>
+              </div>
+            </div>
+          </motion.aside>
+        )}
+
+        {/* Main Content Area */}
+        <main className="relative flex h-full flex-1 flex-col overflow-hidden">
+          {/* Background Pattern - Subtle for App Mode */}
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30">
+            <div
+              className="h-full w-full"
+              style={{
+                position: 'absolute',
+                top: 0,
+                height: '100%',
+                backgroundImage: `
+                 linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+                 linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
+               `,
+                backgroundSize: `${backgroundColumnWidth + GAP}px ${ROW_HEIGHT + GAP}px`,
+                backgroundPosition: 'center -16px',
+              }}
+            />
+          </div>
+
+          {/* Inner Wide Container */}
+          <div className="relative z-10 mx-auto flex h-full w-full flex-col">
+            <div className="flex h-full w-full flex-col" ref={containerRef}>
+              {/* Internal Header (Desktop) */}
+              {!isMobile && (
+                <header className="z-20 flex h-16 flex-none items-center justify-between border-b border-gray-200/50 bg-white/50 px-6 backdrop-blur dark:border-gray-800/50 dark:bg-gray-950/50">
+                  <div className="flex items-center gap-4">
+                    <AnimatePresence>
+                      {!isSidebarOpen && (
+                        <motion.button
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          onClick={() => setIsSidebarOpen(true)}
+                          className="-ml-2 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                        >
+                          <span className="icon-[solar--hamburger-menu-linear] text-xl" />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-900 text-white dark:bg-white dark:text-gray-900">
+                        <span className="icon-[solar--layers-minimalistic-bold] text-sm" />
+                      </div>
+                      <h1 className="font-limelight text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                        Focus Lab
+                      </h1>
+                      <span className="flex h-5 items-center justify-center rounded border border-green-200 bg-green-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-green-700 uppercase dark:border-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        Deep Work
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        updateSettings(
+                          'focus_lab.sound.enabled',
+                          !(settings.focus_lab?.sound?.enabled ?? true)
+                        )
+                      }
+                      className="flex items-center justify-center rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                      title={t.focusLab.settings?.soundEffects || 'Sound Effects'}
+                    >
+                      {(settings.focus_lab?.sound?.enabled ?? true) ? (
+                        <span className="icon-[solar--volume-loud-outline] text-xl" />
+                      ) : (
+                        <span className="icon-[solar--volume-cross-outline] text-xl text-gray-400" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleToggleNotifications}
+                      className="relative flex items-center justify-center rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                      title={
+                        notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications'
+                      }
+                    >
+                      {notificationsEnabled ? (
+                        <span className="icon-[solar--bell-bold] text-xl" />
+                      ) : (
+                        <span className="icon-[solar--bell-off-outline] text-xl text-gray-400" />
+                      )}
+                    </button>
+
+                    {/* Customize Layout Button & Menu */}
+                    <div className="relative z-30 ml-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setShowCustomizeMenu(!showCustomizeMenu)
+                        }}
+                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-lg shadow-gray-200 transition-all active:scale-95 dark:shadow-none ${
+                          showCustomizeMenu
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                            : 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="icon-[solar--widget-4-line-duotone] text-lg" />
+                        {t.focusLab.controls.customizeLayout || 'Customize'}
+                      </button>
+
+                      <AnimatePresence>
+                        {showCustomizeMenu && (
                           <motion.div
-                            key="focus-tip-banner"
-                            layout
-                            initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                            transition={{ duration: 0.18, ease: 'easeOut' }}
-                            className="inline-flex max-w-full shrink-0 items-center rounded-2xl border border-gray-200/80 bg-white/90 px-4 text-xs text-gray-600 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200"
-                            style={{ minHeight: '48px' }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="absolute top-full right-0 mt-2 w-64 overflow-hidden rounded-xl border border-gray-100 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900"
                           >
-                            <p className="text-left leading-relaxed">{t.focusLab.controls.tip}</p>
+                            <div className="flex flex-col gap-1">
+                              <h4 className="mb-1 border-b border-gray-100 px-3 py-2 text-xs font-bold tracking-wider text-gray-500 uppercase dark:border-gray-800">
+                                {t.focusLab.controls.widgetVisibility || 'Show/Hide Cards'}
+                              </h4>
+                              {GRID_PRESETS[activePreset].layout.map((defaultItem) => {
+                                const currentLayout =
+                                  settings.focus_lab?.layout?.[activePreset] ||
+                                  GRID_PRESETS[activePreset].layout
+                                const isActive = currentLayout.some((i) => i.id === defaultItem.id)
+
+                                const idMap: Record<string, string> = {
+                                  sonic: 'sonicShield',
+                                  timer: 'timer',
+                                  brain: 'brainDump',
+                                  todo: 'todo',
+                                  breaker: 'taskBreaker',
+                                  dopamine: 'dopamineMenu',
+                                }
+                                const translationKey = idMap[defaultItem.id] || defaultItem.id
+                                // @ts-ignore
+                                const widgetTitle =
+                                  t.focusLab.widgets[translationKey]?.title || defaultItem.id
+
+                                return (
+                                  <button
+                                    key={defaultItem.id}
+                                    onClick={() => {
+                                      const newLayout = isActive
+                                        ? currentLayout.filter((i) => i.id !== defaultItem.id)
+                                        : [...currentLayout, { ...defaultItem }]
+                                      updateSettings(`focus_lab.layout.${activePreset}`, newLayout)
+                                    }}
+                                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                                      isActive
+                                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
+                                        : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
+                                    }`}
+                                  >
+                                    <span>{widgetTitle}</span>
+                                    {isActive && (
+                                      <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                        className="text-primary-600 dark:text-primary-400 h-4 w-4"
+                                      >
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                )
+                              })}
+
+                              <div className="my-1 h-px bg-gray-100 dark:bg-gray-800" />
+
+                              <button
+                                onClick={() => {
+                                  setShowCustomizeMenu(false)
+                                  setShowResetConfirm(true)
+                                }}
+                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                              >
+                                <span className="icon-[solar--restart-bold] text-sm" />
+                                {t.focusLab.controls.resetLayout}
+                              </button>
+                            </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </>
-                  )}
+
+                      {/* Click Outside Handler (Overlay) */}
+                      {showCustomizeMenu && (
+                        <div
+                          className="fixed inset-0 z-[-1]"
+                          onClick={() => setShowCustomizeMenu(false)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => e.key === 'Escape' && setShowCustomizeMenu(false)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </header>
+              )}
+
+              {/* Mobile Header (Simplified) */}
+              {isMobile && (
+                <div className="z-20 flex flex-none items-center justify-between border-b border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                  <span className="text-lg font-bold dark:text-white">Focus Lab</span>
+                  <button
+                    onClick={onExit}
+                    className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600"
+                  >
+                    Exit
+                  </button>
                 </div>
-              </div>
+              )}
 
               {/* Grid Section */}
               <motion.div
                 layout
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
-                className={`transition-all duration-500 ${isFocusMode ? 'relative z-[95]' : 'mt-10'}`}
+                className={`flex-1 overflow-y-auto ${!isMobile ? 'p-8' : 'px-2 pb-20'}`}
               >
                 {isMobile ? (
                   <FocusLabMobileGrid
@@ -1106,10 +1506,11 @@ export const FocusLabApp = () => {
                 ) : (
                   <FocusLabGrid
                     preset={activePreset}
-                    isFocusMode={isFocusMode}
+                    isFocusMode={true}
                     focusedCardIds={focusedCardIds}
                     onToggleFocus={toggleCardFocus}
-                    containerWidth={containerWidth}
+                    // Subtract padding (p-8 = 64px) to get actual content width
+                    containerWidth={Math.max(0, containerWidth - 64)}
                     focusedTask={focusedTask}
                     onStartFocus={(task) => {
                       setFocusedTask({ text: task, timestamp: Date.now() })
@@ -1122,8 +1523,61 @@ export const FocusLabApp = () => {
               </motion.div>
             </div>
           </div>
-        </motion.div>
+          {/* End of Container */}
+        </main>
+        {/* End of Main Area */}
       </div>
+      {/* Reset Confirmation Modal */}
+      <AnimatePresence>
+        {showResetConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowResetConfirm(false)}
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm dark:bg-black/40"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Escape' && setShowResetConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800"
+            >
+              <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">
+                {t.focusLab.controls.resetLayout || 'Reset Layout?'}
+              </h3>
+              <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+                {t.focusLab.controls.resetConfirm ||
+                  'This will restore the default layout arrangement. Your custom changes will be lost.'}
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  {t.focusLab.common?.cancel || 'Cancel'}
+                </button>
+                <button
+                  onClick={() => {
+                    updateSettings(
+                      `focus_lab.layout.${activePreset}`,
+                      GRID_PRESETS[activePreset].layout
+                    )
+                    setShowResetConfirm(false)
+                  }}
+                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
+                >
+                  {t.focusLab.controls.resetLayout || 'Reset'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   )
 }
@@ -1224,8 +1678,8 @@ const FocusLabGrid = ({
 
   return (
     <div
-      className={`relative w-full transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
-      style={{ height: containerHeight }}
+      className={`relative w-full overflow-x-hidden transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
+      style={{ height: containerHeight, maxWidth: '100%' }}
     >
       <div
         className="absolute top-0 h-full transition-all duration-500 ease-out"
@@ -1253,14 +1707,12 @@ const FocusLabGrid = ({
                 <SonicShieldCard
                   className="h-full w-full"
                   onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
               {item.id === 'timer' && (
                 <TimerCard
                   className="h-full w-full"
                   onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
                   focusedTask={focusedTask}
                   externalCommand={externalCommand}
                   onCommandHandled={onCommandHandled}
@@ -1270,7 +1722,6 @@ const FocusLabGrid = ({
                 <BrainDumpCard
                   className="h-full w-full"
                   onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
               {item.id === 'todo' && (
@@ -1278,7 +1729,6 @@ const FocusLabGrid = ({
                   className="h-full w-full"
                   cols={item.w}
                   onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
                   onStartFocus={onStartFocus}
                 />
               )}
@@ -1286,7 +1736,6 @@ const FocusLabGrid = ({
                 <TaskBreakerCard
                   className="h-full w-full"
                   onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
               {item.id === 'dopamine' && (
@@ -1294,7 +1743,6 @@ const FocusLabGrid = ({
                   className="h-full w-full"
                   cols={item.w}
                   onToggleFocus={() => onToggleFocus(item.id)}
-                  onDelete={() => handleRemoveWidget(item.id)}
                 />
               )}
             </DraggableResizableItem>
@@ -1460,6 +1908,8 @@ function SonicShieldCard({
   className?: string
 }) {
   const { t } = useTranslation()
+  const [isFlipped, setIsFlipped] = useState(false)
+
   return (
     <WidgetCard
       title={t.focusLab.widgets.sonicShield.title}
@@ -1467,8 +1917,20 @@ function SonicShieldCard({
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      customAction={
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsFlipped(!isFlipped)
+          }}
+          className={`rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${isFlipped ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100' : ''}`}
+          aria-label={t.focusLab.widgets.dopamineMenu.edit || 'Edit Sounds'}
+        >
+          <span className="icon-[solar--menu-dots-bold] text-xl" />
+        </button>
+      }
     >
-      <SonicShieldWidget />
+      <SonicShieldWidget isFlipped={isFlipped} onFlip={setIsFlipped} />
     </WidgetCard>
   )
 }
@@ -1489,7 +1951,7 @@ function TimerCard({
   onCommandHandled?: () => void
 }) {
   const { t } = useTranslation()
-
+  const [isFlipped, setIsFlipped] = useState(false)
   const [showTaskTitle, setShowTaskTitle] = useState(true)
 
   useEffect(() => {
@@ -1531,12 +1993,26 @@ function TimerCard({
       }
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
+      customAction={
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsFlipped(!isFlipped)
+          }}
+          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+          aria-label={t.focusLab.widgets.timer.switchMode || 'Switch Mode'}
+        >
+          <MoreHorizontalIcon className="h-5 w-5" />
+        </button>
+      }
       className={className}
     >
       <TimerWidget
         focusedTask={focusedTask}
         externalCommand={externalCommand}
         onCommandHandled={onCommandHandled}
+        isFlipped={isFlipped}
+        onFlip={setIsFlipped}
       />
     </WidgetCard>
   )
@@ -1627,6 +2103,8 @@ function DopamineMenuCard({
   className?: string
 }) {
   const { t } = useTranslation()
+  const [isFlipped, setIsFlipped] = useState(false)
+
   return (
     <WidgetCard
       title={t.focusLab.widgets.dopamineMenu.title}
@@ -1634,8 +2112,20 @@ function DopamineMenuCard({
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      customAction={
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsFlipped(!isFlipped)
+          }}
+          className={`rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${isFlipped ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100' : ''}`}
+          aria-label={t.focusLab.widgets.dopamineMenu.edit || 'Edit Options'}
+        >
+          <MoreHorizontalIcon className="h-5 w-5" />
+        </button>
+      }
     >
-      <DopamineMenuWidget cols={cols} />
+      <DopamineMenuWidget cols={cols} isFlipped={isFlipped} onFlip={setIsFlipped} />
     </WidgetCard>
   )
 }
@@ -1657,10 +2147,17 @@ const timerPresets: Record<TimerPreset, { label: string; duration: number }> = {
   long: { label: 'Long Break · 15m', duration: 15 * 60 },
 }
 
-const SonicShieldWidget = () => {
+const SonicShieldWidget = ({
+  isFlipped,
+  onFlip,
+}: {
+  isFlipped: boolean
+  onFlip: (v: boolean) => void
+}) => {
   const { t } = useTranslation()
   const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
-  const tSounds = t.focusLab.sounds
+  const isSoundEnabled = settings.focus_lab?.sound?.enabled ?? true
+  const tSounds = t.sounds
   const [customSounds, setCustomSounds] = useState<SoundOption[]>([])
   const [activeTracks, setActiveTracks] = useState<Record<string, ActiveTrack>>({})
   const [masterVolume, setMasterVolume] = useState(0.8)
@@ -1832,126 +2329,163 @@ const SonicShieldWidget = () => {
   const isGlobalPlaying = activeCount > 0 && Object.values(activeTracks).some((t) => t.isPlaying)
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      {/* Visualizer & Master Control */}
-      <div className="relative flex min-h-[80px] shrink-0 items-center justify-between rounded-2xl bg-white px-5 py-3 text-gray-900 shadow-sm ring-1 ring-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:ring-gray-800">
-        {/* Visualizer Area */}
-        <div className="flex flex-1 flex-col items-center justify-center gap-2">
-          <SoundVisualizer activeCount={isGlobalPlaying ? activeCount : 0} />
-          <div className="text-xs font-medium opacity-60">
-            {activeCount === 0
-              ? t.focusLab.widgets.sonicShield.selectSounds
-              : `${activeCount} ${t.focusLab.widgets.sonicShield.active}`}
-          </div>
-        </div>
-
-        {/* Vertical Master Volume */}
-        <div className="group flex h-full flex-col items-center justify-center gap-2 border-l border-gray-100 pl-4 dark:border-gray-700">
-          <div
-            className="relative h-14 w-1.5 cursor-pointer rounded-full bg-gray-100 py-1 transition-all hover:w-2 dark:bg-gray-800"
-            onPointerDown={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect()
-              const handleMove = (moveEvent: PointerEvent) => {
-                const height = rect.height
-                const bottom = rect.bottom
-                const clientY = moveEvent.clientY
-                // Calculate percentage from bottom (0 to 1)
-                const percentage = Math.max(0, Math.min(1, (bottom - clientY) / height))
-                setMasterVolume(percentage)
-              }
-
-              handleMove(e.nativeEvent) // Set initial value on click
-
-              const handleUp = () => {
-                window.removeEventListener('pointermove', handleMove)
-                window.removeEventListener('pointerup', handleUp)
-              }
-
-              window.addEventListener('pointermove', handleMove)
-              window.addEventListener('pointerup', handleUp)
-            }}
+    <div className="relative flex h-full flex-col overflow-hidden">
+      <AnimatePresence mode="wait">
+        {isFlipped ? (
+          // BACK: Sound Grid
+          <motion.div
+            key="back"
+            initial={{ opacity: 0, rotateY: 180 }}
+            animate={{ opacity: 1, rotateY: 0 }}
+            exit={{ opacity: 0, rotateY: -180 }}
+            transition={{ duration: 0.3 }}
+            className="flex h-full flex-col gap-3"
           >
-            <div
-              className="group-hover:bg-primary-500 dark:group-hover:bg-primary-400 absolute bottom-0 w-full rounded-full bg-gray-300 transition-all dark:bg-gray-600"
-              style={{ height: `${masterVolume * 100}%` }}
-            />
-            {/* Thumb indicator on hover */}
-            <div
-              className="absolute left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-gray-200"
-              style={{ bottom: `calc(${masterVolume * 100}% - 6px)` }}
-            />
-          </div>
-          <span className="text-[9px] font-bold tracking-widest uppercase opacity-40">
-            {t.focusLab.widgets.sonicShield.volume}
-          </span>
-        </div>
-      </div>
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {allSounds.map((sound) => {
+                  const isActive = !!activeTracks[sound.id]
+                  const track = activeTracks[sound.id]
 
-      {/* Sound Grid */}
-      <div className="scrollbar-none flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {allSounds.map((sound) => {
-            const isActive = !!activeTracks[sound.id]
-            const track = activeTracks[sound.id]
+                  return (
+                    <div
+                      key={sound.id}
+                      className={`group relative flex flex-col justify-between rounded-xl border p-2.5 transition-all ${
+                        isActive
+                          ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+                          : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800'
+                      }`}
+                    >
+                      <button
+                        onClick={() => toggleTrack(sound.id)}
+                        className="flex flex-1 flex-col items-start text-left"
+                      >
+                        <span
+                          className={`text-xs font-bold ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
+                        >
+                          {tSounds[sound.name as keyof typeof tSounds] || sound.name}
+                        </span>
+                      </button>
 
-            return (
-              <div
-                key={sound.id}
-                className={`group relative flex flex-col justify-between rounded-xl border p-2.5 transition-all ${
-                  isActive
-                    ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
-                    : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800'
-                }`}
-              >
+                      {isActive && (
+                        <div className="animate-in fade-in slide-in-from-bottom-2 mt-3">
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={track.volume}
+                            onChange={(e) =>
+                              updateTrackVolume(sound.id, parseFloat(e.target.value))
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400 h-1 w-full cursor-pointer rounded-full"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          // FRONT: Visualizer & Master Volume
+          <motion.div
+            key="front"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative flex h-full flex-col justify-center"
+          >
+            <div className="relative flex h-full w-full flex-col justify-between">
+              {/* Center: Visualizer */}
+              <div className="flex flex-1 flex-col items-center justify-center">
+                <SoundVisualizer
+                  activeCount={isGlobalPlaying && isSoundEnabled ? activeCount : 0}
+                />
+              </div>
+
+              {/* Bottom: Controls */}
+              <div className="flex w-full items-center justify-between pt-4">
+                {/* Play/Pause Button */}
                 <button
-                  onClick={() => toggleTrack(sound.id)}
-                  className="flex flex-1 flex-col items-start text-left"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    updateSettings('focus_lab.sound.enabled', !isSoundEnabled)
+                  }}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+                  title={isSoundEnabled ? 'Pause' : 'Play'}
                 >
-                  <span
-                    className={`text-xs font-bold ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
-                  >
-                    {tSounds[sound.name as keyof typeof tSounds] || sound.name}
-                  </span>
+                  {isSoundEnabled ? (
+                    <span className="icon-[solar--pause-bold] text-2xl" />
+                  ) : (
+                    <span className="icon-[solar--play-bold] ml-1 text-2xl" />
+                  )}
                 </button>
 
-                {isActive && (
-                  <div className="animate-in fade-in slide-in-from-bottom-2 mt-3">
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={track.volume}
-                      onChange={(e) => updateTrackVolume(sound.id, parseFloat(e.target.value))}
-                      onClick={(e) => e.stopPropagation()}
-                      className="bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400 h-1 w-full cursor-pointer rounded-full"
+                {/* Horizontal Volume Slider */}
+                <div className="group flex w-32 flex-col justify-center">
+                  <div
+                    className="relative h-2 w-full cursor-pointer rounded-full bg-gray-100 dark:bg-gray-800"
+                    onPointerDown={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      const handleMove = (moveEvent: PointerEvent) => {
+                        const width = rect.width
+                        const left = rect.left
+                        const clientX = moveEvent.clientX
+                        const percentage = Math.max(0, Math.min(1, (clientX - left) / width))
+                        updateMasterVolume(percentage)
+                      }
+
+                      handleMove(e.nativeEvent)
+
+                      const handleUp = () => {
+                        window.removeEventListener('pointermove', handleMove)
+                        window.removeEventListener('pointerup', handleUp)
+                      }
+
+                      window.addEventListener('pointermove', handleMove)
+                      window.addEventListener('pointerup', handleUp)
+                    }}
+                  >
+                    <div
+                      className="group-hover:bg-primary-500 dark:group-hover:bg-primary-400 absolute left-0 h-full rounded-full bg-gray-300 transition-all dark:bg-gray-600"
+                      style={{ width: `${masterVolume * 100}%` }}
+                    />
+                    <div
+                      className="absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-gray-200"
+                      style={{ left: `calc(${masterVolume * 100}% - 7px)` }}
                     />
                   </div>
-                )}
-
-                {/* Hidden Audio Element */}
-                {isActive && (
-                  <audio
-                    ref={(el) => {
-                      if (el) audioRefs.current[sound.id] = el
-                      else delete audioRefs.current[sound.id]
-                    }}
-                    loop
-                    preload="auto"
-                    src={sound.path}
-                    className="hidden"
-                  >
-                    <track
-                      kind="captions"
-                      src="data:text/vtt;base64,V0VCVlRVCg=="
-                      label="English"
-                    />
-                  </audio>
-                )}
+                </div>
               </div>
-            )
-          })}
-        </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Persistent Audio Elements (Hidden) */}
+      <div className="hidden">
+        {allSounds.map((sound) => {
+          const isActive = !!activeTracks[sound.id]
+          if (!isActive) return null
+          return (
+            <audio
+              key={sound.id}
+              ref={(el) => {
+                if (el) audioRefs.current[sound.id] = el
+                else delete audioRefs.current[sound.id]
+              }}
+              loop
+              preload="auto"
+              src={sound.path}
+              muted={!isSoundEnabled}
+            >
+              <track kind="captions" src="data:text/vtt;base64,V0VCVlRVCg==" label="English" />
+            </audio>
+          )
+        })}
       </div>
     </div>
   )
@@ -1962,11 +2496,15 @@ const TimerWidget = ({
   focusedTask,
   externalCommand,
   onCommandHandled,
+  isFlipped,
+  onFlip,
 }: {
   onTimerComplete?: (minutes: number) => void
   focusedTask?: FocusedTaskState
   externalCommand?: string | null
   onCommandHandled?: () => void
+  isFlipped: boolean
+  onFlip: (flipped: boolean) => void
 }) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
@@ -1974,6 +2512,7 @@ const TimerWidget = ({
   const [customMinutes, setCustomMinutes] = useState(15)
   const [isEditingCustom, setIsEditingCustom] = useState(false)
   const [isCustomChanged, setIsCustomChanged] = useState(false)
+  // Internal isFlipped removed in favor of prop
 
   // Timer Core State
   const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration) // Seconds. Countdown: remaining. Stopwatch: elapsed.
@@ -1996,6 +2535,13 @@ const TimerWidget = ({
     audioRef.current.load()
     if (typeof Notification !== 'undefined') {
       setPermission(Notification.permission)
+    }
+  }, [])
+
+  const playAlarmSound = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play().catch((e) => console.error('Play alarm failed:', e))
     }
   }, [])
 
@@ -2042,74 +2588,86 @@ const TimerWidget = ({
   // -- Timer Logic --
 
   // Reset/Init when mode/preset changes (Only if Idle)
+  // useEffect(() => {
+  //   if (timerState !== 'idle') return
+  // Derive mode from flip state
+  const derivedMode = isFlipped ? 'stopwatch' : 'countdown'
+
+  // Reset timer when flipping (changing modes)
   useEffect(() => {
     if (timerState !== 'idle') return
-
-    if (timerMode === 'countdown') {
+    setTimerState('idle')
+    setStartTime(null)
+    if (isFlipped) {
+      // Stopwatch: start at 0
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    } else {
+      // Countdown: load active preset
       const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
       setTimeLeft(d)
       setTotalAllocatedDuration(d)
-    } else {
-      setTimeLeft(0)
-      setTotalAllocatedDuration(0)
     }
-  }, [activePreset, timerMode, customMinutes, timerState])
+  }, [isFlipped, activePreset, customMinutes, timerState]) // Re-run when preset changes too
 
-  // Tick
+  // Timer Tick
   useEffect(() => {
-    if (!isRunning) return
-
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (timerMode === 'stopwatch') {
-          return prev + 1
+    let interval: NodeJS.Timeout
+    if (timerState === 'focusing' || timerState === 'break') {
+      interval = setInterval(() => {
+        const now = Date.now()
+        // If we strictly track start time, we might need drift correction.
+        // For simplicity now:
+        if (derivedMode === 'countdown') {
+          setTimeLeft((prev) => {
+            if (prev <= 1) {
+              // Complete
+              playAlarmSound()
+              setTimerState(timerState === 'focusing' ? 'focus-completed' : 'break-completed')
+              if (timerState === 'focusing') {
+                // Log session success
+                const duration = Math.floor((totalAllocatedDuration - 0) / 60)
+                if (onTimerComplete) onTimerComplete(duration)
+                saveSession(
+                  {
+                    id: crypto.randomUUID(),
+                    startTime: startTime || Date.now() - totalAllocatedDuration * 1000,
+                    durationMinutes: duration,
+                    completed: true,
+                    taskName: focusedTask?.text || null,
+                  },
+                  user
+                ) // Pass user to saveSession
+                // Sync History
+                if (user) syncFocusHistory(user)
+              }
+              return 0
+            }
+            return prev - 1
+          })
+        } else {
+          // Stopwatch (Count Up)
+          setTimeLeft((prev) => prev + 1)
         }
-        // Countdown
-        if (prev <= 1) {
-          clearInterval(interval)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
+      }, 1000)
+    }
     return () => clearInterval(interval)
-  }, [isRunning, timerMode])
-
-  // Handle Completion (Countdown only)
-  useEffect(() => {
-    if (timerMode === 'countdown' && timeLeft === 0 && isRunning) {
-      // Transition to completed
-      if (timerState === 'focusing') setTimerState('focus-completed')
-      else if (timerState === 'break') setTimerState('break-completed')
-      else setTimerState('focus-completed') // fallback
-
-      // Play Alarm
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0
-        audioRef.current.play().catch((e) => console.error('Failed to play alarm:', e))
-      }
-
-      // Notify
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        new Notification(timerState === 'focusing' ? 'Focus Session Complete!' : 'Break Over!', {
-          icon: '/static/images/logo.png',
-        })
-      }
-
-      // Record Data (Full Allocated Duration) - Only for Focus sessions
-      if (timerState === 'focusing') {
-        const minutes = totalAllocatedDuration / 60
-        handleSessionComplete(Math.round(minutes), true)
-      }
-    }
-  }, [timeLeft, isRunning, timerMode, timerState, totalAllocatedDuration, handleSessionComplete])
+  }, [
+    timerState,
+    derivedMode,
+    totalAllocatedDuration,
+    startTime,
+    focusedTask,
+    onTimerComplete,
+    playAlarmSound,
+    user,
+  ])
 
   // -- Actions --
   const startTimer = () => {
     setStartTime(Date.now())
     if (timerState === 'idle') {
-      setTimerState(timerMode === 'stopwatch' || activePreset === 'focus' ? 'focusing' : 'break')
+      setTimerState(derivedMode === 'stopwatch' || activePreset === 'focus' ? 'focusing' : 'break')
     } else if (isPaused) {
       // Resume
       if (timerState === 'paused-focusing') setTimerState('focusing')
@@ -2118,34 +2676,14 @@ const TimerWidget = ({
   }
 
   const pauseTimer = () => {
-    // Check if we need to set startTime to null or keep it?
-    // Actually, when pausing, we should probably conceptually "stop" the clock.
-    // But for "elapsed" calculation in stopwatch, we just pause the tick.
     if (timerState === 'focusing') setTimerState('paused-focusing')
     if (timerState === 'break') setTimerState('paused-break')
   }
 
   const endSession = () => {
-    // Triggered manually by user (during Pause)
-    // If coming from PAUSED state (or running), we need to save what we have done so far.
-
-    let minutes = 0
-    if (timerMode === 'stopwatch') {
-      minutes = timeLeft / 60
-    } else {
-      // Countdown: Allocated - Left
-      // If we end early, we record what was done.
-      minutes = Math.max(0, totalAllocatedDuration - timeLeft) / 60
-    }
-
-    // Only save if significant (> 1s to allow short tests, but user asked for reliability. Let's say > 10s)
-    if (minutes * 60 >= 10) {
-      handleSessionComplete(Math.round(minutes), false) // completed=false
-    }
-
-    // Reset to Idle
     setTimerState('idle')
-    if (timerMode === 'countdown') {
+    setStartTime(null)
+    if (derivedMode === 'countdown') {
       const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
       setTimeLeft(d)
       setTotalAllocatedDuration(d)
@@ -2187,7 +2725,7 @@ const TimerWidget = ({
   const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 
   const progress =
-    timerMode === 'stopwatch'
+    derivedMode === 'stopwatch'
       ? 1
       : Math.min(Math.max(timeLeft / (totalAllocatedDuration || 1), 0), 1)
 
@@ -2203,260 +2741,251 @@ const TimerWidget = ({
 
   // -- Render --
   return (
-    <div className="relative flex h-full flex-col items-center justify-between py-0.5">
-      {/* Top Controls: Mode & Presets (Only in Idle) */}
-      <div className="flex min-h-[64px] w-full flex-col items-center gap-1">
-        {timerState === 'idle' && (
-          <>
-            <div className="flex w-full max-w-[240px] rounded-lg bg-gray-100 p-1 dark:border dark:border-gray-700 dark:bg-gray-800">
-              {(['countdown', 'stopwatch'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setTimerMode(mode)}
-                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-all ${
-                    timerMode === mode
-                      ? 'text-primary-600 bg-white shadow-sm dark:bg-gray-600 dark:text-white'
-                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {mode === 'countdown'
-                    ? t.focusLab.widgets.timer.countdown
-                    : t.focusLab.widgets.timer.stopwatch}
-                </button>
-              ))}
-            </div>
-
-            {/* Presets (Countdown Only) */}
-            {timerMode === 'countdown' ? (
-              <div className="mt-2 flex justify-center gap-2">
-                {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => {
-                  if (preset === 'long') {
-                    return (
-                      <div
-                        key={preset}
-                        className={`relative flex items-center justify-center rounded-full px-2 transition-all ${activePreset === 'long' ? 'bg-primary-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
-                      >
-                        {isEditingCustom ? (
-                          <>
-                            <input
-                              type="number"
-                              min="1"
-                              max="120"
-                              value={customMinutes}
-                              onChange={(e) => setCustomMinutes(parseInt(e.target.value) || 0)}
-                              onBlur={() => {
-                                setCustomMinutes(Math.max(1, Math.min(120, customMinutes)))
-                                setIsEditingCustom(false)
-                                setIsCustomChanged(true)
-                              }}
-                              onKeyDown={(e) => e.key === 'Enter' && setIsEditingCustom(false)}
-                              className="w-8 appearance-none border-none bg-transparent p-0 text-center text-sm font-bold text-white outline-none"
-                            />
-                            <span className="ml-0.5 text-xs font-medium">m</span>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setActivePreset('long')}
-                            onDoubleClick={(e) => {
-                              e.stopPropagation()
-                              setIsEditingCustom(true)
-                            }}
-                            className="h-full w-full truncate px-2 py-1 text-sm font-bold"
-                          >
-                            {customMinutes}m
-                          </button>
-                        )}
-                      </div>
-                    )
-                  }
-                  return (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setActivePreset(preset)}
-                      className={`rounded-full px-4 py-1 text-sm font-bold transition-all ${activePreset === preset ? 'bg-primary-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
-                    >
-                      {preset === 'focus' ? '25m' : '5m'}
-                    </button>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="mt-2 text-xs font-medium text-gray-400">
-                {lang === 'zh' ? '点击开始正向计时' : 'Click Start to begin count up'}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Progress Ring */}
-      <div className="relative flex flex-1 items-center justify-center">
-        <div className="relative h-38 w-38">
-          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 128 128">
-            <circle
-              cx="64"
-              cy="64"
-              r={radius}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-gray-100 dark:text-gray-800"
-            />
-            <circle
-              cx="64"
-              cy="64"
-              r={radius}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="round"
-              className={`${isCompleted ? 'text-green-500' : 'text-primary-500'} transition-all duration-500 ease-in-out`}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className={circleTextClass}>
-              {isCompleted ? t.focusLab.widgets.timer.done : display}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Actions */}
-      <div className="flex min-h-[60px] w-full flex-col items-center justify-center gap-3">
-        {/* State: IDLE */}
-        {timerState === 'idle' && (
-          <button
-            type="button"
-            onClick={() => {
-              playClickSound()
-              startTimer()
-            }}
-            className="bg-primary-500 shadow-primary-200 hover:bg-primary-600 flex h-10 w-32 items-center justify-center gap-2 rounded-full text-white shadow-lg transition-all active:scale-95 dark:shadow-none"
+    <div className="relative flex h-full flex-col overflow-hidden">
+      <AnimatePresence mode="wait">
+        {isFlipped ? (
+          // BACK: Settings
+          // BACK: Stopwatch Mode
+          <motion.div
+            key="back"
+            initial={{ opacity: 0, rotateY: 180 }}
+            animate={{ opacity: 1, rotateY: 0 }}
+            exit={{ opacity: 0, rotateY: -180 }}
+            transition={{ duration: 0.3 }}
+            className="flex h-full flex-col"
           >
-            <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.start}
-          </button>
-        )}
-
-        {/* State: RUNNING */}
-        {isRunning && (
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound()
-                pauseTimer()
-              }}
-              className="flex h-10 w-32 items-center justify-center gap-2 rounded-full bg-gray-900 text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
-            >
-              <PauseIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.pause}
-            </button>
-            {/* Quick Add 5m (Countdown Only) */}
-            {timerMode === 'countdown' && (
+            {/* Top Right Actions: Switch to Pomodoro */}
+            <div className="absolute top-0 right-0 z-20 p-2">
               <button
-                type="button"
-                onClick={() => {
-                  playClickSound()
-                  extendSession()
-                }}
-                title="+5 Minutes"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                onClick={() => onFlip(false)}
+                className="p-2 text-gray-300 transition-colors hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400"
+                title={t.focusLab.widgets.timer.switchMode || 'Switch Mode'}
               >
-                +5
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* State: PAUSED */}
-        {isPaused && (
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound()
-                endSession()
-              }}
-              className="flex h-10 items-center justify-center rounded-full bg-gray-100 px-4 text-xs font-bold text-gray-500 transition hover:bg-red-50 hover:text-red-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-red-400"
-            >
-              {t.focusLab.widgets.timer.endSession || 'End'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound()
-                startTimer()
-              }}
-              className="bg-primary-500 hover:bg-primary-600 flex h-10 w-32 items-center justify-center gap-2 rounded-full text-white shadow-lg transition-all active:scale-95"
-            >
-              <PlayIcon className="h-4 w-4" /> {t.focusLab.widgets.timer.resume || 'Resume'}
-            </button>
-          </div>
-        )}
-
-        {/* State: COMPLETED */}
-        {isCompleted && (
-          <div className="animate-in slide-in-from-bottom-2 fade-in flex w-full flex-col gap-2">
-            <div className="flex w-full gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  playClickSound()
-                  continueNewSession()
-                }}
-                className="bg-primary-600 shadow-primary-200 hover:bg-primary-700 flex-1 rounded-xl px-3 py-2 text-sm font-bold text-white shadow-lg transition-all active:scale-95 dark:shadow-none"
-              >
-                {t.focusLab.widgets.timer.decisionPrompt?.continueFocus || 'Start New'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  playClickSound()
-                  extendSession()
-                }}
-                className="border-primary-200 text-primary-600 hover:bg-primary-50 dark:text-primary-400 flex-1 rounded-xl border bg-white px-3 py-2 text-sm font-bold shadow-sm transition-all active:scale-95 dark:border-gray-700 dark:bg-gray-800"
-              >
-                +5 Min
+                <MoreHorizontalIcon className="h-5 w-5" />
               </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound()
-                // Forced Break Mode
-                setTimerMode('countdown') // Validate break is always countdown
-                setActivePreset('short')
-                setTimerState('break')
-                setTimeLeft(timerPresets.short.duration)
-                setTotalAllocatedDuration(timerPresets.short.duration)
-                setStartTime(Date.now())
-              }}
-              className="w-full rounded-xl bg-gray-100 px-3 py-2 text-xs font-bold text-gray-500 transition-all hover:bg-gray-200 active:scale-95 dark:bg-gray-800 dark:text-gray-400"
-            >
-              {t.focusLab.widgets.timer.decisionPrompt?.takeBreak || 'End Session'}
-            </button>
-          </div>
+
+            {/* Stopwatch Display */}
+            <div className="flex flex-1 flex-col items-center justify-center">
+              <div className="font-mono text-7xl leading-none font-black tracking-tighter text-gray-900 tabular-nums sm:text-8xl dark:text-white">
+                {display}
+              </div>
+              <p className="mt-2 text-sm font-medium text-gray-400">
+                {isRunning ? 'Recording time...' : 'Ready to start'}
+              </p>
+            </div>
+
+            {/* Stopwatch Controls */}
+            <div className="w-full">
+              {timerState === 'idle' && (
+                <button
+                  onClick={() => {
+                    playClickSound()
+                    startTimer()
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 py-3.5 text-lg font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-600 active:scale-95"
+                >
+                  <PlayIcon className="h-5 w-5" />
+                  {t.focusLab.widgets.timer.start}
+                </button>
+              )}
+
+              {isRunning && (
+                <button
+                  onClick={() => {
+                    playClickSound()
+                    pauseTimer()
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 py-3.5 text-lg font-bold text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95 dark:bg-gray-700 dark:hover:bg-gray-600"
+                >
+                  <PauseIcon className="h-5 w-5" />
+                  {t.focusLab.widgets.timer.pause}
+                </button>
+              )}
+
+              {(isPaused || isCompleted) && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      endSession()
+                    }}
+                    className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  >
+                    {t.focusLab.widgets.timer.endSession || 'End'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      startTimer()
+                    }}
+                    className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-blue-500 py-3.5 text-lg font-bold text-white shadow-lg transition-all hover:bg-blue-600 active:scale-95"
+                  >
+                    <PlayIcon className="h-5 w-5" />
+                    {t.focusLab.widgets.timer.resume || 'Resume'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ) : (
+          // FRONT: Timer Display
+
+          <motion.div
+            key="front"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex h-full flex-col justify-between"
+          >
+            {/* Presets (Visible Only When Idle) */}
+            <div className="flex h-10 items-center justify-center">
+              <AnimatePresence>
+                {timerState === 'idle' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex items-center gap-2 rounded-xl bg-gray-50 p-1 dark:bg-gray-800"
+                  >
+                    {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => (
+                      <button
+                        key={preset}
+                        onClick={() => setActivePreset(preset)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                          activePreset === preset
+                            ? 'text-primary-600 dark:text-primary-400 bg-white shadow-sm dark:bg-gray-700'
+                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                      >
+                        {preset === 'focus' && '25m'}
+                        {preset === 'short' && '5m'}
+                        {preset === 'long' && (
+                          <span className="flex items-center gap-1">
+                            {isEditingCustom ? (
+                              <input
+                                type="number"
+                                min="1"
+                                max="120"
+                                ref={(input) => input?.focus()}
+                                value={customMinutes}
+                                onChange={(e) => setCustomMinutes(parseInt(e.target.value) || 0)}
+                                onBlur={() => {
+                                  setCustomMinutes(Math.max(1, Math.min(120, customMinutes)))
+                                  setIsEditingCustom(false)
+                                  setIsCustomChanged(true)
+                                }}
+                                onKeyDown={(e) => e.key === 'Enter' && setIsEditingCustom(false)}
+                                className="w-8 rounded bg-transparent p-0 text-center outline-none"
+                              />
+                            ) : (
+                              <span onDoubleClick={() => setIsEditingCustom(true)}>
+                                {customMinutes}m
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="flex flex-1 flex-col items-center justify-center">
+              <div
+                className="flex w-full items-center justify-center"
+                style={{ containerType: 'inline-size' }}
+              >
+                <div
+                  className={`font-mono leading-none font-black tracking-tighter tabular-nums ${isCompleted ? 'text-green-500' : 'text-gray-900 dark:text-white'}`}
+                  style={{ fontSize: 'clamp(2.5rem, 26cqw, 7rem)' }}
+                >
+                  {isCompleted ? t.focusLab.widgets.timer.done : display}
+                </div>
+              </div>
+              {!isCompleted && timerState !== 'idle' && (
+                <p className="mt-2 animate-pulse text-sm font-medium text-gray-400">
+                  {timerState === 'focusing'
+                    ? 'Stay focused'
+                    : timerState === 'break'
+                      ? 'Take a break'
+                      : 'Paused'}
+                </p>
+              )}
+            </div>
+
+            {/* Bottom Action Button */}
+            <div className="w-full">
+              {timerState === 'idle' && (
+                <button
+                  onClick={() => {
+                    playClickSound()
+                    startTimer()
+                  }}
+                  className="bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-lg font-bold text-white shadow-lg transition-all active:scale-95"
+                >
+                  {/* Play Icon */}
+                  <span className="icon-[solar--play-bold] text-xl" />
+                  {t.focusLab.widgets.timer.start}
+                </button>
+              )}
+
+              {isRunning && (
+                <button
+                  onClick={() => {
+                    playClickSound()
+                    pauseTimer()
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 py-3.5 text-lg font-bold text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95 dark:bg-gray-700 dark:hover:bg-gray-600"
+                >
+                  {/* Pause Icon */}
+                  <span className="icon-[solar--pause-bold] text-xl" />
+                  {t.focusLab.widgets.timer.pause}
+                </button>
+              )}
+
+              {isPaused && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      endSession()
+                    }}
+                    className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  >
+                    {t.focusLab.widgets.timer.endSession || 'End'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      startTimer()
+                    }}
+                    className="bg-primary-500 hover:bg-primary-600 flex flex-[2] items-center justify-center gap-2 rounded-2xl py-3.5 text-lg font-bold text-white shadow-lg transition-all active:scale-95"
+                  >
+                    <span className="icon-[solar--play-bold] text-xl" />
+                    {t.focusLab.widgets.timer.resume || 'Resume'}
+                  </button>
+                </div>
+              )}
+
+              {isCompleted && (
+                <button
+                  onClick={() => {
+                    playClickSound()
+                    continueNewSession()
+                  }}
+                  className="w-full rounded-2xl bg-green-500 py-3.5 text-lg font-bold text-white shadow-lg shadow-green-500/30 transition-all hover:bg-green-600 active:scale-95"
+                >
+                  {t.focusLab.widgets.timer.decisionPrompt?.continueFocus || 'Start New Session'}
+                </button>
+              )}
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   )
-}
-
-const getSecondsUntilTarget = (timeStr: string) => {
-  if (!timeStr) return 0
-  const [hours, minutes] = timeStr.split(':').map((value) => parseInt(value, 10))
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0
-  const now = new Date()
-  const target = new Date()
-  target.setHours(hours, minutes, 0, 0)
-  if (target <= now) {
-    target.setDate(target.getDate() + 1)
-  }
-  return Math.max(Math.round((target.getTime() - now.getTime()) / 1000), 0)
 }
 
 const TaskBreakerWidget = () => {
@@ -2650,7 +3179,7 @@ const TaskBreakerWidget = () => {
         value={task}
         onChange={(event) => setTask(event.target.value)}
         placeholder={t.focusLab.widgets.taskBreaker.placeholder}
-        className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-800"
+        className="focus:border-primary-500 focus:ring-primary-500 scrollbar-none w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-800 [&::-webkit-scrollbar]:hidden"
       />
 
       <button
@@ -3131,34 +3660,11 @@ const PlayIcon = ({ className }: { className?: string }) => (
 )
 
 const PauseIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.4"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="6" y1="4" x2="6" y2="20" />
-    <line x1="18" y1="4" x2="18" y2="20" />
-  </svg>
+  <span className={`icon-[solar--arrow-right-up-outline] ${className}`} />
 )
 
 const InfoIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="16" x2="12" y2="12" />
-    <line x1="12" y1="8" x2="12.01" y2="8" />
-  </svg>
+  <span className={`icon-[solar--info-circle-outline] ${className}`} />
 )
 
 const ArrowLaunchIcon = ({ className }: { className?: string }) => (
@@ -3176,13 +3682,23 @@ const ArrowLaunchIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
+const DopamineMenuWidget = ({
+  cols = 6,
+  isFlipped,
+  onFlip,
+}: {
+  cols?: number
+  isFlipped: boolean
+  onFlip: (v: boolean) => void
+}) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const defaultOptions = useMemo(() => t.focusLab.widgets.dopamineMenu.defaultOptions, [t])
   const [options, setOptions] = useState(defaultOptions)
   const [newOption, setNewOption] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
+
+  const [showResult, setShowResult] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
 
@@ -3196,7 +3712,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
       if (user) {
         const cloud = await fetchCloudDopamine(user)
         if (cloud && cloud.length > 0) {
-          setOptions(cloud)
+          setOptions(uniq(cloud))
           setIsLoaded(true)
           dataOwnerId.current = user.id
           return
@@ -3206,7 +3722,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
       // 2. Local
       const local = readDopamineStorage(lang, user?.id)
       if (local) {
-        setOptions(local)
+        setOptions(uniq(local))
       } else {
         setOptions(defaultOptions)
       }
@@ -3239,6 +3755,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
   const handleSpin = () => {
     if (options.length === 0) return
     setIsSpinning(true)
+    setShowResult(false)
     setSelected(null)
 
     // Simulate spinning effect
@@ -3250,6 +3767,7 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
       if (count > maxCount) {
         clearInterval(interval)
         setIsSpinning(false)
+        setShowResult(true)
         // Final selection
         const final = options[Math.floor(Math.random() * options.length)]
         setSelected(final)
@@ -3269,106 +3787,167 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex gap-2">
-        {/* Result Area */}
-        <div className="bg-primary-50 ring-primary-100 dark:bg-primary-900/20 dark:ring-primary-900/30 flex min-h-[80px] flex-1 flex-col items-center justify-center rounded-2xl p-2 text-center shadow-sm ring-1">
-          {selected ? (
-            <motion.div
-              key={selected}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-xl font-black tracking-tight text-gray-900 dark:text-white"
-            >
-              {selected}
-            </motion.div>
-          ) : (
-            <p className="text-primary-400/70 text-xs font-bold tracking-wider uppercase">
-              {isSpinning
-                ? t.focusLab.widgets.dopamineMenu.spinning
-                : t.focusLab.widgets.dopamineMenu.ready}
-            </p>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            playClickSound()
-            handleSpin()
-          }}
-          disabled={isSpinning || options.length === 0}
-          className="group/btn from-primary-400 to-primary-600 shadow-primary-500/30 hover:shadow-primary-500/50 dark:from-primary-500 dark:to-primary-700 relative flex w-20 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl bg-gradient-to-br p-2 text-xs font-bold text-white shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:shadow-none"
-        >
-          <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover/btn:opacity-100" />
-          {isSpinning ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-          ) : (
-            <>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="relative z-10 h-5 w-5 drop-shadow-sm"
-              >
-                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
-                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
-              </svg>
-              <span className="relative z-10 drop-shadow-sm">
-                {t.focusLab.widgets.dopamineMenu.button}
-              </span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Options List */}
-      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
-        <div className="mb-2 flex gap-2 p-1">
-          <input
-            type="text"
-            value={newOption}
-            onChange={(e) => setNewOption(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addOption()}
-            placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
-            className="focus:border-primary-500 focus:ring-primary-500 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-          />
-          <button
-            onClick={addOption}
-            className="bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/40 rounded-lg px-3 py-2 text-xs font-bold"
+    <div className="relative flex h-full flex-col overflow-hidden">
+      <AnimatePresence mode="wait">
+        {isFlipped ? (
+          // BACK: Settings / Options List
+          <motion.div
+            key="back"
+            initial={{ opacity: 0, rotateY: 180 }}
+            animate={{ opacity: 1, rotateY: 0 }}
+            exit={{ opacity: 0, rotateY: -180 }}
+            transition={{ duration: 0.3 }}
+            className="flex h-full flex-col gap-3"
           >
-            {t.focusLab.widgets.dopamineMenu.add}
-          </button>
-        </div>
-        <div className={`grid gap-2 px-1 ${cols >= 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {options.map((opt, idx) => (
-            <div
-              key={idx}
-              className="group hover:border-primary-100 dark:hover:border-primary-900/30 flex items-center justify-between rounded-lg border border-transparent bg-white px-2 py-1.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-800"
-            >
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{opt}</span>
+            {/* Inner Header Removed as per request */}
+            <div className="pt-1" />
+
+            {/* Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newOption}
+                onChange={(e) => setNewOption(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addOption()}
+                placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
+                className="focus:border-primary-500 focus:ring-primary-500 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              />
               <button
-                onClick={() => removeOption(idx)}
-                className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:text-gray-500"
-                aria-label={t.focusLab.widgets.dopamineMenu.accessibility.removeOption}
+                onClick={addOption}
+                className="bg-primary-500 hover:bg-primary-600 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-sm transition-all active:scale-95"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-3.5 w-3.5"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                {t.focusLab.widgets.dopamineMenu.add}
               </button>
             </div>
-          ))}
-        </div>
-      </div>
+
+            {/* List */}
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto rounded-xl border border-dashed border-gray-200 p-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+              <div className={`grid gap-2 ${cols >= 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {options.map((opt, idx) => (
+                  <div
+                    key={idx}
+                    className="group flex items-center justify-between rounded-lg bg-white p-2 text-sm shadow-sm transition-all hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  >
+                    <span className="truncate pr-2">{opt}</span>
+                    <button
+                      onClick={() => removeOption(idx)}
+                      className="p-1 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:text-red-500"
+                      aria-label={t.focusLab.widgets.dopamineMenu.accessibility.removeOption}
+                    >
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        ) : showResult ? (
+          // RESULT VIEW
+          <motion.div
+            key="result"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex h-full flex-col items-center justify-center gap-6 text-center"
+          >
+            <div className="flex flex-col items-center gap-2">
+              <div className="text-4xl">🎉</div>
+              <h3 className="max-w-full px-4 text-2xl font-black break-words text-gray-900 dark:text-white">
+                {selected}
+              </h3>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResult(false)}
+                className="rounded-xl px-4 py-2 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              >
+                {t.focusLab.widgets.dopamineMenu.done || 'Done'}
+              </button>
+              <button
+                onClick={() => {
+                  playClickSound()
+                  handleSpin()
+                }}
+                className="bg-primary-500 hover:bg-primary-600 shadow-primary-200 rounded-xl px-6 py-2 text-sm font-bold text-white shadow-lg transition-transform active:scale-95"
+              >
+                {t.focusLab.widgets.dopamineMenu.spinAgain || 'Spin Again'}
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          // FRONT: Simple Card + Spinner Overlay
+          <motion.div
+            key="front"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative flex h-full flex-col"
+          >
+            {/* Edit Button moved to Header */}
+
+            {isSpinning ? (
+              // Spinning State
+              <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                <div className="border-primary-200 border-t-primary-500 h-12 w-12 animate-spin rounded-full border-4" />
+                <p className="text-primary-600 dark:text-primary-400 animate-pulse text-lg font-bold">
+                  {selected || t.focusLab.widgets.dopamineMenu.spinning || 'Spinning...'}
+                </p>
+              </div>
+            ) : (
+              // Initial Simple State
+              <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
+                <div className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex h-16 w-16 items-center justify-center rounded-full">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="h-8 w-8"
+                  >
+                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" />
+                    <line x1="15" y1="9" x2="15.01" y2="9" />
+                  </svg>
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {t.focusLab.widgets.dopamineMenu.needBoost || 'Need a boost?'}
+                  </h3>
+                  {/* <p className="text-xs text-gray-500">
+                     {t.focusLab.widgets.dopamineMenu.needBoostDesc || 'Get a random hit of simple joy.'}
+                   </p> */}
+                </div>
+                <button
+                  onClick={() => {
+                    playClickSound()
+                    handleSpin()
+                  }}
+                  className="w-full max-w-[160px] rounded-2xl bg-gray-800 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-transform hover:bg-gray-900 active:scale-95 dark:bg-gray-700 dark:hover:bg-gray-600"
+                >
+                  {t.focusLab.widgets.dopamineMenu.getDopamine || 'Get Dopamine'}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
+
+const ArrowLeftIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--arrow-left-outline] ${className}`} />
+)
+
+const MinusIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--minus-circle-outline] ${className}`} />
+)
+
+const TrashIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--trash-bin-trash-outline] ${className}`} />
+)
+
+const MoreHorizontalIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--menu-dots-bold] ${className}`} />
+)

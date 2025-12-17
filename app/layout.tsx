@@ -2,7 +2,7 @@ import 'css/tailwind.css'
 import 'pliny/search/algolia.css'
 import 'remark-github-blockquote-alert/alert.css'
 
-import { Space_Grotesk } from 'next/font/google'
+import { Space_Grotesk, Limelight } from 'next/font/google'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
@@ -15,6 +15,13 @@ const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-space-grotesk',
+})
+
+const limelight = Limelight({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-limelight',
 })
 
 export const viewport: Viewport = {
@@ -122,7 +129,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html
       lang={localeToHtmlLang(activeLocale)}
-      className={`${space_grotesk.variable} scroll-smooth`}
+      className={`${space_grotesk.variable} ${limelight.variable} scroll-smooth`}
       suppressHydrationWarning
     >
       <head>
@@ -158,7 +165,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <link rel="alternate" type="application/rss+xml" href={`${basePath}/feed.xml`} />
       </head>
       <body
-        className={`bg-white pl-[calc(100vw-100%)] text-black antialiased dark:bg-gray-950 dark:text-white ${space_grotesk.variable}`}
+        className={`bg-white pl-[calc(100vw-100%)] text-black antialiased dark:bg-gray-950 dark:text-white ${space_grotesk.variable} ${limelight.variable}`}
         suppressHydrationWarning
       >
         <ThemeProviders>{children}</ThemeProviders>

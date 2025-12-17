@@ -39,7 +39,7 @@ export const FocusLabDashboard = () => {
             className="absolute inset-0 z-10"
           >
             <FocusSettingsProvider>
-              <FocusLabAppLazy />
+              <FocusLabAppLazy onExit={() => setIsFocusMode(false)} />
             </FocusSettingsProvider>
           </motion.div>
         )}

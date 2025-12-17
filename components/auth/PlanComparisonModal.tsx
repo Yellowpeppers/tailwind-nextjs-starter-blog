@@ -99,13 +99,21 @@ export default function PlanComparisonModal({ isOpen, onClose }: PlanComparisonM
                               scope="col"
                               className="px-6 py-3 text-center text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400"
                             >
-                              {t.comparePlans.columns.free}
+                              <div className="flex flex-col">
+                                <span>{t.comparePlans.columns.free}</span>
+                                <span className="mt-1 text-sm font-normal text-gray-400">$0</span>
+                              </div>
                             </th>
                             <th
                               scope="col"
                               className="px-6 py-3 text-center text-xs font-bold tracking-wider text-indigo-600 uppercase dark:text-indigo-400"
                             >
-                              {t.comparePlans.columns.pro}
+                              <div className="flex flex-col">
+                                <span>{t.comparePlans.columns.pro}</span>
+                                <span className="mt-1 text-sm font-extrabold text-indigo-600 dark:text-indigo-400">
+                                  $5<span className="text-xs font-normal">/mo</span>
+                                </span>
+                              </div>
                             </th>
                           </tr>
                         </thead>
