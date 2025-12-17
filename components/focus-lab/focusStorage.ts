@@ -16,20 +16,18 @@ import { User } from '@supabase/supabase-js'
 export const saveSession = async (session: FocusSession, user?: User | null) => {
   if (typeof window === 'undefined') return
 
-  // Always save to local storage as backup/latency compensation
-  // UPDATE: Only if Guest. If User, Cloud Only.
-  if (!user) {
-    try {
-      const existing = window.localStorage.getItem(STORAGE_KEY)
-      let history: FocusSession[] = []
-      if (existing) {
-        history = JSON.parse(existing)
-      }
-      history.push(session)
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
-    } catch (error) {
-      console.error('Failed to save focus session locally:', error)
+  // Always save to local storage as backup/latency compensation, scoped to user
+  try {
+    const key = user ? `${STORAGE_KEY}-${user.id}` : STORAGE_KEY
+    const existing = window.localStorage.getItem(key)
+    let history: FocusSession[] = []
+    if (existing) {
+      history = JSON.parse(existing)
     }
+    history.push(session)
+    window.localStorage.setItem(key, JSON.stringify(history))
+  } catch (error) {
+    console.error('Failed to save focus session locally:', error)
   }
 
   // If logged in, save to Cloud
@@ -87,11 +85,12 @@ export const fetchCloudHistory = async (user: User): Promise<FocusSession[]> => 
   return cloudSessions
 }
 
-export const getHistory = (): FocusSession[] => {
+export const getHistory = (userId?: string): FocusSession[] => {
   if (typeof window === 'undefined') return []
 
   try {
-    const existing = window.localStorage.getItem(STORAGE_KEY)
+    const key = userId ? `${STORAGE_KEY}-${userId}` : STORAGE_KEY
+    const existing = window.localStorage.getItem(key)
     if (existing) {
       return JSON.parse(existing)
     }

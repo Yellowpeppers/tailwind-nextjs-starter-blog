@@ -5,8 +5,8 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
 import Image from 'next/image'
 import Link from 'next/link'
-
 import { useAuth } from '@/context/AuthContext'
+
 import {
   STATION_SYNC_EVENT,
   createFocusItem,
@@ -16,66 +16,12 @@ import {
   uploadImage,
   type FocusItem,
 } from './focusStationStorage'
+import PlanComparisonModal from '@/components/auth/PlanComparisonModal'
+
+const UpgradeModal = PlanComparisonModal
 
 // Simple Upgrade Modal
-const UpgradeModal = ({ onClose }: { onClose: () => void }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-    <motion.div
-      initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800"
-    >
-      <div className="relative h-32 bg-gradient-to-br from-indigo-500 to-purple-600 p-6 text-white">
-        <h3 className="text-2xl font-bold">Upgrade to Pro</h3>
-        <p className="opacity-90">Unlock limitless focus.</p>
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 rounded-full bg-white/20 p-1 hover:bg-white/30"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-      <div className="p-6">
-        <div className="mb-6 space-y-3">
-          <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
-              ✓
-            </div>
-            <span>Unlimited Focus Items</span>
-          </div>
-          <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
-              ✓
-            </div>
-            <span>Priority Image Uploads</span>
-          </div>
-          <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
-              ✓
-            </div>
-            <span>Advanced Analytics</span>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-3 font-semibold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
-        >
-          Get Pro Access
-        </button>
-        <p className="mt-4 text-center text-xs text-gray-400">
-          Restoring purchases? <span className="cursor-pointer underline">Click here</span>
-        </p>
-      </div>
-    </motion.div>
-  </div>
-)
+// Simple Upgrade Modal Replaced by PlanComparisonModal
 
 export const FocusStation = ({
   cols = 1,
@@ -95,6 +41,11 @@ export const FocusStation = ({
   const ITEM_LIMIT = 20
   const isLimitReached = items.length >= ITEM_LIMIT
 
+  // Track which user the current items belong to.
+  // This prevents "Guest Items" from being saved to "New User" immediately upon login
+  // before the load effect has a chance to fetch the user's actual data.
+  const dataOwnerId = useRef<string | undefined>(undefined)
+
   // Load logic
   useEffect(() => {
     const loadItems = async () => {
@@ -102,13 +53,14 @@ export const FocusStation = ({
         if (user) {
           const cloudItems = await fetchCloudItems(user)
           if (cloudItems) {
-            // if null, error occurred, maybe fallback?
             setItems(cloudItems)
           } else {
-            setItems(readStationStorage())
+            setItems(readStationStorage(user.id))
           }
+          dataOwnerId.current = user.id
         } else {
           setItems(readStationStorage())
+          dataOwnerId.current = undefined
         }
       } catch (e) {
         console.error('Failed to load station items:', e)
@@ -122,6 +74,18 @@ export const FocusStation = ({
   // Save logic
   useEffect(() => {
     if (!isLoaded) return
+
+    // Safety Check: Don't save if the current data doesn't belong to the current user.
+    // This happens during the split second of login/logout switching.
+    if (user?.id !== dataOwnerId.current) {
+      if (!user && dataOwnerId.current === undefined) {
+        // Guest saving Guest data -> OK
+      } else {
+        // Mismatch (e.g. User logged in, but dataOwner is still undefined/Guest) -> ABORT
+        return
+      }
+    }
+
     try {
       saveStationItems(items, user)
     } catch (e) {
@@ -149,8 +113,8 @@ export const FocusStation = ({
   const addTextItem = () => {
     if (!inputValue.trim()) return
 
-    // Check limit for PRO upselling
-    if (isLimitReached && user) {
+    // Check limit for PRO upselling (Limit Guests Only)
+    if (isLimitReached && !user) {
       setShowUpgrade(true)
       return
     }
@@ -363,7 +327,7 @@ export const FocusStation = ({
         </div>
       </div>
 
-      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      {showUpgrade && <UpgradeModal isOpen={true} onClose={() => setShowUpgrade(false)} />}
     </>
   )
 }

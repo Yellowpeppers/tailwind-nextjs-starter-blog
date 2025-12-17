@@ -31,11 +31,12 @@ export const createBrainDumpItem = (text: string, image?: string): BrainDumpItem
   image,
 })
 
-export const readBrainDumpStorage = (): BrainDumpState => {
+export const readBrainDumpStorage = (userId?: string): BrainDumpState => {
   if (typeof window === 'undefined') return { left: [], right: [] }
   try {
-    const left = window.localStorage.getItem(BRAIN_DUMP_STORAGE_KEY_LEFT)
-    const right = window.localStorage.getItem(BRAIN_DUMP_STORAGE_KEY_RIGHT)
+    const suffix = userId ? `-${userId}` : ''
+    const left = window.localStorage.getItem(BRAIN_DUMP_STORAGE_KEY_LEFT + suffix)
+    const right = window.localStorage.getItem(BRAIN_DUMP_STORAGE_KEY_RIGHT + suffix)
 
     return {
       left: left ? JSON.parse(left) : [],
@@ -66,22 +67,15 @@ export const fetchCloudBrainDump = async (user: User): Promise<BrainDumpState | 
   const right: BrainDumpItem[] = []
 
   data.forEach((item) => {
-    // Safe check for JSON format (if we decide to store complex data)
-    // OR simple detection of Base64.
-    // Current Strategy: If content starts with 'data:image', it is an image.
-    // BUT if user adds text + image, we need to handle that.
-    // Let's improve: Try to parse content as JSON first.
     let text = item.content
     let image: string | undefined = undefined
 
     try {
-      // Attempt to parse "composite" content
       if (item.content.startsWith('{') && item.content.includes('"type":')) {
         const parsed = JSON.parse(item.content)
         if (parsed.text !== undefined) text = parsed.text
         if (parsed.image !== undefined) image = parsed.image
       } else if (item.content.startsWith('data:image')) {
-        // Legacy/Simple: Image only
         text = ''
         image = item.content
       }
@@ -102,10 +96,11 @@ export const fetchCloudBrainDump = async (user: User): Promise<BrainDumpState | 
 }
 
 export const saveBrainDump = async (state: BrainDumpState, user?: User | null) => {
-  // Local Save (Only if Guest)
-  if (typeof window !== 'undefined' && !user) {
-    window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_LEFT, JSON.stringify(state.left))
-    window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_RIGHT, JSON.stringify(state.right))
+  // Local Save (Always save to local cache, scoped)
+  if (typeof window !== 'undefined') {
+    const suffix = user ? `-${user.id}` : ''
+    window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_LEFT + suffix, JSON.stringify(state.left))
+    window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_RIGHT + suffix, JSON.stringify(state.right))
   }
 
   // Cloud Save

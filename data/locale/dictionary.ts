@@ -221,6 +221,9 @@ export const dictionary = {
           focusTooltip: 'Focus on this task',
         },
       },
+      errors: {
+        migrationFailed: 'Migration failed. Please try again.',
+      },
       controls: {
         resetModal: {
           title: 'Reset Dashboard Layout?',
@@ -704,6 +707,69 @@ export const dictionary = {
         },
       },
     },
+    auth: {
+      loginTitle: 'Login to Access Stats',
+      signupTitle: 'Create Account',
+      loginDesc:
+        'Please login to view your statistics and sync your focus sessions to the cloud across devices.',
+      signupDesc: 'Sign up to start saving your data permanently.',
+      email: 'Email',
+      password: 'Password',
+      signIn: 'Sign In',
+      signUp: 'Sign Up',
+      processing: 'Processing...',
+      orContinueWith: 'Or continue with',
+      guestContinue: 'Continue as Guest',
+      haveAccount: 'Already have an account? Sign in',
+      noAccount: "Don't have an account? Sign up",
+      checkEmailTitle: 'Check your email',
+      checkEmailDesc:
+        "We've sent a confirmation link to {email}. Click the link to verify your account and start syncing.",
+      gotIt: 'Got it',
+      error: 'Authentication failed',
+    },
+    userMenu: {
+      signedInAs: 'Signed in as',
+      profile: 'Profile & Settings',
+      upgrade: 'Upgrade / Plan',
+      signOut: 'Sign Out',
+      proBadge: 'PRO',
+    },
+    comparePlans: {
+      title: 'Compare Plans',
+      subtitle: 'Unlock your full potential with Pro.',
+      columns: {
+        feature: 'Feature',
+        free: 'Free',
+        pro: 'Pro',
+      },
+      features: {
+        focusWidgets: 'Focus Widgets',
+        cloudSync: 'Cloud Sync',
+        stats: 'Statistics & Analytics',
+        customBackgrounds: 'Custom Backgrounds',
+        aiTaskBreaker: 'AI Task Breaker',
+        prioritySupport: 'Priority Support',
+        unlimitedTasks: 'Unlimited Tasks',
+      },
+      values: {
+        basic: 'Basic',
+        allAccess: 'All Access',
+        limit20: 'Limit 20',
+        unlimited: 'Unlimited',
+        inDev: 'In Development',
+      },
+      beta: {
+        msgPre: 'Good News! You are currently on the ',
+        planName: 'Internal Beta Plan',
+        msgPost: '.',
+        description: 'Enjoy all Pro features for free during this period.',
+      },
+    },
+    userProfile: {
+      betaBadge: 'Pro Plan (Internal Beta)',
+      betaDescription: 'All features are currently free.',
+    },
   },
   zh: {
     nav: {
@@ -897,6 +963,7 @@ export const dictionary = {
             showTimer: '返回倒计时显示',
           },
         },
+
         taskBreaker: {
           title: 'AI 任务拆解',
           subtitle:
@@ -957,6 +1024,9 @@ export const dictionary = {
           emptySubtitle: '添加任务开始新的一天',
           focusTooltip: '专注此任务',
         },
+      },
+      errors: {
+        migrationFailed: '迁移失败，请重试。',
       },
       sounds: {
         insects: '昆虫',
@@ -1384,6 +1454,67 @@ export const dictionary = {
           },
         },
       },
+    },
+    auth: {
+      loginTitle: '登录以查看统计数据',
+      signupTitle: '创建账户',
+      loginDesc: '请登录以查看您的统计数据，并将您的专注会话同步到云端，实现多设备共享。',
+      signupDesc: '注册账户，永久保存您的数据。',
+      email: '邮箱',
+      password: '密码',
+      signIn: '登录',
+      signUp: '注册',
+      processing: '处理中...',
+      orContinueWith: '其他登录方式',
+      guestContinue: '以游客身份继续',
+      haveAccount: '已有账户？登录',
+      noAccount: '还没有账户？注册',
+      checkEmailTitle: '请检查您的邮箱',
+      checkEmailDesc: '我们已向 {email} 发送了确认链接。点击链接验证您的账户并开始同步。',
+      gotIt: '知道了',
+      error: '认证失败',
+    },
+    userMenu: {
+      signedInAs: '登录身份',
+      profile: '个人资料与设置',
+      upgrade: '升级 / 计划',
+      signOut: '退出登录',
+      proBadge: '专业版',
+    },
+    comparePlans: {
+      title: '对比计划',
+      subtitle: '解锁 Pro 版全部潜力。',
+      columns: {
+        feature: '功能',
+        free: '免费版',
+        pro: '专业版',
+      },
+      features: {
+        focusWidgets: '专注组件',
+        cloudSync: '云端同步',
+        stats: '统计数据与分析',
+        customBackgrounds: '自定义背景',
+        aiTaskBreaker: 'AI 任务拆解',
+        prioritySupport: '优先支持',
+        unlimitedTasks: '无限任务',
+      },
+      values: {
+        basic: '基础',
+        allAccess: '全部',
+        limit20: '限20个',
+        unlimited: '无限',
+        inDev: '正在开发',
+      },
+      beta: {
+        msgPre: '好消息！您当前处于',
+        planName: '内部测试计划',
+        msgPost: '中。',
+        description: '在此期间免费享受所有 Pro 功能。',
+      },
+    },
+    userProfile: {
+      betaBadge: '专业版计划（内测中）',
+      betaDescription: '当前所有功能免费。',
     },
   },
 }

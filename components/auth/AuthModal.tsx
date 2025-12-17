@@ -4,15 +4,17 @@ import { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/context/AuthContext'
+import { useTranslation } from '@/context/LanguageContext'
 import Image from 'next/image'
 
 type AuthModalProps = {
   isOpen: boolean
   onClose: () => void
-  onGuestContinue: () => void
+  onGuestContinue?: () => void
 }
 
 export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModalProps) {
+  const { t } = useTranslation()
   const { signInWithGoogle, signInWithEmail, signUp } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
@@ -37,7 +39,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
         setShowCheckEmail(true)
       }
     } catch (err: unknown) {
-      setError((err as Error).message || 'Authentication failed')
+      setError((err as Error).message || t.auth.error)
     } finally {
       setLoading(false)
     }
@@ -115,19 +117,28 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                       as="h3"
                       className="mb-2 text-xl leading-6 font-semibold text-gray-900 dark:text-gray-100"
                     >
-                      Check your email
+                      {t.auth.checkEmailTitle}
                     </Dialog.Title>
                     <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-                      We've sent a confirmation link to{' '}
-                      <span className="font-medium text-gray-900 dark:text-white">{email}</span>.
-                      Click the link to verify your account and start syncing.
+                      {t.auth.checkEmailDesc.split('{email}').map((part, i) =>
+                        i === 0 ? (
+                          <span key={i}>
+                            {part}
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {email}
+                            </span>
+                          </span>
+                        ) : (
+                          <span key={i}>{part}</span>
+                        )
+                      )}
                     </p>
                     <button
                       type="button"
                       className="bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600 w-full rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                       onClick={handleClose}
                     >
-                      Got it
+                      {t.auth.gotIt}
                     </button>
                   </div>
                 ) : (
@@ -137,12 +148,10 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                         as="h3"
                         className="text-base leading-6 font-semibold text-gray-900 dark:text-gray-100"
                       >
-                        {isLogin ? 'Login to Access Stats' : 'Create Account'}
+                        {isLogin ? t.auth.loginTitle : t.auth.signupTitle}
                       </Dialog.Title>
                       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        {isLogin
-                          ? 'Please login to view your statistics and sync your focus sessions to the cloud across devices.'
-                          : 'Sign up to start saving your data permanently.'}
+                        {isLogin ? t.auth.loginDesc : t.auth.signupDesc}
                       </p>
                     </div>
 
@@ -152,7 +161,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                           htmlFor="email"
                           className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                         >
-                          Email
+                          {t.auth.email}
                         </label>
                         <input
                           type="email"
@@ -169,7 +178,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                           htmlFor="password"
                           className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                         >
-                          Password
+                          {t.auth.password}
                         </label>
                         <input
                           type="password"
@@ -189,7 +198,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                         disabled={loading}
                         className="bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600 w-full rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
                       >
-                        {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
+                        {loading ? t.auth.processing : isLogin ? t.auth.signIn : t.auth.signUp}
                       </button>
                     </form>
 
@@ -199,7 +208,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                       </div>
                       <div className="relative flex justify-center">
                         <span className="bg-white px-2 text-sm text-gray-500 dark:bg-gray-900">
-                          Or continue with
+                          {t.auth.orContinueWith}
                         </span>
                       </div>
                     </div>
@@ -218,13 +227,15 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                         </svg>
                         Google
                       </button>
-                      <button
-                        type="button"
-                        className="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                        onClick={onGuestContinue}
-                      >
-                        Continue as Guest
-                      </button>
+                      {onGuestContinue && (
+                        <button
+                          type="button"
+                          className="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                          onClick={onGuestContinue}
+                        >
+                          {t.auth.guestContinue}
+                        </button>
+                      )}
                     </div>
 
                     <div className="mt-4 text-center">
@@ -236,9 +247,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                         }}
                         className="text-primary-600 hover:text-primary-500 dark:text-primary-400 text-sm font-medium"
                       >
-                        {isLogin
-                          ? "Don't have an account? Sign up"
-                          : 'Already have an account? Sign in'}
+                        {isLogin ? t.auth.noAccount : t.auth.haveAccount}
                       </button>
                     </div>
                   </>

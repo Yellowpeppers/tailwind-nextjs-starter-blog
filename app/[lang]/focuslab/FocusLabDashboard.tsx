@@ -14,17 +14,21 @@ import {
 } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { FocusStation } from '@/components/focus-lab/FocusStation'
+import DataMigrationModal from '@/components/focus-lab/DataMigrationModal'
 import {
   syncLocalToCloud,
   createFocusItem,
   readStationStorage,
   saveStationItems,
+  fetchCloudItems,
+  STATION_STORAGE_KEY,
 } from '@/components/focus-lab/focusStationStorage'
 import { AnalyticsModal } from '@/components/focus-lab/AnalyticsModal'
 import { saveSession, syncFocusHistory, getHistory } from '@/components/focus-lab/focusStorage'
 import { useAuth } from '@/context/AuthContext'
+
 import AuthModal from '@/components/auth/AuthModal'
-import { syncToDo, readToDoStorage } from '@/components/focus-lab/todoStorage'
+import { syncToDo, readToDoStorage, TODO_STORAGE_KEY } from '@/components/focus-lab/todoStorage'
 import {
   BrainDumpItem,
   createBrainDumpItem,
@@ -39,6 +43,8 @@ import {
   saveDopamine,
   syncDopamine,
 } from '@/components/focus-lab/dopamineStorage'
+import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
+import { debounce } from 'lodash'
 
 // Context for passing drag controls to children
 const DragHandleContext = createContext<DragControls | null>(null)
@@ -459,7 +465,9 @@ export const FocusLabDashboard = () => {
   const [containerWidth, setContainerWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [activePreset, setActivePreset] = useState<LayoutPreset>('desktop')
+
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authTrigger, setAuthTrigger] = useState<'generic' | 'stats'>('generic')
   const { user } = useAuth()
 
   const headerPadding = 0
@@ -493,43 +501,126 @@ export const FocusLabDashboard = () => {
     }
   }, [])
 
-  /* Sync Logic */
-  const [showSyncModal, setShowSyncModal] = useState(false)
+  /* Sync / Migration Logic */
+  const [showMigrationModal, setShowMigrationModal] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
 
   useEffect(() => {
     if (user) {
-      // Check if we have already asked in this session
-      if (typeof window !== 'undefined' && sessionStorage.getItem('focus-lab-sync-asked')) return
+      if (typeof window !== 'undefined' && sessionStorage.getItem('focus-lab-migration-asked'))
+        return
 
       const station = readStationStorage()
       const todo = readToDoStorage()
       const brain = readBrainDumpStorage()
       const dopamine = readDopamineStorage(lang)
-      const history = getHistory()
+      // History is less critical to "Move", but good to check.
+      // Actually history sync is safe to just run in verify.
 
       const hasLocal =
         station.length > 0 ||
         todo.length > 0 ||
         brain.left.length > 0 ||
         brain.right.length > 0 ||
-        (dopamine && dopamine.length > 0) ||
-        history.length > 0
+        (dopamine && dopamine.length > 0)
 
       if (hasLocal) {
-        setShowSyncModal(true)
-        sessionStorage.setItem('focus-lab-sync-asked', 'true')
+        setShowMigrationModal(true)
+        sessionStorage.setItem('focus-lab-migration-asked', 'true')
       }
     }
   }, [user, lang])
 
-  const handleSyncConfirm = async () => {
+  const handleMigrate = async () => {
     if (!user) return
-    await syncFocusHistory(user)
-    await syncLocalToCloud(user)
-    await syncToDo(user)
-    await syncBrainDump(user)
-    await syncDopamine(user, lang)
-    setShowSyncModal(false)
+    setIsMigrating(true)
+    try {
+      // 1. Focus Station / ToDo (Same storage)
+      // Fetch cloud, merge local, save, clear local
+      const cloudStation = await fetchCloudItems(user)
+      const localStation = readStationStorage() // Guest
+      const localLegacyTodo = readToDoStorage() // Legacy Guest key
+
+      let merged = [...(cloudStation || [])]
+      let hasChanges = false
+
+      if (localStation.length > 0) {
+        merged = [...merged, ...localStation]
+        hasChanges = true
+        window.localStorage.removeItem(STATION_STORAGE_KEY)
+      }
+
+      if (localLegacyTodo.length > 0) {
+        // Convert legacy items
+        const convertedLegacy = localLegacyTodo.map((t) => createFocusItem('text', t.text))
+        // Preserve completed status if possible (createFocusItem defaults to false)
+        // We might need to map manualy
+        const mappedLegacy = localLegacyTodo.map((t) => ({
+          id: t.id, // Keep ID if valid UUID? createFocusItem generates new one. Let's keep it if possible or gen new.
+          // createFocusItem generates valid one.
+          type: 'text' as const,
+          content: t.text,
+          completed: t.completed,
+          position: Date.now(),
+        }))
+
+        merged = [...merged, ...mappedLegacy]
+        hasChanges = true
+        window.localStorage.removeItem(TODO_STORAGE_KEY)
+      }
+
+      if (hasChanges) {
+        await saveStationItems(merged, user)
+      }
+
+      // 2. Brain Dump
+      const cloudBrain = await fetchCloudBrainDump(user)
+      const localBrain = readBrainDumpStorage() // Guest
+      if (localBrain.left.length > 0 || localBrain.right.length > 0) {
+        const mergedLeft = [...(cloudBrain?.left || []), ...localBrain.left]
+        const mergedRight = [...(cloudBrain?.right || []), ...localBrain.right]
+        await saveBrainDump({ left: mergedLeft, right: mergedRight }, user)
+        // Clear local keys (v2 and v1)
+        window.localStorage.removeItem('focus-lab-brain-dump-list-v2')
+        window.localStorage.removeItem('focus-lab-brain-dump-list')
+      }
+
+      // 3. Dopamine
+      const cloudDopamine = await fetchCloudDopamine(user)
+      const localDopamine = readDopamineStorage(lang) // Guest
+      if (localDopamine && localDopamine.length > 0) {
+        // Merge unique options
+        const set = new Set([...(cloudDopamine || []), ...localDopamine])
+        await saveDopamine(Array.from(set), lang, user)
+        window.localStorage.removeItem(`focus-lab-dopamine-menu-${lang}`)
+      }
+
+      // 4. History (Always safe to sync)
+      await syncFocusHistory(user)
+
+      // 5. Force UI to reload?
+      // The components (FocusStation etc) have useEffect([user]) which loads.
+      // But we just updated the cloud data. The components might have loaded "empty cloud" and sat there.
+      // We need to trigger a reload or they wait for next refresh?
+      // Since we updated cloud, components need to re-fetch.
+      // Simplest way: window.location.reload() or rely on SWR?
+      // We are not using SWR.
+      // We can rely on `window.location.reload()` for simplicity ensure fresh state.
+      window.location.reload()
+    } catch (e) {
+      console.error('Migration failed:', e)
+      alert(t.focusLab.errors?.migrationFailed || 'Migration failed. Please try again.')
+    } finally {
+      setIsMigrating(false)
+      setShowMigrationModal(false)
+    }
+  }
+
+  const handleCancelMigration = () => {
+    setShowMigrationModal(false)
+    // Optional: Clear guest data if user explicitely says "Start Fresh"?
+    // Or just keep it hidden. Current behavior: Keep it hidden (User mode sees empty).
+    // If they logout, it's still there. That's fine.
   }
 
   useEffect(() => {
@@ -686,13 +777,18 @@ export const FocusLabDashboard = () => {
       <AnimatePresence>
         {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
       </AnimatePresence>
+
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onGuestContinue={() => {
-          setShowAuthModal(false)
-          setShowAnalytics(true)
-        }}
+        onGuestContinue={
+          authTrigger === 'stats'
+            ? undefined
+            : () => {
+                setShowAuthModal(false)
+                setShowAnalytics(true)
+              }
+        }
       />
       <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] min-h-screen w-screen">
         <motion.div
@@ -839,48 +935,6 @@ export const FocusLabDashboard = () => {
                   </button>
 
                   <AnimatePresence>
-                    {showSyncModal && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-                      >
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800"
-                        >
-                          <div className="p-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                              Sync Local Data?
-                            </h3>
-                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                              We found unfinished tasks and settings on this device. Would you like
-                              to merge them into your account?
-                            </p>
-                          </div>
-                          <div className="flex justify-end gap-3 bg-gray-50 px-6 py-4 dark:bg-gray-700/50">
-                            <button
-                              onClick={() => setShowSyncModal(false)}
-                              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                            >
-                              No, Start Fresh
-                            </button>
-                            <button
-                              onClick={handleSyncConfirm}
-                              className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-lg active:scale-95"
-                            >
-                              Yes, Sync Data
-                            </button>
-                          </div>
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <AnimatePresence>
                     {showResetConfirm && (
                       <motion.div
                         initial={{ opacity: 0 }}
@@ -940,6 +994,7 @@ export const FocusLabDashboard = () => {
                         if (user) {
                           setShowAnalytics(true)
                         } else {
+                          setAuthTrigger('stats')
                           setShowAuthModal(true)
                         }
                       }}
@@ -1091,46 +1146,35 @@ const FocusLabGrid = ({
   externalCommand?: string | null
   onCommandHandled?: () => void
 }) => {
+  const { settings, updateSettings, isLoaded } = useFocusSettingsContext()
   const presetConfig = GRID_PRESETS[preset]
   const [layout, setLayout] = useState<GridItem[]>(() => cloneLayout(presetConfig.layout))
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [isPresetLoaded, setIsPresetLoaded] = useState(false)
 
+  // Sync from Settings (Cloud -> Local)
   useEffect(() => {
-    setIsPresetLoaded(false)
-    const storageKey = getLayoutStorageKey(preset)
-    try {
-      if (typeof window === 'undefined') {
+    if (isLoaded) {
+      const savedLayout = settings.focus_lab?.layout?.[preset]
+      if (Array.isArray(savedLayout) && savedLayout.length > 0) {
+        setLayout(savedLayout)
+      } else {
+        // Only reset to default if we have literally nothing in settings (first load)
+        // or if we switched presets and that preset is empty
+        // But we want to preserve local changes if cloud is empty?
+        // No, if cloud is empty, we use default.
         setLayout(cloneLayout(presetConfig.layout))
-        setIsPresetLoaded(true)
-        return
       }
-      const savedLayout = window.localStorage.getItem(storageKey)
-      if (savedLayout) {
-        const parsed = JSON.parse(savedLayout)
-        if (Array.isArray(parsed)) {
-          setLayout(parsed)
-          setIsPresetLoaded(true)
-          return
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load layout:', error)
     }
-    setLayout(cloneLayout(presetConfig.layout))
-    setIsPresetLoaded(true)
-  }, [preset, presetConfig.layout])
+  }, [isLoaded, preset, settings.focus_lab?.layout, presetConfig.layout])
 
-  useEffect(() => {
-    if (!isPresetLoaded) return
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(getLayoutStorageKey(preset), JSON.stringify(layout))
-      }
-    } catch (error) {
-      console.error('Failed to save layout:', error)
-    }
-  }, [layout, preset, isPresetLoaded])
+  // Debounced Save
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const saveLayout = useCallback(
+    debounce((newLayout: GridItem[], currentPreset: string) => {
+      updateSettings(`focus_lab.layout.${currentPreset}`, newLayout)
+    }, 1000),
+    [updateSettings]
+  )
 
   const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false)
 
@@ -1153,11 +1197,19 @@ const FocusLabGrid = ({
   }
 
   const updateLayout = (id: string, newProps: Partial<GridItem>) => {
-    setLayout((prev) => prev.map((item) => (item.id === id ? { ...item, ...newProps } : item)))
+    setLayout((prev) => {
+      const next = prev.map((item) => (item.id === id ? { ...item, ...newProps } : item))
+      saveLayout(next, preset)
+      return next
+    })
   }
 
   const handleRemoveWidget = (id: string) => {
-    setLayout((prev) => prev.filter((item) => item.id !== id))
+    setLayout((prev) => {
+      const next = prev.filter((item) => item.id !== id)
+      saveLayout(next, preset)
+      return next
+    })
   }
 
   const visibleItems =
@@ -1604,6 +1656,7 @@ const timerPresets: Record<TimerPreset, { label: string; duration: number }> = {
 
 const SonicShieldWidget = () => {
   const { t } = useTranslation()
+  const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
   const tSounds = t.focusLab.sounds
   const [customSounds, setCustomSounds] = useState<SoundOption[]>([])
   const [activeTracks, setActiveTracks] = useState<Record<string, ActiveTrack>>({})
@@ -1611,35 +1664,67 @@ const SonicShieldWidget = () => {
   const audioRefs = useRef<Record<string, HTMLAudioElement>>({})
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load settings from localStorage
-  useEffect(() => {
-    try {
-      const savedTracks = window.localStorage.getItem('focus-lab-sonic-tracks')
-      const savedVolume = window.localStorage.getItem('focus-lab-sonic-volume')
+  // Ref to prevent saving immediately after loading from context
+  const isRemoteUpdate = useRef(false)
 
-      if (savedTracks) {
-        setActiveTracks(JSON.parse(savedTracks))
+  // Load settings from Context
+  useEffect(() => {
+    if (isSettingsLoaded) {
+      const soundSettings = settings.focus_lab?.sound
+      if (soundSettings) {
+        isRemoteUpdate.current = true
+        if (soundSettings.active_tracks) setActiveTracks(soundSettings.active_tracks)
+        if (typeof soundSettings.master_volume === 'number')
+          setMasterVolume(soundSettings.master_volume)
+        setTimeout(() => {
+          isRemoteUpdate.current = false
+        }, 50)
       }
-      if (savedVolume) {
-        setMasterVolume(parseFloat(savedVolume))
-      }
-    } catch (error) {
-      console.error('Failed to load sonic settings:', error)
-    } finally {
       setIsLoaded(true)
     }
-  }, [])
+  }, [isSettingsLoaded, settings.focus_lab?.sound])
 
-  // Save settings to localStorage
+  // Debounced Save
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const saveSoundSettings = useCallback(
+    debounce((tracks: Record<string, ActiveTrack>, volume: number) => {
+      updateSettings('focus_lab.sound', {
+        active_tracks: tracks,
+        master_volume: volume,
+      })
+    }, 1000),
+    [updateSettings]
+  )
+
+  // Auto-save on change (explicitly called in handlers normally, but for volume/tracks we can use useEffect here
+  // because the update frequency is lower than resize, AND we want to capture all logic paths)
+  // BUT we must avoid the loop.
+  // The loop happens if updateSettings -> settings change -> useEffect loads -> setState -> useEffect saves.
+  // To avoid loop: Only save if state differs from settings?
+  // Or just use handlers.
+  // Let's use handlers wrapper.
+
+  const updateActiveTracks = (
+    callback: (prev: Record<string, ActiveTrack>) => Record<string, ActiveTrack>
+  ) => {
+    setActiveTracks((prev) => {
+      const next = callback(prev)
+      saveSoundSettings(next, masterVolume)
+      return next
+    })
+  }
+
+  const updateMasterVolume = (vol: number) => {
+    setMasterVolume(vol)
+    saveSoundSettings(activeTracks, vol)
+  }
+
+  // Save settings to context when activeTracks or masterVolume change, but not if it was a remote update
   useEffect(() => {
-    if (!isLoaded) return
-    try {
-      window.localStorage.setItem('focus-lab-sonic-tracks', JSON.stringify(activeTracks))
-      window.localStorage.setItem('focus-lab-sonic-volume', masterVolume.toString())
-    } catch (error) {
-      console.error('Failed to save sonic settings:', error)
+    if (isLoaded && !isRemoteUpdate.current && isSettingsLoaded) {
+      saveSoundSettings(activeTracks, masterVolume)
     }
-  }, [activeTracks, masterVolume, isLoaded])
+  }, [activeTracks, masterVolume, isLoaded, saveSoundSettings, isSettingsLoaded])
 
   useEffect(() => {
     const fetchCustomSounds = async () => {
@@ -2617,6 +2702,9 @@ const BrainDumpWidget = () => {
 
   const [isLoaded, setIsLoaded] = useState(false)
 
+  // Safety Ref to prevent leak
+  const dataOwnerId = useRef<string | undefined>(undefined)
+
   // Load and migrate data
   useEffect(() => {
     const init = async () => {
@@ -2626,18 +2714,27 @@ const BrainDumpWidget = () => {
       // 1. Try Cloud First if User
       if (user) {
         const cloud = await fetchCloudBrainDump(user)
-        // Only use cloud if it actually has data. If empty, we might be in "First Sync" scenario where we want to upload Local data.
         if (cloud && (cloud.left.length > 0 || cloud.right.length > 0)) {
           setLeftItems(cloud.left)
           setRightItems(cloud.right)
           setIsLoaded(true)
+          dataOwnerId.current = user.id
           return
         }
       }
 
       // 2. Fallback to Local
-      const local = readBrainDumpStorage()
+      const local = readBrainDumpStorage(user?.id)
       if (local.left.length > 0 || local.right.length > 0) {
+        // ... (existing logic) ...
+        // We need to keep the existing sanitization logic here...
+        // Actually, to keep chunk size small, maybe I shouldn't rewrite the whole init function?
+        // But I need to set dataOwnerId.current!
+
+        // Let's use a smaller targeted replace if possible, or rewrite carefully.
+        // The existing code has a lot of logic inside local block.
+        // I will rewrite the whole `useEffect` for Init to be safe.
+
         // Robust UUID Generator
         const generateUUID = () => {
           if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
@@ -2659,26 +2756,23 @@ const BrainDumpWidget = () => {
         setLeftItems(sanitize(local.left))
         setRightItems(sanitize(local.right))
       } else {
-        // Migration Logic (Legacy)
+        // Migration Logic
         try {
-          // Migration from v2 (single list)
           const storedV2 = window.localStorage.getItem('focus-lab-brain-dump-list-v2')
           if (storedV2) {
             const items: BrainDumpItem[] = JSON.parse(storedV2)
-            // Fix IDs on migration
             const fixedItems = items.map((i) => ({ ...i, id: crypto.randomUUID() }))
             const mid = Math.ceil(fixedItems.length / 2)
             setLeftItems(fixedItems.slice(0, mid))
             setRightItems(fixedItems.slice(mid))
           } else {
-            // Migration from v1 (string array)
             const storedV1 = window.localStorage.getItem('focus-lab-brain-dump-list')
             if (storedV1) {
               const oldItems: string[] = JSON.parse(storedV1)
               const migrated = oldItems.map((item) => {
                 const isImage = item.startsWith('data:image')
                 return {
-                  id: crypto.randomUUID(), // Use real UUID
+                  id: crypto.randomUUID(),
                   text: isImage ? '' : item,
                   image: isImage ? item : undefined,
                 }
@@ -2692,6 +2786,8 @@ const BrainDumpWidget = () => {
           console.error(e)
         }
       }
+
+      dataOwnerId.current = user?.id
       setIsLoaded(true)
     }
 
@@ -2701,6 +2797,16 @@ const BrainDumpWidget = () => {
   // Persist data
   useEffect(() => {
     if (!isLoaded) return
+
+    // Safety Guard
+    if (user?.id !== dataOwnerId.current) {
+      if (!user && dataOwnerId.current === undefined) {
+        // OK
+      } else {
+        return // Mismatch
+      }
+    }
+
     const save = async () => {
       await saveBrainDump({ left: leftItems, right: rightItems }, user)
     }
@@ -3077,6 +3183,9 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
   const [isSpinning, setIsSpinning] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
 
+  // Safety Ref to prevent leak
+  const dataOwnerId = useRef<string | undefined>(undefined)
+
   // Load options
   useEffect(() => {
     const init = async () => {
@@ -3086,17 +3195,19 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
         if (cloud && cloud.length > 0) {
           setOptions(cloud)
           setIsLoaded(true)
+          dataOwnerId.current = user.id
           return
         }
       }
 
       // 2. Local
-      const local = readDopamineStorage(lang)
+      const local = readDopamineStorage(lang, user?.id)
       if (local) {
         setOptions(local)
       } else {
         setOptions(defaultOptions)
       }
+      dataOwnerId.current = user?.id
       setIsLoaded(true)
     }
     init()
@@ -3105,6 +3216,16 @@ const DopamineMenuWidget = ({ cols = 6 }: { cols?: number }) => {
   // Save options
   useEffect(() => {
     if (!isLoaded) return
+
+    // Safety Guard
+    if (user?.id !== dataOwnerId.current) {
+      if (!user && dataOwnerId.current === undefined) {
+        // OK
+      } else {
+        return // Mismatch
+      }
+    }
+
     const save = async () => {
       await saveDopamine(options, lang, user)
     }

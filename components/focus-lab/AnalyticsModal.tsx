@@ -35,7 +35,7 @@ export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
 
   useEffect(() => {
     const loadData = async () => {
-      let allSessions = getHistory()
+      let allSessions = getHistory(user?.id)
 
       // If user is logged in, try to fetch fresh cloud data to ensure cross-device sync
       if (user) {
@@ -300,7 +300,7 @@ export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
         </div>
 
         {/* Content Scrollable */}
-        <div className="scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800 flex-1 overflow-y-auto p-6">
+        <div className="no-scrollbar flex-1 overflow-y-auto p-6">
           <div className="grid gap-6 md:grid-cols-2">
             {/* Left: Summary & Chart */}
             <div className="flex flex-col gap-6">
@@ -314,7 +314,7 @@ export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
                     {formatDuration(selectedDayMinutes)}
                   </span>
                   <span className="text-sm text-gray-500 dark:text-gray-400">
-                    / {selectedDayCount} {lang === 'zh' ? '次会话' : 'sessions'}
+                    / {selectedDayCount} {lang === 'zh' ? '次专注' : 'sessions'}
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-gray-400">{currentSelectionStats?.fullDate}</div>

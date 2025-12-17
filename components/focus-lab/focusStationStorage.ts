@@ -31,11 +31,12 @@ export const createFocusItem = (type: FocusItemType, content: string): FocusItem
   }
 }
 
-export const readStationStorage = (): FocusItem[] => {
+export const readStationStorage = (userId?: string): FocusItem[] => {
   if (typeof window === 'undefined') return []
   try {
     const storage = window.localStorage
-    const value = storage.getItem(STATION_STORAGE_KEY)
+    const key = userId ? `${STATION_STORAGE_KEY}-${userId}` : STATION_STORAGE_KEY
+    const value = storage.getItem(key)
     if (!value) return []
     const parsed = JSON.parse(value)
     if (!Array.isArray(parsed)) return []
@@ -75,9 +76,10 @@ export const fetchCloudItems = async (user: User): Promise<FocusItem[] | null> =
 
 export const saveStationItems = async (items: FocusItem[], user?: User | null) => {
   try {
-    // Local Write (Only if Guest)
-    if (typeof window !== 'undefined' && !user) {
-      window.localStorage.setItem(STATION_STORAGE_KEY, JSON.stringify(items))
+    // Local Write (For both Guest keys and User keys)
+    if (typeof window !== 'undefined') {
+      const key = user ? `${STATION_STORAGE_KEY}-${user.id}` : STATION_STORAGE_KEY
+      window.localStorage.setItem(key, JSON.stringify(items))
       window.dispatchEvent(new CustomEvent(STATION_SYNC_EVENT, { detail: items }))
     }
 

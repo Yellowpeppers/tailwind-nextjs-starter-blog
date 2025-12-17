@@ -12,6 +12,10 @@ type AuthContextType = {
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  updateProfile: (data: {
+    full_name?: string
+    avatar_url?: string
+  }) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -98,9 +102,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null)
   }
 
+  const updateProfile = async (data: { full_name?: string; avatar_url?: string }) => {
+    const { error } = await supabase.auth.updateUser({
+      data,
+    })
+    return { error }
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, signInWithGoogle, signInWithEmail, signUp, signOut }}
+      value={{
+        user,
+        session,
+        loading,
+        signInWithGoogle,
+        signInWithEmail,
+        signUp,
+        signOut,
+        updateProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>

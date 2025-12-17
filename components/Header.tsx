@@ -15,9 +15,14 @@ import { useTranslation } from '@/context/LanguageContext'
 import UserMenu from './UserMenu'
 import AuthModal from '@/components/auth/AuthModal'
 
+import UserProfileModal from '@/components/auth/UserProfileModal'
+import PlanComparisonModal from '@/components/auth/PlanComparisonModal'
+
 const Header = () => {
   const { t } = useTranslation()
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
 
   let headerClass =
     'flex w-full flex-col gap-4 bg-white py-6 dark:bg-gray-950 sm:gap-6 sm:py-8 lg:py-10'
@@ -71,7 +76,11 @@ const Header = () => {
             <Suspense fallback={null}>
               <LanguageSwitch />
             </Suspense>
-            <UserMenu onLoginClick={() => setIsAuthModalOpen(true)} />
+            <UserMenu
+              onLoginClick={() => setIsAuthModalOpen(true)}
+              onOpenProfile={() => setIsProfileModalOpen(true)}
+              onOpenPlan={() => setIsPlanModalOpen(true)}
+            />
             <MobileNav />
           </div>
         </div>
@@ -99,6 +108,8 @@ const Header = () => {
         onClose={() => setIsAuthModalOpen(false)}
         onGuestContinue={() => setIsAuthModalOpen(false)}
       />
+      <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+      <PlanComparisonModal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} />
     </>
   )
 }

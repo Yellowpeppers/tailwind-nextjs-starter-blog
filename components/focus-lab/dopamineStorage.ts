@@ -7,17 +7,18 @@ export const LEGACY_KEY = 'focus-lab-dopamine-options'
 // Dopamine Menu is just a list of strings
 export type DopamineState = string[]
 
-export const readDopamineStorage = (lang: string): DopamineState | null => {
+export const readDopamineStorage = (lang: string, userId?: string): DopamineState | null => {
   if (typeof window === 'undefined') return null
   try {
-    const key = `${DOPAMINE_STORAGE_KEY_PREFIX}${lang}`
+    const prefix = userId ? `${DOPAMINE_STORAGE_KEY_PREFIX}${userId}-` : DOPAMINE_STORAGE_KEY_PREFIX
+    const key = `${prefix}${lang}`
     const saved = window.localStorage.getItem(key)
     const legacy = window.localStorage.getItem(LEGACY_KEY)
 
     if (saved) return JSON.parse(saved)
-    if (!saved && legacy) return JSON.parse(legacy) // Fallback/Migrate
+    if (!saved && legacy && !userId) return JSON.parse(legacy) // Fallback only for guest
 
-    return null // Let caller handle defaults
+    return null
   } catch (e) {
     return null
   }
@@ -42,9 +43,10 @@ export const fetchCloudDopamine = async (user: User): Promise<DopamineState | nu
 }
 
 export const saveDopamine = async (options: DopamineState, lang: string, user?: User | null) => {
-  // Local Save (Only if Guest)
-  if (typeof window !== 'undefined' && !user) {
-    const key = `${DOPAMINE_STORAGE_KEY_PREFIX}${lang}`
+  // Local Save (Always save to local cache, scoped)
+  if (typeof window !== 'undefined') {
+    const prefix = user ? `${DOPAMINE_STORAGE_KEY_PREFIX}${user.id}-` : DOPAMINE_STORAGE_KEY_PREFIX
+    const key = `${prefix}${lang}`
     window.localStorage.setItem(key, JSON.stringify(options))
   }
 

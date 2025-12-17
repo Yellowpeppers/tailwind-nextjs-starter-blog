@@ -25,11 +25,12 @@ export const createToDoItem = (text: string): ToDoStorageItem => {
   }
 }
 
-export const readToDoStorage = (): ToDoStorageItem[] => {
+export const readToDoStorage = (userId?: string): ToDoStorageItem[] => {
   if (typeof window === 'undefined') return []
   try {
     const storage = window.localStorage
-    const value = storage.getItem(TODO_STORAGE_KEY)
+    const key = userId ? `${TODO_STORAGE_KEY}-${userId}` : TODO_STORAGE_KEY
+    const value = storage.getItem(key)
     if (!value) return []
     const parsed = JSON.parse(value)
     if (!Array.isArray(parsed)) return []
@@ -42,9 +43,10 @@ export const readToDoStorage = (): ToDoStorageItem[] => {
 
 export const writeToDoStorage = async (tasks: ToDoStorageItem[], user?: User | null) => {
   try {
-    // Local Write (Only if Guest)
-    if (typeof window !== 'undefined' && !user) {
-      window.localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(tasks))
+    // Local Write (For both Guest keys and User keys)
+    if (typeof window !== 'undefined') {
+      const key = user ? `${TODO_STORAGE_KEY}-${user.id}` : TODO_STORAGE_KEY
+      window.localStorage.setItem(key, JSON.stringify(tasks))
       window.dispatchEvent(new CustomEvent(TODO_SYNC_EVENT, { detail: tasks }))
     }
 

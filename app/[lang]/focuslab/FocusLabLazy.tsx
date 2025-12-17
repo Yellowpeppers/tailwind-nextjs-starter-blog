@@ -15,6 +15,8 @@ const FocusLabLoading = () => {
   )
 }
 
+import { FocusSettingsProvider } from '@/components/focus-lab/FocusSettingsContext'
+
 const FocusLabDashboard = dynamic(
   () => import('./FocusLabDashboard').then((mod) => mod.FocusLabDashboard),
   {
@@ -24,5 +26,9 @@ const FocusLabDashboard = dynamic(
 )
 
 export function FocusLabLazy() {
-  return <FocusLabDashboard />
+  return (
+    <FocusSettingsProvider>
+      <FocusLabDashboard />
+    </FocusSettingsProvider>
+  )
 }

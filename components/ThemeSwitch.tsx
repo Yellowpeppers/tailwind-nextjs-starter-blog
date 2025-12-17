@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { useThemeColor, ThemeColor } from '@/context/ThemeColorContext'
+import { useFocusSettings } from '@/components/focus-lab/useFocusSettings'
 import {
   Menu,
   MenuButton,
@@ -59,9 +60,33 @@ const ThemeSwitch = () => {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme, resolvedTheme } = useTheme()
   const { themeColor, setThemeColor } = useThemeColor()
+  const { updateSettings, settings, isLoaded } = useFocusSettings()
 
   // When mounted on client, now we can show the UI
   useEffect(() => setMounted(true), [])
+
+  // Sync Cloud -> Local
+  useEffect(() => {
+    if (isLoaded && settings.theme) {
+      if (settings.theme.mode && settings.theme.mode !== theme) {
+        setTheme(settings.theme.mode)
+      }
+      if (settings.theme.color && settings.theme.color !== themeColor) {
+        setThemeColor(settings.theme.color as ThemeColor)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, settings.theme]) // Ignore theme/themeColor dependencies to avoid loop
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme)
+    updateSettings('theme.mode', newTheme)
+  }
+
+  const handleColorChange = (newColor: ThemeColor) => {
+    setThemeColor(newColor)
+    updateSettings('theme.color', newColor)
+  }
 
   return (
     <div className="flex items-center">
@@ -81,7 +106,7 @@ const ThemeSwitch = () => {
           leaveTo="transform opacity-0 scale-95"
         >
           <MenuItems className="ring-opacity-5 absolute right-0 z-50 mt-2 w-auto origin-top-right divide-y divide-gray-100 rounded-md bg-white p-2 shadow-lg ring-1 ring-black focus:outline-none dark:divide-gray-700 dark:bg-gray-800">
-            <RadioGroup value={theme} onChange={setTheme}>
+            <RadioGroup value={theme} onChange={handleThemeChange}>
               <div className="p-1">
                 <Radio value="light">
                   <MenuItem>
@@ -148,7 +173,7 @@ const ThemeSwitch = () => {
                 ].map(({ name, color, label }) => (
                   <button
                     key={name}
-                    onClick={() => setThemeColor(name as ThemeColor)}
+                    onClick={() => handleColorChange(name as ThemeColor)}
                     className={`h-6 w-6 rounded-full ring-2 ring-offset-2 ring-offset-white transition-all hover:scale-110 dark:ring-offset-gray-800 ${
                       themeColor === name ? 'ring-gray-400 dark:ring-gray-400' : 'ring-transparent'
                     }`}
