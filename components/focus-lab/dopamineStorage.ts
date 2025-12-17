@@ -42,8 +42,8 @@ export const fetchCloudDopamine = async (user: User): Promise<DopamineState | nu
 }
 
 export const saveDopamine = async (options: DopamineState, lang: string, user?: User | null) => {
-  // Local Save
-  if (typeof window !== 'undefined') {
+  // Local Save (Only if Guest)
+  if (typeof window !== 'undefined' && !user) {
     const key = `${DOPAMINE_STORAGE_KEY_PREFIX}${lang}`
     window.localStorage.setItem(key, JSON.stringify(options))
   }
@@ -85,4 +85,12 @@ export const saveDopamine = async (options: DopamineState, lang: string, user?: 
       console.error('Dopamine sync failed:', e)
     }
   }
+}
+
+export const syncDopamine = async (user: User, lang: string) => {
+  if (typeof window === 'undefined') return
+  const options = readDopamineStorage(lang)
+  if (!options || options.length === 0) return
+
+  await saveDopamine(options, lang, user)
 }

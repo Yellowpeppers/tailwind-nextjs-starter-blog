@@ -17,16 +17,19 @@ export const saveSession = async (session: FocusSession, user?: User | null) => 
   if (typeof window === 'undefined') return
 
   // Always save to local storage as backup/latency compensation
-  try {
-    const existing = window.localStorage.getItem(STORAGE_KEY)
-    let history: FocusSession[] = []
-    if (existing) {
-      history = JSON.parse(existing)
+  // UPDATE: Only if Guest. If User, Cloud Only.
+  if (!user) {
+    try {
+      const existing = window.localStorage.getItem(STORAGE_KEY)
+      let history: FocusSession[] = []
+      if (existing) {
+        history = JSON.parse(existing)
+      }
+      history.push(session)
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
+    } catch (error) {
+      console.error('Failed to save focus session locally:', error)
     }
-    history.push(session)
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
-  } catch (error) {
-    console.error('Failed to save focus session locally:', error)
   }
 
   // If logged in, save to Cloud

@@ -75,8 +75,8 @@ export const fetchCloudItems = async (user: User): Promise<FocusItem[] | null> =
 
 export const saveStationItems = async (items: FocusItem[], user?: User | null) => {
   try {
-    // Local Write
-    if (typeof window !== 'undefined') {
+    // Local Write (Only if Guest)
+    if (typeof window !== 'undefined' && !user) {
       window.localStorage.setItem(STATION_STORAGE_KEY, JSON.stringify(items))
       window.dispatchEvent(new CustomEvent(STATION_SYNC_EVENT, { detail: items }))
     }

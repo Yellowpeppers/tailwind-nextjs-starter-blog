@@ -34,6 +34,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [supabase])
 
+  // Self-healing: Ensure profile exists if user is logged in
+  useEffect(() => {
+    const ensureProfile = async () => {
+      if (!user) return
+
+      // Check if profile exists
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      if (error || !data) {
+        console.warn('Profile missing for authenticated user, attempting to heal...')
+        // Create profile manually (Self-healing)
+        // We use upsert to be safe, though insert would work if it's truly missing
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .upsert({ id: user.id, tier: 'free' }, { onConflict: 'id' })
+
+        if (insertError) {
+          console.error('Failed to auto-create profile:', insertError)
+        } else {
+          console.log('Profile successfully restored.')
+        }
+      }
+    }
+
+    if (user) {
+      ensureProfile()
+    }
+  }, [user, supabase])
+
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',

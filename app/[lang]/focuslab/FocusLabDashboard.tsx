@@ -21,21 +21,23 @@ import {
   saveStationItems,
 } from '@/components/focus-lab/focusStationStorage'
 import { AnalyticsModal } from '@/components/focus-lab/AnalyticsModal'
-import { saveSession, syncFocusHistory } from '@/components/focus-lab/focusStorage'
+import { saveSession, syncFocusHistory, getHistory } from '@/components/focus-lab/focusStorage'
 import { useAuth } from '@/context/AuthContext'
 import AuthModal from '@/components/auth/AuthModal'
-import { syncToDo } from '@/components/focus-lab/todoStorage'
+import { syncToDo, readToDoStorage } from '@/components/focus-lab/todoStorage'
 import {
   BrainDumpItem,
   createBrainDumpItem,
   fetchCloudBrainDump,
   readBrainDumpStorage,
   saveBrainDump,
+  syncBrainDump,
 } from '@/components/focus-lab/brainDumpStorage'
 import {
   fetchCloudDopamine,
   readDopamineStorage,
   saveDopamine,
+  syncDopamine,
 } from '@/components/focus-lab/dopamineStorage'
 
 // Context for passing drag controls to children
@@ -491,13 +493,44 @@ export const FocusLabDashboard = () => {
     }
   }, [])
 
+  /* Sync Logic */
+  const [showSyncModal, setShowSyncModal] = useState(false)
+
   useEffect(() => {
     if (user) {
-      console.log('User logged in, syncing data...')
-      syncFocusHistory(user)
-      syncLocalToCloud(user)
+      // Check if we have already asked in this session
+      if (typeof window !== 'undefined' && sessionStorage.getItem('focus-lab-sync-asked')) return
+
+      const station = readStationStorage()
+      const todo = readToDoStorage()
+      const brain = readBrainDumpStorage()
+      const dopamine = readDopamineStorage(lang)
+      const history = getHistory()
+
+      const hasLocal =
+        station.length > 0 ||
+        todo.length > 0 ||
+        brain.left.length > 0 ||
+        brain.right.length > 0 ||
+        (dopamine && dopamine.length > 0) ||
+        history.length > 0
+
+      if (hasLocal) {
+        setShowSyncModal(true)
+        sessionStorage.setItem('focus-lab-sync-asked', 'true')
+      }
     }
-  }, [user])
+  }, [user, lang])
+
+  const handleSyncConfirm = async () => {
+    if (!user) return
+    await syncFocusHistory(user)
+    await syncLocalToCloud(user)
+    await syncToDo(user)
+    await syncBrainDump(user)
+    await syncDopamine(user, lang)
+    setShowSyncModal(false)
+  }
 
   useEffect(() => {
     if (!showGroupModal) return
@@ -805,37 +838,47 @@ export const FocusLabDashboard = () => {
                     {t.focusLab.controls.resetLayout}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!user) setShowAuthModal(true)
-                    }}
-                    className={`${CONTROL_BUTTON_BASE} group border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800`}
-                  >
-                    {user ? (
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-green-500" />
-                        <span>{user.email || 'Synced'}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-4 w-4"
+                  <AnimatePresence>
+                    {showSyncModal && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                      >
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800"
                         >
-                          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                          <polyline points="10 17 15 12 10 7" />
-                          <line x1="15" y1="12" x2="3" y2="12" />
-                        </svg>
-                        Login
-                      </>
+                          <div className="p-6">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                              Sync Local Data?
+                            </h3>
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                              We found unfinished tasks and settings on this device. Would you like
+                              to merge them into your account?
+                            </p>
+                          </div>
+                          <div className="flex justify-end gap-3 bg-gray-50 px-6 py-4 dark:bg-gray-700/50">
+                            <button
+                              onClick={() => setShowSyncModal(false)}
+                              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                            >
+                              No, Start Fresh
+                            </button>
+                            <button
+                              onClick={handleSyncConfirm}
+                              className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-lg active:scale-95"
+                            >
+                              Yes, Sync Data
+                            </button>
+                          </div>
+                        </motion.div>
+                      </motion.div>
                     )}
-                  </button>
+                  </AnimatePresence>
 
                   <AnimatePresence>
                     {showResetConfirm && (
@@ -2330,6 +2373,7 @@ const getSecondsUntilTarget = (timeStr: string) => {
 
 const TaskBreakerWidget = () => {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const [task, setTask] = useState('')
   const [visibleSteps, setVisibleSteps] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)

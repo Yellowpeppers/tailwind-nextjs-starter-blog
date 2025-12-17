@@ -42,8 +42,8 @@ export const readToDoStorage = (): ToDoStorageItem[] => {
 
 export const writeToDoStorage = async (tasks: ToDoStorageItem[], user?: User | null) => {
   try {
-    // Local Write
-    if (typeof window !== 'undefined') {
+    // Local Write (Only if Guest)
+    if (typeof window !== 'undefined' && !user) {
       window.localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(tasks))
       window.dispatchEvent(new CustomEvent(TODO_SYNC_EVENT, { detail: tasks }))
     }
@@ -78,7 +78,7 @@ export const writeToDoStorage = async (tasks: ToDoStorageItem[], user?: User | n
 
       if (header.length > 0) {
         const { error } = await supabase.from('todo_tasks').upsert(header)
-        if (error) console.error('Cloud save error', error)
+        if (error) console.error('Cloud save error (todo):', error.message)
       }
     }
   } catch (error) {
@@ -94,7 +94,7 @@ export const fetchCloudTasks = async (user: User) => {
     .select('*')
     .order('created_at', { ascending: true })
   if (error) {
-    console.error('Fetch cloud tasks error', error)
+    console.error('Fetch cloud tasks error', error.message)
     return []
   }
   return data.map((t: { id: string; text: string; completed: boolean }) => ({
@@ -110,17 +110,40 @@ export const syncToDo = async (user: User) => {
   if (tasks.length === 0) return
 
   const supabase = createClient()
-  const records = tasks.map((t) => ({
-    id: t.id,
-    user_id: user.id,
-    text: t.text,
-    completed: t.completed,
-    updated_at: new Date().toISOString(),
-  }))
+  let hasUpdates = false
+
+  // Validate IDs: UUID check
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  const records = tasks.map((t) => {
+    // If ID is not a valid UUID, generate a new one
+    if (!uuidRegex.test(t.id)) {
+      const newId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `10000000-1000-4000-8000-${Date.now().toString(16).padEnd(12, '0')}` // Simple fallback
+      t.id = newId
+      hasUpdates = true
+    }
+
+    return {
+      id: t.id,
+      user_id: user.id,
+      text: t.text,
+      completed: t.completed,
+      updated_at: new Date().toISOString(),
+    }
+  })
+
+  // If we fixed any IDs, save back to local storage so we don't have issues next time
+  if (hasUpdates) {
+    console.log('Migrated legacy IDs to UUIDs')
+    writeToDoStorage(tasks) // This updates local storage with new IDs
+  }
 
   const { error } = await supabase.from('todo_tasks').upsert(records, { onConflict: 'id' })
   if (error) {
-    console.error('ToDo sync error:', error)
+    console.error('ToDo sync error:', error.message || error)
   } else {
     console.log(`Synced ${records.length} tasks to cloud`)
   }

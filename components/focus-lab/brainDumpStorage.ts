@@ -102,8 +102,8 @@ export const fetchCloudBrainDump = async (user: User): Promise<BrainDumpState | 
 }
 
 export const saveBrainDump = async (state: BrainDumpState, user?: User | null) => {
-  // Local Save
-  if (typeof window !== 'undefined') {
+  // Local Save (Only if Guest)
+  if (typeof window !== 'undefined' && !user) {
     window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_LEFT, JSON.stringify(state.left))
     window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_RIGHT, JSON.stringify(state.right))
   }
@@ -168,4 +168,12 @@ export const saveBrainDump = async (state: BrainDumpState, user?: User | null) =
       console.error('Brain dump sync failed:', e)
     }
   }
+}
+
+export const syncBrainDump = async (user: User) => {
+  if (typeof window === 'undefined') return
+  const state = readBrainDumpStorage()
+  if (state.left.length === 0 && state.right.length === 0) return
+
+  await saveBrainDump(state, user)
 }
