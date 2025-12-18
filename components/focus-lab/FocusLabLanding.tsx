@@ -1,12 +1,50 @@
-'use client'
-
-import { motion } from 'framer-motion'
+import { motion, useMotionTemplate, useMotionValue } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
 import Image from 'next/image'
-import { useState } from 'react'
+import { MouseEvent, useState } from 'react'
 
 type Props = {
   onEnter: () => void
+}
+
+const MagneticButton = ({
+  children,
+  onClick,
+  className,
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  className?: string
+}) => {
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+
+  function handleMouseMove({ clientX, clientY, currentTarget }: MouseEvent) {
+    const { left, top, width, height } = currentTarget.getBoundingClientRect()
+    const x = clientX - (left + width / 2)
+    const y = clientY - (top + height / 2)
+    mouseX.set(x * 0.15)
+    mouseY.set(y * 0.15)
+  }
+
+  function handleMouseLeave() {
+    mouseX.set(0)
+    mouseY.set(0)
+  }
+
+  return (
+    <motion.button
+      onClick={onClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ x: mouseX, y: mouseY }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className={className}
+    >
+      {children}
+    </motion.button>
+  )
 }
 
 const FAQItem = ({ question, answer }: { question: string; answer: string }) => {
@@ -45,9 +83,32 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
     <div className="relative min-h-screen w-full overflow-hidden bg-white text-gray-900 transition-colors dark:bg-gray-950 dark:text-gray-100">
       {/* Background Gradients */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-[20%] -left-[10%] h-[70vh] w-[70vh] rounded-full bg-purple-200/30 blur-[120px] dark:bg-purple-900/20" />
-        <div className="absolute top-[10%] right-[0%] h-[60vh] w-[60vh] rounded-full bg-blue-200/30 blur-[100px] dark:bg-blue-900/20" />
-        <div className="absolute -bottom-[20%] left-[20%] h-[80vh] w-[80vh] rounded-full bg-emerald-100/30 blur-[120px] dark:bg-emerald-900/10" />
+        <motion.div
+          animate={{
+            x: [0, 100, 0],
+            y: [0, -50, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+          className="absolute -top-[20%] -left-[10%] h-[70vh] w-[70vh] rounded-full bg-purple-200/30 blur-[120px] dark:bg-purple-900/20"
+        />
+        <motion.div
+          animate={{
+            x: [0, -70, 0],
+            y: [0, 80, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+          className="absolute top-[10%] right-[0%] h-[60vh] w-[60vh] rounded-full bg-blue-200/30 blur-[100px] dark:bg-blue-900/20"
+        />
+        <motion.div
+          animate={{
+            x: [0, 50, 0],
+            y: [0, 40, 0],
+          }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
+          className="absolute -bottom-[20%] left-[20%] h-[80vh] w-[80vh] rounded-full bg-emerald-100/30 blur-[120px] dark:bg-emerald-900/10"
+        />
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -90,13 +151,13 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <button
+              <MagneticButton
                 onClick={onEnter}
-                className="group hover:shadow-primary-500/25 relative flex h-16 min-w-[240px] items-center justify-center gap-3 overflow-hidden rounded-full bg-gray-900 px-8 text-xl font-bold text-white shadow-2xl transition-all hover:scale-105 hover:bg-black active:scale-95 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+                className="group hover:shadow-primary-500/25 relative flex h-16 min-w-[240px] items-center justify-center gap-3 overflow-hidden rounded-full bg-gray-900 px-8 text-xl font-bold text-white shadow-2xl dark:bg-white dark:text-black dark:hover:bg-gray-100"
               >
-                <span>Enter Focus Studio</span>
+                <span className="relative z-10">Enter Focus Studio</span>
                 <svg
-                  className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
+                  className="relative z-10 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -109,8 +170,8 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
                 </svg>
 
                 {/* Glow Effect */}
-                <div className="from-primary-500/0 via-primary-500/40 to-primary-500/0 absolute inset-0 -z-10 translate-y-[100%] bg-gradient-to-r blur-lg transition-transform duration-1000 group-hover:translate-y-[-100%]" />
-              </button>
+                <div className="from-primary-500/0 via-primary-500/40 to-primary-500/0 absolute inset-0 z-0 translate-y-[100%] bg-gradient-to-r blur-lg transition-transform duration-1000 group-hover:translate-y-[-100%]" />
+              </MagneticButton>
             </motion.div>
 
             <p className="mt-4 text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -295,9 +356,13 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
                 quote: 'I recommend Focus Lab to all my clients. It builds the right rituals.',
               },
             ].map((t, i) => (
-              <div
+              <motion.div
                 key={i}
-                className="min-w-[300px] flex-shrink-0 rounded-2xl bg-gray-50 p-6 dark:bg-gray-800"
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="min-w-[300px] flex-shrink-0 rounded-2xl bg-white/70 p-6 backdrop-blur-md dark:bg-gray-800/70"
               >
                 <div className="flex items-center gap-1 text-yellow-500">★★★★★</div>
                 <p className="mt-4 text-gray-700 dark:text-gray-300">"{t.quote}"</p>
@@ -305,7 +370,7 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
                   <div className="font-bold text-gray-900 dark:text-white">{t.name}</div>
                   <div className="text-xs text-gray-500">{t.role}</div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </section>
@@ -347,10 +412,6 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
             </button>
           </div>
         </section>
-
-        <footer className="border-t border-gray-100 py-12 text-center text-sm text-gray-500 dark:border-gray-800 dark:text-gray-400">
-          <p>© {new Date().getFullYear()} Focus Lab. Built for neurodiversity.</p>
-        </footer>
       </div>
     </div>
   )

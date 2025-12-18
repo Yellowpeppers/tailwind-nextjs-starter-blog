@@ -13,7 +13,7 @@ type UserProfileModalProps = {
 }
 
 export default function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
-  const { user, signOut, updateProfile } = useAuth()
+  const { user, signOut, updateProfile, tier } = useAuth()
   const { t } = useTranslation()
   const [displayName, setDisplayName] = useState('')
   const [isEditing, setIsEditing] = useState(false)
@@ -126,9 +126,21 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                   <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                 </div>
 
-                <div className="mb-6 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:from-amber-900/20 dark:to-orange-900/20">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
+                <div
+                  className={`mb-6 flex w-fit items-center gap-3 rounded-xl p-4 transition-colors ${
+                    tier === 'pro'
+                      ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20'
+                      : 'bg-gray-50 dark:bg-gray-800'
+                  }`}
+                >
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                      tier === 'pro'
+                        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400'
+                        : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                    }`}
+                  >
+                    {tier === 'pro' ? (
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -138,15 +150,38 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                       >
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="h-6 w-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div
+                      className={`font-bold ${
+                        tier === 'pro'
+                          ? 'text-amber-800 dark:text-amber-200'
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {tier === 'pro' ? 'Pro Plan' : 'Free Plan'}
                     </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-amber-800 dark:text-amber-200">
-                        {t.userProfile.betaBadge}
-                      </div>
+                    {tier === 'pro' && (
                       <div className="text-xs text-amber-700/80 dark:text-amber-300/60">
                         {t.userProfile.betaDescription}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </Dialog.Panel>

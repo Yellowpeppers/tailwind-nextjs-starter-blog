@@ -3,7 +3,7 @@ import { defaultLocale, isLocale } from './lib/i18n'
 
 const PUBLIC_FILE = /\.(.*)$/
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (
@@ -33,6 +33,8 @@ export function middleware(request: NextRequest) {
     },
   })
 }
+
+export default proxy
 
 export const config = {
   matcher: [

@@ -51,3 +51,4 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     </LanguageProvider>
   )
 }
+// Force rebuild dictionary

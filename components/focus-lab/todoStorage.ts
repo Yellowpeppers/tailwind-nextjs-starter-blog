@@ -10,6 +10,7 @@ export type ToDoStorageItem = {
   id: string
   text: string
   completed: boolean
+  updated_at?: string
 }
 
 // ... helper ...
@@ -22,6 +23,7 @@ export const createToDoItem = (text: string): ToDoStorageItem => {
       typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : fallbackId(),
     text: trimmedText,
     completed: false,
+    updated_at: new Date().toISOString(),
   }
 }
 
@@ -34,7 +36,10 @@ export const readToDoStorage = (userId?: string): ToDoStorageItem[] => {
     if (!value) return []
     const parsed = JSON.parse(value)
     if (!Array.isArray(parsed)) return []
-    return parsed
+    return parsed.map((t) => ({
+      ...t,
+      updated_at: t.updated_at || new Date().toISOString(),
+    }))
   } catch (error) {
     console.error('Failed to read Focus Lab To-Do storage', error)
     return []
@@ -70,12 +75,13 @@ export const writeToDoStorage = async (tasks: ToDoStorageItem[], user?: User | n
       // But user asked for cloud save.
 
       // Let's iterate and Upsert.
+      const nowIso = new Date().toISOString()
       const header = tasks.map((t) => ({
         id: t.id,
         user_id: user.id,
         text: t.text,
         completed: t.completed,
-        updated_at: new Date().toISOString(),
+        updated_at: t.updated_at || nowIso,
       }))
 
       if (header.length > 0) {
@@ -99,10 +105,11 @@ export const fetchCloudTasks = async (user: User) => {
     console.error('Fetch cloud tasks error', error.message)
     return []
   }
-  return data.map((t: { id: string; text: string; completed: boolean }) => ({
+  return data.map((t: { id: string; text: string; completed: boolean; updated_at?: string }) => ({
     id: t.id,
     text: t.text,
     completed: t.completed,
+    updated_at: t.updated_at || new Date().toISOString(),
   })) as ToDoStorageItem[]
 }
 

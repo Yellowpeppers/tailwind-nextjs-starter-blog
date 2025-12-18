@@ -312,7 +312,33 @@ input:-webkit-autofill:focus {
     }
   }
 
+  @keyframes shine {
+    from {
+      background-position: 200% center;
+    }
+
+    to {
+      background-position: -200% center;
+    }
+  }
+
   .animate-border-flow {
     animation: border-flow 3s linear infinite;
+  }
+
+  .animate-shine {
+    animation: shine 3s linear infinite;
+  }
+}
+
+@layer components {
+  .focuslab-typography {
+    font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .focuslab-numeric {
+    font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
   }
 }

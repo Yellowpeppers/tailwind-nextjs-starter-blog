@@ -16,6 +16,7 @@ type AuthContextType = {
     full_name?: string
     avatar_url?: string
   }) => Promise<{ error: Error | null }>
+  tier: string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tier, setTier] = useState<string>('free')
   const supabase = createClient()
 
   useEffect(() => {
@@ -62,12 +64,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('Failed to auto-create profile:', insertError)
         } else {
           console.log('Profile successfully restored.')
+          setTier('free')
+        }
+      } else {
+        // Fetch tier
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('tier')
+          .eq('id', user.id)
+          .single()
+
+        if (profileData) {
+          setTier(profileData.tier || 'free')
         }
       }
     }
 
     if (user) {
       ensureProfile()
+    } else {
+      setTier('free')
     }
   }, [user, supabase])
 
@@ -120,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         updateProfile,
+        tier,
       }}
     >
       {children}

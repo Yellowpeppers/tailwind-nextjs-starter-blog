@@ -23,12 +23,35 @@ const UpgradeModal = PlanComparisonModal
 // Simple Upgrade Modal
 // Simple Upgrade Modal Replaced by PlanComparisonModal
 
+// --- Icons ---
+const PlusIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--add-circle-outline] ${className}`} />
+)
+
+const TrashIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--trash-bin-minimalistic-outline] ${className}`} />
+)
+
+const CheckIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--check-read-linear] ${className}`} />
+)
+
+const TargetIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--target-outline] ${className}`} />
+)
+
+const XIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--close-circle-outline] ${className}`} />
+)
+
 export const FocusStation = ({
   cols = 1,
   onStartFocus,
+  focusedTaskId,
 }: {
   cols?: number
-  onStartFocus?: (task: string) => void
+  onStartFocus?: (task: string, id: string) => void
+  focusedTaskId?: string | null
 }) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
@@ -140,7 +163,7 @@ export const FocusStation = ({
     }
   }
 
-  const isWide = cols > 3
+  const isWide = cols >= 5
 
   return (
     <>
@@ -159,20 +182,9 @@ export const FocusStation = ({
             <button
               onClick={addTextItem}
               disabled={!inputValue.trim()}
-              className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
+              className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <PlusIcon className="h-5 w-5" />
             </button>
           </div>
 
@@ -188,19 +200,7 @@ export const FocusStation = ({
             className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:bg-gray-100 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             title={lang === 'en' ? 'Clear all tasks' : '清空所有任务'}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
+            <TrashIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -226,7 +226,11 @@ export const FocusStation = ({
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                    className="group relative flex cursor-pointer items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-gray-100 transition-all hover:shadow-md dark:bg-gray-900/40 dark:ring-gray-800"
+                    className={`group relative flex cursor-pointer items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900/40 ${
+                      focusedTaskId === item.id
+                        ? 'border-primary-500 ring-primary-500 dark:border-primary-400 dark:ring-primary-400 border ring-1'
+                        : 'ring-primary-100/50 hover:border-primary-200 dark:ring-primary-900/30 border border-transparent ring-1'
+                    }`}
                     onClick={() => toggleItem(item.id)}
                   >
                     {/* Checkbox (Click toggle) */}
@@ -238,23 +242,11 @@ export const FocusStation = ({
                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
                         item.completed
                           ? 'border-primary-500 bg-primary-500 text-white'
-                          : 'hover:border-primary-400 border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'
+                          : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
                       }`}
                       onPointerDown={(e) => e.stopPropagation()}
                     >
-                      {item.completed && (
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-3.5 w-3.5"
-                        >
-                          <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                      )}
+                      {item.completed && <CheckIcon className="h-3.5 w-3.5" />}
                     </button>
 
                     {/* Content */}
@@ -268,15 +260,35 @@ export const FocusStation = ({
                       {item.content}
                     </span>
 
-                    {/* Focus Button (Target Icon) */}
-                    {onStartFocus && !item.completed && (
+                    {/* Actions Group */}
+                    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      {/* Focus Button (Target Icon) */}
+                      {onStartFocus && !item.completed && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onStartFocus(item.content, item.id)
+                          }}
+                          className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+                            focusedTaskId === item.id
+                              ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
+                              : 'hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 hover:bg-gray-100 dark:text-gray-600 dark:hover:bg-gray-800'
+                          }`}
+                          title="Focus on this"
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
+                          <TargetIcon className="h-4 w-4" />
+                        </button>
+                      )}
+
+                      {/* Delete Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          onStartFocus(item.content)
+                          removeItem(item.id)
                         }}
-                        className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-600"
-                        title="Focus on this"
+                        className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                        title="Delete"
                         onPointerDown={(e) => e.stopPropagation()}
                       >
                         <svg
@@ -288,37 +300,10 @@ export const FocusStation = ({
                           strokeLinejoin="round"
                           className="h-4 w-4"
                         >
-                          <circle cx="12" cy="12" r="10" />
-                          <line x1="22" y1="12" x2="18" y2="12" />
-                          <line x1="6" y1="12" x2="2" y2="12" />
-                          <line x1="12" y1="6" x2="12" y2="2" />
-                          <line x1="12" y1="22" x2="12" y2="18" />
+                          <path d="M18 6L6 18M6 6l12 12" />
                         </svg>
                       </button>
-                    )}
-
-                    {/* Delete Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeItem(item.id)
-                      }}
-                      className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
-                      title="Delete"
-                      onPointerDown={(e) => e.stopPropagation()}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4"
-                      >
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
-                    </button>
+                    </div>
                   </Reorder.Item>
                 ))}
               </AnimatePresence>

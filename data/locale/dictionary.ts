@@ -110,6 +110,18 @@ export const dictionary = {
       description: 'But don’t worry, you can find plenty of other things on our homepage.',
       cta: 'Back to homepage',
     },
+    sounds: {
+      insects: 'Insects',
+      rain: 'Rain',
+      'summer-night': 'Summer Night',
+      thunder: 'Thunder',
+      waves: 'Waves',
+      'white-noise': 'White Noise',
+      wind: 'Wind',
+      brown: 'Brown Noise',
+      pink: 'Pink Noise',
+      white: 'White Noise',
+    },
     focusLab: {
       header: {
         eyebrow: 'Focus Lab',
@@ -120,6 +132,11 @@ export const dictionary = {
       },
       stats: {
         dailyGoal: 'Daily Goal',
+      },
+      sidebar: {
+        focusTools: 'FOCUS TOOLS',
+        proMember: 'Pro Member',
+        freePlan: 'Free Plan',
       },
       loading: {
         title: 'Loading Focus Lab',
@@ -169,6 +186,8 @@ export const dictionary = {
           resume: 'RESUME',
           endSession: 'End Session',
           done: 'Focus Complete!',
+          ready: 'Ready to start',
+          recording: 'Recording time...',
           decisionPrompt: {
             continueFocus: 'Continue Focus',
             plusFive: '+5m',
@@ -182,6 +201,7 @@ export const dictionary = {
             showTimer: 'Show timer countdown again',
           },
         },
+
         taskBreaker: {
           title: 'AI Task Breaker',
           subtitle:
@@ -220,6 +240,7 @@ export const dictionary = {
           spinning: 'Spinning...',
           ready: 'Ready to Draw',
           button: 'GIVE ME DOPAMINE',
+          spinButton: 'Dopamine',
           addPlaceholder: 'Add option...',
           add: 'Add',
           accessibility: {
@@ -309,453 +330,53 @@ export const dictionary = {
         cancel: 'Cancel',
         confirmBtn: 'Remove',
       },
-    },
-    promo: {
-      proTip: 'Pro Tip',
-      title: 'Curious about your focus levels?',
-      description:
-        'Run the same ASRS v1.1 screener clinicians use and get instant guidance on where to start.',
-      button: 'Start Free Assessment',
-    },
-    sounds: {
-      insects: 'Insects',
-      rain: 'Rain',
-      'summer-night': 'Summer Night',
-      thunder: 'Thunder',
-      waves: 'Waves',
-      'white-noise': 'White Noise',
-      wind: 'Wind',
-      brown: 'Brown Noise',
-      pink: 'Pink Noise',
-      white: 'White Noise',
-    },
-    seo: {
-      title: 'How this ADHD Dashboard helps you focus',
-      sonicShield: {
-        title: '1. White Noise: Custom Soundscapes',
-        content:
-          'For many ADHD brains, silence is actually distracting. Every small sound becomes a potential interruption. Our White Noise player provides a range of "auditory masking" options including White Noise, Rain, Insects, Summer Night, Thunder, Waves, and Wind. These create a consistent sound blanket that covers up distracting background noises, reducing the cognitive load required to filter them out.',
+
+      promo: {
+        proTip: 'Pro Tip',
+        title: 'Curious about your focus levels?',
+        description:
+          'Run the same ASRS v1.1 screener clinicians use and get instant guidance on where to start.',
+        button: 'Start Free Assessment',
       },
-      pomodoro: {
-        title: '2. Focus Timer: Conquer Time Blindness',
-        content:
-          '"Time Blindness" is a common struggle where the passage of time feels abstract. The Focus Timer externalizes time, making it visible and concrete. Working in short bursts (like 25 minutes) with guaranteed breaks helps maintain dopamine levels and prevents burnout.',
-      },
-      taskBreaker: {
-        title: '3. AI Task Breaker: Reduce Executive Dysfunction',
-        content:
-          'Large tasks can feel impossible, leading to "Executive Dysfunction" or paralysis. The AI Task Breaker helps you smash big projects into tiny, non-threatening steps. Seeing a concrete path forward reduces anxiety and makes it easier to just start.',
-      },
-      scratchpad: {
-        title: '4. Attention Hub: Offload Working Memory',
-        content:
-          'ADHD brains often have "leaky" working memory. The Attention Hub serves as an external holding bay for random thoughts, ideas, or reminders that pop up while you\'re working. Instead of switching tasks to address them (and losing your flow), you capture them here and keep going.',
-      },
-      dopamineMenu: {
-        title: '5. Dopamine Menu: Healthy Stimulation',
-        content:
-          'When energy dips, the ADHD brain craves stimulation, often leading to doom-scrolling. The Dopamine Menu provides a curated list of quick, healthy dopamine hits (like "Drink Water" or "Stretch") to reboot your brain without getting sucked into a distraction vortex.',
-      },
-      faq: {
-        title: 'Frequently Asked Questions',
-        items: [
-          {
-            q: 'Is this focus dashboard free?',
-            a: 'Yes, Focus Lab is completely free to use. It runs entirely in your browser.',
-          },
-          {
-            q: 'Do I need to download anything?',
-            a: 'No downloads required. It works on any modern web browser (Chrome, Safari, Firefox, Edge) on both desktop and mobile.',
-          },
-        ],
-      },
-    },
-  },
-  test: {
-    title: 'Free Adult ADHD Self-Screening',
-    subtitle: 'ASRS-v1.1',
-    description:
-      'Answer 18 research-backed questions to understand how closely your experiences align with adult ADHD patterns.',
-    start: 'Start Assessment →',
-    meta: '2 minutes · No email required',
-    questions: [
-      {
-        id: 1,
-        text: 'How often do you have trouble <strong>wrapping up the final details</strong> of a project, once the <strong>challenging parts</strong> have been done?',
-        isPartA: true,
-        hints: [
-          'My work is usually buttoned up',
-          'Only if I’m exhausted or stressed',
-          'Occasionally a loose end slips by',
-          'I often need reminders to finish the last bits',
-          'I rarely feel a project is truly finished',
-        ],
-      },
-      {
-        id: 2,
-        text: 'How often do you have difficulty <strong>getting things in order</strong> when you have to do a task that requires <strong>organization</strong>?',
-        isPartA: true,
-        hints: [
-          'Lists and systems come naturally',
-          'Only complex projects throw me off',
-          'I have to pause to figure out the plan',
-          'Most tasks feel scattered without help',
-          'I feel overwhelmed just thinking about organizing',
-        ],
-      },
-      {
-        id: 3,
-        text: 'How often do you have problems <strong>remembering appointments or obligations</strong>?',
-        isPartA: true,
-        hints: [
-          'My calendar is always up to date',
-          'Rarely—I might forget a recurring task',
-          'I need frequent reminders to stay on track',
-          'Missed appointments happen a lot',
-          'I forget commitments almost as soon as I make them',
-        ],
-      },
-      {
-        id: 4,
-        text: 'When you have a task that requires <strong>a lot of thought</strong>, how often do you <strong>avoid or delay getting started</strong>?',
-        isPartA: true,
-        hints: [
-          'I dive right in',
-          'Only when the task is unclear',
-          'I procrastinate unless there’s pressure',
-          'The start line feels like a wall most days',
-          'I routinely miss deadlines because I avoid the task',
-        ],
-      },
-      {
-        id: 5,
-        text: 'How often do you <strong>fidget or squirm</strong> with your hands or feet when you have to sit down for a long time?',
-        isPartA: true,
-        hints: [
-          'Sitting still isn’t a problem',
-          'Only during very long meetings',
-          'I shift around after a short while',
-          'I’m constantly tapping or bouncing',
-          'I can’t stay seated without moving',
-        ],
-      },
-      {
-        id: 6,
-        text: 'How often do you feel <strong>overly active</strong> and compelled to do things, like you were <strong>driven by a motor</strong>?',
-        isPartA: true,
-        hints: [
-          'My energy is steady and manageable',
-          'I get revved up only on high-pressure days',
-          'I feel “on” more often than not',
-          'It’s hard to slow down even when I try',
-          'I feel like I’m constantly running inside',
-        ],
-      },
-      {
-        id: 7,
-        text: 'How often do you make <strong>careless mistakes</strong> when you have to work on a <strong>boring or difficult project</strong>?',
-        isPartA: false,
-        hints: [
-          'My work is usually error-free',
-          'Only when I’m extremely tired',
-          'I occasionally miss small details',
-          'I often have to double-check my work',
-          'I make mistakes no matter how hard I try',
-        ],
-      },
-      {
-        id: 8,
-        text: 'How often do you have difficulty <strong>keeping your attention</strong> when you are doing <strong>boring or repetitive work</strong>?',
-        isPartA: false,
-        hints: [
-          'I stay focused regardless of the task',
-          'Only mind-numbing tasks lose me',
-          'I drift off unless I refocus often',
-          'I struggle to finish repetitive work',
-          'I can barely stick with repetitive tasks at all',
-        ],
-      },
-      {
-        id: 9,
-        text: 'How often do you have difficulty <strong>concentrating on what people say</strong> to you, even when they are speaking to you directly?',
-        isPartA: false,
-        hints: [
-          'I stay engaged when someone speaks',
-          'Only in very noisy environments',
-          'My mind wanders in longer conversations',
-          'I miss key points unless I take notes',
-          'It feels impossible to stay tuned in',
-        ],
-      },
-      {
-        id: 10,
-        text: 'How often do you <strong>misplace or have difficulty finding things</strong> at home or at work?',
-        isPartA: false,
-        hints: [
-          'Everything has a place and stays there',
-          'Only occasional slip-ups',
-          'I lose track unless I tidy constantly',
-          'I’m always searching for essentials',
-          'Items vanish the moment I set them down',
-        ],
-      },
-      {
-        id: 11,
-        text: 'How often are you <strong>distracted by activity or noise</strong> around you?',
-        isPartA: false,
-        hints: [
-          'Background noise rarely fazes me',
-          'Only sudden or loud sounds derail me',
-          'I need headphones to stay on task',
-          'Most environments pull my focus away',
-          'Every little sound feels disruptive',
-        ],
-      },
-      {
-        id: 12,
-        text: 'How often do you <strong>leave your seat</strong> in meetings or other situations in which you are expected to remain seated?',
-        isPartA: false,
-        hints: [
-          'I stay seated as expected',
-          'Only in extra-long sessions',
-          'I excuse myself once in a while',
-          'I frequently need to stand or walk',
-          'Sitting through a meeting feels impossible',
-        ],
-      },
-      {
-        id: 13,
-        text: 'How often do you feel <strong>restless or fidgety</strong>?',
-        isPartA: false,
-        hints: [
-          'I feel calm most of the time',
-          'Only during stressful weeks',
-          'There’s a mild buzz in my body',
-          'Restlessness is my default state',
-          'I rarely feel physically settled',
-        ],
-      },
-      {
-        id: 14,
-        text: 'How often do you have difficulty <strong>unwinding and relaxing</strong> when you have time to yourself?',
-        isPartA: false,
-        hints: [
-          'Downtime actually relaxes me',
-          'It takes a few minutes to settle',
-          'I need rituals to shut my brain off',
-          'Relaxing feels like another task',
-          'I can’t switch off, even alone',
-        ],
-      },
-      {
-        id: 15,
-        text: 'How often do you find yourself <strong>talking too much</strong> when you are in social situations?',
-        isPartA: false,
-        hints: [
-          'I match the pacing of the room',
-          'Only when I’m extra excited',
-          'Sometimes I realize I’m rambling',
-          'Friends gently ask me to slow down',
-          'I dominate conversations without meaning to',
-        ],
-      },
-      {
-        id: 16,
-        text: "When you're in a conversation, how often do you find yourself <strong>finishing the sentences</strong> of the people you are talking to, before they can finish them themselves?",
-        isPartA: false,
-        hints: [
-          'I rarely jump in prematurely',
-          'Only with close friends or family',
-          'Sometimes I blurt the ending for others',
-          'I do it enough that people notice',
-          'I constantly finish people’s sentences',
-        ],
-      },
-      {
-        id: 17,
-        text: 'How often do you have difficulty <strong>waiting your turn</strong> in situations when turn taking is required?',
-        isPartA: false,
-        hints: [
-          'Lines and queues don’t bother me',
-          'Only when I’m in a major rush',
-          'I get antsy unless I’m distracted',
-          'Waiting my turn feels uncomfortable',
-          'I have to move ahead or tap out somehow',
-        ],
-      },
-      {
-        id: 18,
-        text: 'How often do you <strong>interrupt others</strong> when they are busy?',
-        isPartA: false,
-        hints: [
-          'I respect people’s space and focus',
-          'Only if I urgently need something',
-          'Sometimes I pop in mid-task',
-          'Interrupting happens most days',
-          'I constantly cut people off without meaning to',
-        ],
-      },
-    ],
-    options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Very Often'],
-    common: {
-      partA: 'Part A',
-      partB: 'Part B',
-      question: 'Question',
-      of: 'of',
-      hideHints: 'Hide Hints',
-      showHints: 'Show Hints',
-      soundOn: 'Sound on',
-      soundOff: 'Sound off',
-      previous: 'Previous',
-    },
-    break: {
-      title: '🧠 Part A Complete!',
-      description:
-        "Great job. You've finished the core screening questions. Take a deep breath before the final stretch.",
-      button: 'Continue to Part B →',
-    },
-    analyzing: {
-      messages: ['Analyzing responses...', 'Mapping neuro-profile...', 'Finalizing score...'],
-      subtitle: 'We’ll surface your ASRS insights in just a moment.',
-    },
-    results: {
-      status: 'Status',
-      totalScore: 'Total Score',
-      outOf: 'out of 72',
-      buckets: {
-        low: {
-          label: 'Unlikely to have ADHD',
-          description: 'Your symptoms are within the typical range',
+      seo: {
+        title: 'How this ADHD Dashboard helps you focus',
+        sonicShield: {
+          title: '1. White Noise: Custom Soundscapes',
+          content:
+            'For many ADHD brains, silence is actually distracting. Every small sound becomes a potential interruption. Our White Noise player provides a range of "auditory masking" options including White Noise, Rain, Insects, Summer Night, Thunder, Waves, and Wind. These create a consistent sound blanket that covers up distracting background noises, reducing the cognitive load required to filter them out.',
         },
-        medium: {
-          label: 'Likely to have ADHD',
-          description: 'You are showing signs that may impact your daily life',
+        pomodoro: {
+          title: '2. Focus Timer: Conquer Time Blindness',
+          content:
+            '"Time Blindness" is a common struggle where the passage of time feels abstract. The Focus Timer externalizes time, making it visible and concrete. Working in short bursts (like 25 minutes) with guaranteed breaks helps maintain dopamine levels and prevents burnout.',
         },
-        high: {
-          label: 'Highly Consistent with ADHD',
-          description: 'Your symptoms are significant. We recommend consulting a professional',
+        taskBreaker: {
+          title: '3. AI Task Breaker: Reduce Executive Dysfunction',
+          content:
+            'Large tasks can feel impossible, leading to "Executive Dysfunction" or paralysis. The AI Task Breaker helps you smash big projects into tiny, non-threatening steps. Seeing a concrete path forward reduces anxiety and makes it easier to just start.',
         },
-      },
-      cta: {
-        title: 'Ready to get in the zone? Access your personal focus dashboard.',
-        button: 'Enter Focus Lab Dashboard →',
-        retake: 'Retake Test',
-        guide: '📚 Recommended: Quiet Fidget Toy Guide',
-        home: 'Back to Home',
-      },
-    },
-    guide: {
-      accuracy: {
-        title: 'How to get accurate results?',
-        text: "Please answer based on your experiences over the past 6 months. Try to avoid answering based on how you 'wish' you were.",
-      },
-      scoring: {
-        title: 'Scoring Guide',
-        text: 'This test uses the ASRS v1.1 logic. Part A (first 6 questions) is the primary screener.',
-      },
-      nextSteps: {
-        title: 'What if the risk is high?',
-        text: 'This is not a diagnosis. We recommend printing your results and sharing them with a licensed professional.',
-      },
-      privacy: {
-        title: 'Data Privacy',
-        text: 'Your answers are processed locally in your browser. No personal data leaves your device.',
-      },
-    },
-    disclaimer:
-      'Based on the Adult ADHD Self-Report Scale (ASRS-v1.1) Symptom Checklist. This self-screening is for educational purposes only and is not a medical diagnosis. Material adapted from World Health Organization standards.',
-    copyright:
-      'ASRS-v1.1 Copyright © New York University and Ronald C. Kessler, PhD. All rights reserved. Used with permission.',
-  },
-  footer: {
-    rights: 'All rights reserved.',
-    quickLinks: 'Quick Links',
-  },
-  common: {
-    loading: 'Loading...',
-    error: 'Something went wrong',
-  },
-  tools: {
-    dopamine: {
-      metaTitle: 'Dopamine Menu Spinner',
-      metaDescription:
-        'Spin a wheel of science-backed micro-activities whenever your ADHD brain craves dopamine.',
-      eyebrow: 'Micro Tool',
-      title: 'The Dopamine Menu',
-      subtitle: "Don't doom-scroll. Spin the wheel.",
-      question: 'How much time/energy do you have?',
-      nowServingEyebrow: 'Now Serving',
-      resultEyebrow: 'Your pull',
-      spinButton: 'Give me a hit',
-      emptyHistory: 'Spin the wheel to log your dopamine hits.',
-      energyModes: {
-        low: {
-          label: 'Low',
-          selectorHint: 'Quick Hit (5 mins)',
-          description: 'Micro hits to re-engage your brain without spending a ton of energy.',
-          activities: [
-            'Drink water',
-            'Stretch it out',
-            '5 jumping jacks',
-            'Pet the cat',
-            'Deep belly breaths',
-            'Sip a hot drink',
+        scratchpad: {
+          title: '4. Attention Hub: Offload Working Memory',
+          content:
+            'ADHD brains often have "leaky" working memory. The Attention Hub serves as an external holding bay for random thoughts, ideas, or reminders that pop up while you\'re working. Instead of switching tasks to address them (and losing your flow), you capture them here and keep going.',
+        },
+        dopamineMenu: {
+          title: '5. Dopamine Menu: Healthy Stimulation',
+          content:
+            'When energy dips, the ADHD brain craves stimulation, often leading to doom-scrolling. The Dopamine Menu provides a curated list of quick, healthy dopamine hits (like "Drink Water" or "Stretch") to reboot your brain without getting sucked into a distraction vortex.',
+        },
+        faq: {
+          title: 'Frequently Asked Questions',
+          items: [
+            {
+              q: 'Is this focus dashboard free?',
+              a: 'Yes, Focus Lab is completely free to use. It runs entirely in your browser.',
+            },
+            {
+              q: 'Do I need to download anything?',
+              a: 'No downloads required. It works on any modern web browser (Chrome, Safari, Firefox, Edge) on both desktop and mobile.',
+            },
           ],
-        },
-        medium: {
-          label: 'Medium',
-          selectorHint: 'Sensory Reset',
-          description: 'Regulate your nervous system with tactile or sensory boosts.',
-          activities: [
-            'Cold water on your face',
-            'Wrap up in a weighted blanket',
-            'Blast your hype playlist',
-            'Diffuse a citrus scent',
-          ],
-        },
-        high: {
-          label: 'High',
-          selectorHint: 'Deep Dive (30+ mins)',
-          description: 'Lean into the hyperfocus with immersive, soul-filling work.',
-          activities: [
-            'Read a chapter',
-            'Sketch or draw',
-            'Walk outside',
-            'Tidy one zone',
-            'Cook something cozy',
-          ],
-        },
-      },
-    },
-    noise: {
-      metaTitle: 'Deep Focus Noise Generator',
-      metaDescription: 'Loop brown, pink, or white noise to mask distractions and enter deep work.',
-      eyebrow: 'Deep Work Utility',
-      title: 'Deep Focus Noise Generator',
-      subtitle: 'Select a color frequency to mask distractions.',
-      nowPlayingEyebrow: 'Now Playing',
-      colorLabel: 'Color',
-      whyItWorksEyebrow: 'Why it works',
-      whyItWorksDescription:
-        "Brown noise (low frequency) is often preferred by ADHD brains because it dampens the 'internal monologue' and creates a consistent sound blanket, unlike white noise which can be too harsh.",
-      controls: {
-        playLabel: 'Play noise',
-        pauseLabel: 'Pause noise',
-        volumeLabel: 'Volume',
-      },
-      playerLabel: 'Focus noise player',
-      tracks: {
-        brown: {
-          label: 'Brown Noise',
-          sublabel: 'Deep rumble for silencing mental chatter',
-        },
-        pink: {
-          label: 'Pink Noise',
-          sublabel: 'Balanced rain-like bed for gentle focus',
-        },
-        white: {
-          label: 'White Noise',
-          sublabel: 'Bright static to mask office conversations',
         },
       },
     },
@@ -779,6 +400,397 @@ export const dictionary = {
         "We've sent a confirmation link to {email}. Click the link to verify your account and start syncing.",
       gotIt: 'Got it',
       error: 'Authentication failed',
+    },
+    test: {
+      title: 'Free Adult ADHD Self-Screening',
+      subtitle: 'ASRS-v1.1',
+      description:
+        'Answer 18 research-backed questions to understand how closely your experiences align with adult ADHD patterns.',
+      start: 'Start Assessment →',
+      meta: '2 minutes · No email required',
+      questions: [
+        {
+          id: 1,
+          text: 'How often do you have trouble <strong>wrapping up the final details</strong> of a project, once the <strong>challenging parts</strong> have been done?',
+          isPartA: true,
+          hints: [
+            'My work is usually buttoned up',
+            'Only if I’m exhausted or stressed',
+            'Occasionally a loose end slips by',
+            'I often need reminders to finish the last bits',
+            'I rarely feel a project is truly finished',
+          ],
+        },
+        {
+          id: 2,
+          text: 'How often do you have difficulty <strong>getting things in order</strong> when you have to do a task that requires <strong>organization</strong>?',
+          isPartA: true,
+          hints: [
+            'Lists and systems come naturally',
+            'Only complex projects throw me off',
+            'I have to pause to figure out the plan',
+            'Most tasks feel scattered without help',
+            'I feel overwhelmed just thinking about organizing',
+          ],
+        },
+        {
+          id: 3,
+          text: 'How often do you have problems <strong>remembering appointments or obligations</strong>?',
+          isPartA: true,
+          hints: [
+            'My calendar is always up to date',
+            'Rarely—I might forget a recurring task',
+            'I need frequent reminders to stay on track',
+            'Missed appointments happen a lot',
+            'I forget commitments almost as soon as I make them',
+          ],
+        },
+        {
+          id: 4,
+          text: 'When you have a task that requires <strong>a lot of thought</strong>, how often do you <strong>avoid or delay getting started</strong>?',
+          isPartA: true,
+          hints: [
+            'I dive right in',
+            'Only when the task is unclear',
+            'I procrastinate unless there’s pressure',
+            'The start line feels like a wall most days',
+            'I routinely miss deadlines because I avoid the task',
+          ],
+        },
+        {
+          id: 5,
+          text: 'How often do you <strong>fidget or squirm</strong> with your hands or feet when you have to sit down for a long time?',
+          isPartA: true,
+          hints: [
+            'Sitting still isn’t a problem',
+            'Only during very long meetings',
+            'I shift around after a short while',
+            'I’m constantly tapping or bouncing',
+            'I can’t stay seated without moving',
+          ],
+        },
+        {
+          id: 6,
+          text: 'How often do you feel <strong>overly active</strong> and compelled to do things, like you were <strong>driven by a motor</strong>?',
+          isPartA: true,
+          hints: [
+            'My energy is steady and manageable',
+            'I get revved up only on high-pressure days',
+            'I feel “on” more often than not',
+            'It’s hard to slow down even when I try',
+            'I feel like I’m constantly running inside',
+          ],
+        },
+        {
+          id: 7,
+          text: 'How often do you make <strong>careless mistakes</strong> when you have to work on a <strong>boring or difficult project</strong>?',
+          isPartA: false,
+          hints: [
+            'My work is usually error-free',
+            'Only when I’m extremely tired',
+            'I occasionally miss small details',
+            'I often have to double-check my work',
+            'I make mistakes no matter how hard I try',
+          ],
+        },
+        {
+          id: 8,
+          text: 'How often do you have difficulty <strong>keeping your attention</strong> when you are doing <strong>boring or repetitive work</strong>?',
+          isPartA: false,
+          hints: [
+            'I stay focused regardless of the task',
+            'Only mind-numbing tasks lose me',
+            'I drift off unless I refocus often',
+            'I struggle to finish repetitive work',
+            'I can barely stick with repetitive tasks at all',
+          ],
+        },
+        {
+          id: 9,
+          text: 'How often do you have difficulty <strong>concentrating on what people say</strong> to you, even when they are speaking to you directly?',
+          isPartA: false,
+          hints: [
+            'I stay engaged when someone speaks',
+            'Only in very noisy environments',
+            'My mind wanders in longer conversations',
+            'I miss key points unless I take notes',
+            'It feels impossible to stay tuned in',
+          ],
+        },
+        {
+          id: 10,
+          text: 'How often do you <strong>misplace or have difficulty finding things</strong> at home or at work?',
+          isPartA: false,
+          hints: [
+            'Everything has a place and stays there',
+            'Only occasional slip-ups',
+            'I lose track unless I tidy constantly',
+            'I’m always searching for essentials',
+            'Items vanish the moment I set them down',
+          ],
+        },
+        {
+          id: 11,
+          text: 'How often are you <strong>distracted by activity or noise</strong> around you?',
+          isPartA: false,
+          hints: [
+            'Background noise rarely fazes me',
+            'Only sudden or loud sounds derail me',
+            'I need headphones to stay on task',
+            'Most environments pull my focus away',
+            'Every little sound feels disruptive',
+          ],
+        },
+        {
+          id: 12,
+          text: 'How often do you <strong>leave your seat</strong> in meetings or other situations in which you are expected to remain seated?',
+          isPartA: false,
+          hints: [
+            'I stay seated as expected',
+            'Only in extra-long sessions',
+            'I excuse myself once in a while',
+            'I frequently need to stand or walk',
+            'Sitting through a meeting feels impossible',
+          ],
+        },
+        {
+          id: 13,
+          text: 'How often do you feel <strong>restless or fidgety</strong>?',
+          isPartA: false,
+          hints: [
+            'I feel calm most of the time',
+            'Only during stressful weeks',
+            'There’s a mild buzz in my body',
+            'Restlessness is my default state',
+            'I rarely feel physically settled',
+          ],
+        },
+        {
+          id: 14,
+          text: 'How often do you have difficulty <strong>unwinding and relaxing</strong> when you have time to yourself?',
+          isPartA: false,
+          hints: [
+            'Downtime actually relaxes me',
+            'It takes a few minutes to settle',
+            'I need rituals to shut my brain off',
+            'Relaxing feels like another task',
+            'I can’t switch off, even alone',
+          ],
+        },
+        {
+          id: 15,
+          text: 'How often do you find yourself <strong>talking too much</strong> when you are in social situations?',
+          isPartA: false,
+          hints: [
+            'I match the pacing of the room',
+            'Only when I’m extra excited',
+            'Sometimes I realize I’m rambling',
+            'Friends gently ask me to slow down',
+            'I dominate conversations without meaning to',
+          ],
+        },
+        {
+          id: 16,
+          text: "When you're in a conversation, how often do you find yourself <strong>finishing the sentences</strong> of the people you are talking to, before they can finish them themselves?",
+          isPartA: false,
+          hints: [
+            'I rarely jump in prematurely',
+            'Only with close friends or family',
+            'Sometimes I blurt the ending for others',
+            'I do it enough that people notice',
+            'I constantly finish people’s sentences',
+          ],
+        },
+        {
+          id: 17,
+          text: 'How often do you have difficulty <strong>waiting your turn</strong> in situations when turn taking is required?',
+          isPartA: false,
+          hints: [
+            'Lines and queues don’t bother me',
+            'Only when I’m in a major rush',
+            'I get antsy unless I’m distracted',
+            'Waiting my turn feels uncomfortable',
+            'I have to move ahead or tap out somehow',
+          ],
+        },
+        {
+          id: 18,
+          text: 'How often do you <strong>interrupt others</strong> when they are busy?',
+          isPartA: false,
+          hints: [
+            'I respect people’s space and focus',
+            'Only if I urgently need something',
+            'Sometimes I pop in mid-task',
+            'Interrupting happens most days',
+            'I constantly cut people off without meaning to',
+          ],
+        },
+      ],
+      options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Very Often'],
+      common: {
+        partA: 'Part A',
+        partB: 'Part B',
+        question: 'Question',
+        of: 'of',
+        hideHints: 'Hide Hints',
+        showHints: 'Show Hints',
+        soundOn: 'Sound on',
+        soundOff: 'Sound off',
+        previous: 'Previous',
+      },
+      break: {
+        title: '🧠 Part A Complete!',
+        description:
+          "Great job. You've finished the core screening questions. Take a deep breath before the final stretch.",
+        button: 'Continue to Part B →',
+      },
+      analyzing: {
+        messages: ['Analyzing responses...', 'Mapping neuro-profile...', 'Finalizing score...'],
+        subtitle: 'We’ll surface your ASRS insights in just a moment.',
+      },
+      results: {
+        status: 'Status',
+        totalScore: 'Total Score',
+        outOf: 'out of 72',
+        buckets: {
+          low: {
+            label: 'Unlikely to have ADHD',
+            description: 'Your symptoms are within the typical range',
+          },
+          medium: {
+            label: 'Likely to have ADHD',
+            description: 'You are showing signs that may impact your daily life',
+          },
+          high: {
+            label: 'Highly Consistent with ADHD',
+            description: 'Your symptoms are significant. We recommend consulting a professional',
+          },
+        },
+        cta: {
+          title: 'Ready to get in the zone? Access your personal focus dashboard.',
+          button: 'Enter Focus Lab Dashboard →',
+          retake: 'Retake Test',
+          guide: '📚 Recommended: Quiet Fidget Toy Guide',
+          home: 'Back to Home',
+        },
+      },
+      guide: {
+        accuracy: {
+          title: 'How to get accurate results?',
+          text: "Please answer based on your experiences over the past 6 months. Try to avoid answering based on how you 'wish' you were.",
+        },
+        scoring: {
+          title: 'Scoring Guide',
+          text: 'This test uses the ASRS v1.1 logic. Part A (first 6 questions) is the primary screener.',
+        },
+        nextSteps: {
+          title: 'What if the risk is high?',
+          text: 'This is not a diagnosis. We recommend printing your results and sharing them with a licensed professional.',
+        },
+        privacy: {
+          title: 'Data Privacy',
+          text: 'Your answers are processed locally in your browser. No personal data leaves your device.',
+        },
+      },
+      disclaimer:
+        'Based on the Adult ADHD Self-Report Scale (ASRS-v1.1) Symptom Checklist. This self-screening is for educational purposes only and is not a medical diagnosis. Material adapted from World Health Organization standards.',
+      copyright:
+        'ASRS-v1.1 Copyright © New York University and Ronald C. Kessler, PhD. All rights reserved. Used with permission.',
+    },
+    footer: {
+      rights: 'All rights reserved.',
+      quickLinks: 'Quick Links',
+    },
+    common: {
+      loading: 'Loading...',
+      error: 'Something went wrong',
+    },
+
+    tools: {
+      dopamine: {
+        metaTitle: 'Dopamine Menu Spinner',
+        metaDescription:
+          'Spin a wheel of science-backed micro-activities whenever your ADHD brain craves dopamine.',
+        eyebrow: 'Micro Tool',
+        title: 'The Dopamine Menu',
+        subtitle: "Don't doom-scroll. Spin the wheel.",
+        question: 'How much time/energy do you have?',
+        nowServingEyebrow: 'Now Serving',
+        resultEyebrow: 'Your pull',
+        spinButton: 'Give me a hit',
+        emptyHistory: 'Spin the wheel to log your dopamine hits.',
+        energyModes: {
+          low: {
+            label: 'Low',
+            selectorHint: 'Quick Hit (5 mins)',
+            description: 'Micro hits to re-engage your brain without spending a ton of energy.',
+            activities: [
+              'Drink water',
+              'Stretch it out',
+              '5 jumping jacks',
+              'Pet the cat',
+              'Deep belly breaths',
+              'Sip a hot drink',
+            ],
+          },
+          medium: {
+            label: 'Medium',
+            selectorHint: 'Sensory Reset',
+            description: 'Regulate your nervous system with tactile or sensory boosts.',
+            activities: [
+              'Cold water on your face',
+              'Wrap up in a weighted blanket',
+              'Blast your hype playlist',
+              'Diffuse a citrus scent',
+            ],
+          },
+          high: {
+            label: 'High',
+            selectorHint: 'Deep Dive (30+ mins)',
+            description: 'Lean into the hyperfocus with immersive, soul-filling work.',
+            activities: [
+              'Read a chapter',
+              'Sketch or draw',
+              'Walk outside',
+              'Tidy one zone',
+              'Cook something cozy',
+            ],
+          },
+        },
+      },
+      noise: {
+        metaTitle: 'Deep Focus Noise Generator',
+        metaDescription:
+          'Loop brown, pink, or white noise to mask distractions and enter deep work.',
+        eyebrow: 'Deep Work Utility',
+        title: 'Deep Focus Noise Generator',
+        subtitle: 'Select a color frequency to mask distractions.',
+        nowPlayingEyebrow: 'Now Playing',
+        colorLabel: 'Color',
+        whyItWorksEyebrow: 'Why it works',
+        whyItWorksDescription:
+          "Brown noise (low frequency) is often preferred by ADHD brains because it dampens the 'internal monologue' and creates a consistent sound blanket, unlike white noise which can be too harsh.",
+        controls: {
+          playLabel: 'Play noise',
+          pauseLabel: 'Pause noise',
+          volumeLabel: 'Volume',
+        },
+        playerLabel: 'Focus noise player',
+        tracks: {
+          brown: {
+            label: 'Brown Noise',
+            sublabel: 'Deep rumble for silencing mental chatter',
+          },
+          pink: {
+            label: 'Pink Noise',
+            sublabel: 'Balanced rain-like bed for gentle focus',
+          },
+          white: {
+            label: 'White Noise',
+            sublabel: 'Bright static to mask office conversations',
+          },
+        },
+      },
     },
     userMenu: {
       signedInAs: 'Signed in as',
@@ -930,6 +942,18 @@ export const dictionary = {
       description: '别担心，可以回到首页继续探索。',
       cta: '返回首页',
     },
+    sounds: {
+      insects: '昆虫',
+      rain: '雨声',
+      'summer-night': '夏夜',
+      thunder: '雷声',
+      waves: '海浪',
+      'white-noise': '白噪音',
+      wind: '风声',
+      brown: '棕噪音',
+      pink: '粉噪音',
+      white: '白噪音',
+    },
     focusLab: {
       header: {
         eyebrow: 'Focus Lab',
@@ -941,48 +965,14 @@ export const dictionary = {
       stats: {
         dailyGoal: '每日目标',
       },
+      sidebar: {
+        focusTools: '专注工具',
+        proMember: 'Pro 会员',
+        freePlan: '免费版',
+      },
       loading: {
         title: '正在加载 Focus Lab',
         description: '正在搭建你的无干扰工作台...',
-      },
-      controls: {
-        resetModal: {
-          title: '重置布局？',
-          description: '您的数据（任务、便签等）将被保留，但卡片位置将被重置。',
-          confirm: '重置',
-          cancel: '取消',
-        },
-        resetConfirm: '此操作将恢复默认布局，您的自定义更改将会丢失。',
-        focusMode: '专注模式',
-        exitFocus: '退出专注',
-        resetLayout: '重置布局',
-        customizeLayout: '更改布局',
-        widgetVisibility: '显示/隐藏卡片',
-        tip: '拖动标题行来改变布局。点击标题行来隐藏或者显示这个卡片。拖动卡片右下角来改变卡片大小。',
-        dismissTip: '关闭提示',
-        tipToggle: {
-          show: '显示提示',
-          hide: '收起提示',
-        },
-        joinGroup: '加入 Focus Lab 微信群',
-        groupModal: {
-          title: '加入 NeuroHacks Lab 微信群',
-          description: '微信扫码进群，与其他 Focus Lab 用户一同交流 ADHD 效率工具。',
-          close: '关闭',
-          qrAlt: 'NeuroHacks 微信交流群二维码',
-        },
-        delete: {
-          confirm: '删除此卡片？',
-          desc: '您可以通过点击顶部的“重置布局”来恢复它。',
-          cancel: '取消',
-          confirmBtn: '删除',
-        },
-      },
-      promo: {
-        proTip: '专业建议',
-        title: '想了解你的专注力水平？',
-        description: '使用临床医生使用的 ASRS v1.1 筛查工具，即刻获取改善建议。',
-        button: '开始免费评估',
       },
       widgets: {
         sonicShield: {
@@ -1000,6 +990,7 @@ export const dictionary = {
             close: '关闭',
             on: '开启',
             off: '关闭',
+            hideHeaders: '隐藏卡片标题',
           },
           upgradeCard: {
             title: '升级计划',
@@ -1028,6 +1019,8 @@ export const dictionary = {
           resume: '继续',
           endSession: '结束专注',
           done: '又完成了一次专注',
+          ready: '准备开始',
+          recording: '正在记录',
           decisionPrompt: {
             continueFocus: '继续专注',
             plusFive: '再来5m',
@@ -1041,7 +1034,6 @@ export const dictionary = {
             showTimer: '返回倒计时显示',
           },
         },
-
         taskBreaker: {
           title: 'AI 任务拆解',
           subtitle:
@@ -1080,6 +1072,7 @@ export const dictionary = {
           spinning: '旋转中...',
           ready: '准备抽卡',
           button: '给我多巴胺',
+          spinButton: '给我多巴胺',
           addPlaceholder: '添加选项...',
           add: '添加',
           accessibility: {
@@ -1093,6 +1086,13 @@ export const dictionary = {
             '深呼吸 🌬️',
             '摸摸猫/狗 🐶',
           ],
+          needBoost: '需要动力？',
+          needBoostDesc: '随机获取一个简单的快乐。',
+          getDopamine: '获取多巴胺',
+          spinAgain: '再抽一次',
+          done: '完成',
+          edit: '编辑选项',
+          back: '返回',
         },
         todo: {
           title: '今日待办',
@@ -1103,20 +1103,66 @@ export const dictionary = {
           focusTooltip: '专注此任务',
         },
       },
+      promo: {
+        proTip: '专业提示',
+        title: 'ADHD 专注力提升',
+        description: '参加我们的免费 ADHD 测试，了解您独特的认知特征并获取个性化策略。',
+        button: '开始免费测试',
+      },
       errors: {
         migrationFailed: '迁移失败，请重试。',
       },
-      sounds: {
-        insects: '昆虫',
-        rain: '雨声',
-        'summer-night': '夏夜',
-        thunder: '雷声',
-        waves: '海浪',
-        'white-noise': '白噪音',
-        wind: '风声',
-        brown: '棕噪音',
-        pink: '粉噪音',
-        white: '白噪音',
+      settings: {
+        title: '设置',
+        darkMode: '深色模式',
+        notifications: '通知提醒',
+        soundEffects: '音效',
+        themeColor: '主题色',
+        close: '关闭',
+        on: '开启',
+        off: '关闭',
+        hideHeaders: '隐藏卡片标题',
+      },
+      upgradeCard: {
+        title: '升级计划',
+        subtitle: '对比 Free 与 Pro 版差异',
+        button: '查看详情',
+      },
+      controls: {
+        resetModal: {
+          title: '重置布局？',
+          description: '您的数据（任务、便签等）将被保留，但卡片位置将被重置。',
+          confirm: '重置',
+          cancel: '取消',
+        },
+        resetConfirm: '此操作将恢复默认布局，您的自定义更改将会丢失。',
+        focusMode: '专注模式',
+        exitFocus: '退出专注',
+        resetLayout: '重置布局',
+        customizeLayout: '更改布局',
+        widgetVisibility: '显示/隐藏卡片',
+        tip: '拖动标题行来改变布局。点击标题行来隐藏或者显示这个卡片。拖动卡片右下角来改变卡片大小。',
+        dismissTip: '关闭提示',
+        tipToggle: {
+          show: '显示提示',
+          hide: '收起提示',
+        },
+        joinGroup: '加入 Focus Lab 微信群',
+      },
+      common: {
+        cancel: '取消',
+      },
+      groupModal: {
+        title: '加入 NeuroHacks Lab 微信群',
+        description: '微信扫码进群，与其他 Focus Lab 用户一同交流 ADHD 效率工具。',
+        close: '关闭',
+        qrAlt: 'NeuroHacks 微信交流群二维码',
+      },
+      delete: {
+        confirm: '删除此卡片？',
+        desc: '您可以通过点击顶部的“重置布局”来恢复它。',
+        cancel: '取消',
+        confirmBtn: '删除',
       },
       seo: {
         title: '这个 ADHD 仪表盘如何帮助你专注',
@@ -1467,6 +1513,25 @@ export const dictionary = {
       loading: '加载中...',
       error: '出错了',
     },
+    auth: {
+      loginTitle: '登录以查看统计数据',
+      signupTitle: '创建账户',
+      loginDesc: '请登录以查看您的统计数据，并将您的专注会话同步到云端，实现多设备共享。',
+      signupDesc: '注册账户，永久保存您的数据。',
+      email: '邮箱',
+      password: '密码',
+      signIn: '登录',
+      signUp: '注册',
+      processing: '处理中...',
+      orContinueWith: '其他登录方式',
+      guestContinue: '以游客身份继续',
+      haveAccount: '已有账户？登录',
+      noAccount: '还没有账户？注册',
+      checkEmailTitle: '请检查您的邮箱',
+      checkEmailDesc: '我们已向 {email} 发送了确认链接。点击链接验证您的账户并开始同步。',
+      gotIt: '知道了',
+      error: '认证失败',
+    },
     tools: {
       dopamine: {
         metaTitle: '多巴胺菜单旋转器',
@@ -1568,25 +1633,6 @@ export const dictionary = {
         },
       },
     },
-    auth: {
-      loginTitle: '登录以查看统计数据',
-      signupTitle: '创建账户',
-      loginDesc: '请登录以查看您的统计数据，并将您的专注会话同步到云端，实现多设备共享。',
-      signupDesc: '注册账户，永久保存您的数据。',
-      email: '邮箱',
-      password: '密码',
-      signIn: '登录',
-      signUp: '注册',
-      processing: '处理中...',
-      orContinueWith: '其他登录方式',
-      guestContinue: '以游客身份继续',
-      haveAccount: '已有账户？登录',
-      noAccount: '还没有账户？注册',
-      checkEmailTitle: '请检查您的邮箱',
-      checkEmailDesc: '我们已向 {email} 发送了确认链接。点击链接验证您的账户并开始同步。',
-      gotIt: '知道了',
-      error: '认证失败',
-    },
     userMenu: {
       signedInAs: '登录身份',
       profile: '个人资料与设置',
@@ -1627,12 +1673,12 @@ export const dictionary = {
     },
     userProfile: {
       betaBadge: '专业版计划（内测中）',
-      betaDescription: '当前所有功能免费。',
+      betaDescription: '当前所有功能均可免费体验。',
     },
   },
-}
+} as const
 
-export type Dictionary = (typeof dictionary)['en']
+export type Dictionary = (typeof dictionary)[Locale]
 
 export const getDictionary = async (locale: Locale): Promise<Dictionary> => {
   return dictionary[locale]

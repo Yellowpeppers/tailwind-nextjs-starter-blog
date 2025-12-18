@@ -19,14 +19,14 @@ export const FocusLabDashboard = () => {
   const [isFocusMode, setIsFocusMode] = useState(false)
 
   return (
-    <div className="relative min-h-screen font-sans">
+    <div className="focuslab-typography relative min-h-screen font-sans">
       <AnimatePresence mode="wait">
         {!isFocusMode ? (
           <motion.div
             key="landing"
             exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
             transition={{ duration: 0.5 }}
-            className="absolute inset-0 z-0"
+            className="relative z-0"
           >
             <FocusLabLanding onEnter={() => setIsFocusMode(true)} />
           </motion.div>

@@ -10,6 +10,8 @@ export type FocusSession = {
 
 const STORAGE_KEY = 'focus-lab-history-v1'
 
+const getStorageKey = (userId?: string) => (userId ? `${STORAGE_KEY}-${userId}` : STORAGE_KEY)
+
 import { createClient } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 
@@ -18,7 +20,7 @@ export const saveSession = async (session: FocusSession, user?: User | null) => 
 
   // Always save to local storage as backup/latency compensation, scoped to user
   try {
-    const key = user ? `${STORAGE_KEY}-${user.id}` : STORAGE_KEY
+    const key = getStorageKey(user?.id)
     const existing = window.localStorage.getItem(key)
     let history: FocusSession[] = []
     if (existing) {
@@ -34,14 +36,19 @@ export const saveSession = async (session: FocusSession, user?: User | null) => 
   if (user) {
     try {
       const supabase = createClient()
-      const { error } = await supabase.from('focus_logs').insert({
-        user_id: user.id,
-        task_name: session.taskName,
-        start_time: session.startTime,
-        duration_minutes: Math.round(session.durationMinutes),
-        completed: session.completed,
-      })
-      if (error) console.error('Failed to save session to cloud:', error)
+      const { error } = await supabase.from('focus_logs').upsert(
+        {
+          id: session.id,
+          user_id: user.id,
+          task_name: session.taskName,
+          start_time: session.startTime,
+          duration_minutes: Math.round(session.durationMinutes),
+          completed: session.completed,
+        },
+        { onConflict: 'id' }
+      )
+
+      if (error) console.error('Failed to save session to cloud:', error?.message || error)
     } catch (error) {
       console.error('Supabase error:', error)
     }
@@ -77,7 +84,7 @@ export const fetchCloudHistory = async (user: User): Promise<FocusSession[]> => 
   // Save to local storage to keep "Local First" architecture consistent
   // We can treat Cloud as source of truth here because logs are append-only mostly.
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudSessions))
+    window.localStorage.setItem(getStorageKey(user.id), JSON.stringify(cloudSessions))
   } catch (e) {
     console.error('Failed to update local history from cloud:', e)
   }
@@ -89,11 +96,36 @@ export const getHistory = (userId?: string): FocusSession[] => {
   if (typeof window === 'undefined') return []
 
   try {
-    const key = userId ? `${STORAGE_KEY}-${userId}` : STORAGE_KEY
+    const key = getStorageKey(userId)
     const existing = window.localStorage.getItem(key)
+
+    let scoped: FocusSession[] = []
     if (existing) {
-      return JSON.parse(existing)
+      scoped = JSON.parse(existing)
     }
+
+    // Merge legacy guest history into user-scoped key to avoid losing old sessions after login
+    if (userId) {
+      const legacy = window.localStorage.getItem(STORAGE_KEY)
+      if (legacy) {
+        const legacySessions: FocusSession[] = JSON.parse(legacy)
+        const byId = new Map(scoped.map((s) => [s.id, s]))
+        let hasNew = false
+        for (const session of legacySessions) {
+          if (!byId.has(session.id)) {
+            byId.set(session.id, session)
+            hasNew = true
+          }
+        }
+        const merged = Array.from(byId.values())
+        if (hasNew) {
+          window.localStorage.setItem(key, JSON.stringify(merged))
+        }
+        return merged
+      }
+    }
+
+    return scoped
   } catch (error) {
     console.error('Failed to read focus history:', error)
   }
@@ -105,7 +137,7 @@ export const syncFocusHistory = async (user: User) => {
   if (typeof window === 'undefined') return
 
   try {
-    const localHistory = getHistory()
+    const localHistory = getHistory(user.id)
     if (localHistory.length === 0) return
 
     const supabase = createClient()
@@ -135,15 +167,15 @@ export const syncFocusHistory = async (user: User) => {
   }
 }
 
-export const getTodaySessions = (): FocusSession[] => {
-  const all = getHistory()
+export const getTodaySessions = (userId?: string): FocusSession[] => {
+  const all = getHistory(userId)
   const now = new Date()
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
 
   return all.filter((s) => s.startTime >= startOfDay)
 }
 
-export const getTodayFocusMinutes = (): number => {
-  const sessions = getTodaySessions()
+export const getTodayFocusMinutes = (userId?: string): number => {
+  const sessions = getTodaySessions(userId)
   return sessions.reduce((acc, curr) => acc + curr.durationMinutes, 0)
 }
