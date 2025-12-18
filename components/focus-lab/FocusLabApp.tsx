@@ -22,6 +22,7 @@ import {
   saveStationItems,
   fetchCloudItems,
   STATION_STORAGE_KEY,
+  STATION_SYNC_EVENT,
 } from '@/components/focus-lab/focusStationStorage'
 import { AnalyticsModal } from '@/components/focus-lab/AnalyticsModal'
 import {
@@ -52,8 +53,102 @@ import {
 import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
 import { useThemeColor, ThemeColor } from '@/context/ThemeColorContext'
 import { debounce, merge, cloneDeep, uniq } from 'lodash'
+import isEqual from 'lodash/isEqual'
 
-// Context for passing drag controls to children
+// --- Icons ---
+const SmileCircleIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--smile-circle-outline] ${className}`} />
+)
+
+const MagicIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--magic-stick-3-outline] ${className}`} />
+)
+
+const HandIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--hand-shake-linear] ${className}`} />
+)
+
+const HandPalmIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--hand-shake-linear] ${className}`} />
+)
+
+const PlayIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--play-bold] ${className}`} />
+)
+
+const PauseIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--pause-bold] ${className}`} />
+)
+
+const InfoIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--info-circle-outline] ${className}`} />
+)
+
+const ArrowLaunchIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--arrow-right-up-outline] ${className}`} />
+)
+
+const ArrowLeftIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--arrow-left-outline] ${className}`} />
+)
+
+const MinusIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--minus-circle-outline] ${className}`} />
+)
+
+const TrashIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--trash-bin-minimalistic-outline] ${className}`} />
+)
+
+const PlusIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--add-circle-outline] ${className}`} />
+)
+
+const MoreHorizontalIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--menu-dots-bold] ${className}`} />
+)
+
+const CloseIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--close-circle-outline] ${className}`} />
+)
+
+const XIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--close-circle-outline] ${className}`} />
+)
+
+const StatsIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--chart-2-outline] ${className}`} />
+)
+
+const ProfileIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--user-circle-outline] ${className}`} />
+)
+
+const SettingsIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--settings-outline] ${className}`} />
+)
+
+const StarIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--star-bold] ${className}`} />
+)
+
+const EditIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--pen-2-outline] ${className}`} />
+)
+
+const CheckIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--check-circle-outline] ${className}`} />
+)
+
+const TransferIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--transfer-horizontal-outline] ${className}`} />
+)
+
+const LogoutIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--logout-2-outline] ${className}`} />
+)
+
+// --- Shared Components ---
 const DragHandleContext = createContext<DragControls | null>(null)
 
 // --- Helper Functions ---
@@ -105,7 +200,7 @@ const SegmentedControl = <T extends string>({
   onChange: (value: T) => void
 }) => {
   return (
-    <div className="flex h-8 w-full min-w-max rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+    <div className="bg-primary-50 dark:bg-primary-950/30 flex h-8 w-full min-w-max rounded-lg p-1">
       {options.map((option) => {
         const isActive = value === option.value
         return (
@@ -115,7 +210,7 @@ const SegmentedControl = <T extends string>({
             onClick={() => onChange(option.value)}
             className={`relative flex-1 rounded-md px-3 text-xs font-bold tracking-wider whitespace-nowrap uppercase transition-all ${
               isActive
-                ? 'text-primary-600 dark:text-primary-400 bg-white shadow-sm dark:bg-gray-700'
+                ? 'text-primary-600 dark:text-primary-400 dark:bg-primary-800/40 bg-white shadow-sm'
                 : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
             }`}
           >
@@ -178,14 +273,16 @@ type ActiveTrack = {
 // --- Widget Card Component ---
 
 type WidgetCardProps = {
-  title: ReactNode
-  subtitle: ReactNode
+  title?: ReactNode
+  subtitle?: ReactNode
   children: ReactNode
   onHeaderClick?: () => void
   onDelete?: () => void
   badge?: ReactNode
   customAction?: ReactNode
+  customActionPosition?: 'top' | 'right'
   className?: string
+  showHeader?: boolean
 }
 
 const WidgetCard = ({
@@ -196,7 +293,9 @@ const WidgetCard = ({
   onDelete,
   badge,
   customAction,
+  customActionPosition = 'top',
   className = '',
+  showHeader = true,
 }: WidgetCardProps) => {
   const [showInfo, setShowInfo] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -204,7 +303,8 @@ const WidgetCard = ({
   const deleteRef = useRef<HTMLDivElement>(null)
   const { settings } = useFocusSettingsContext()
   const { t } = useTranslation()
-  const hideHeaders = settings.focus_lab?.hide_headers
+  const hideHeadersSetting = settings.focus_lab?.hide_headers
+  const headerHidden = hideHeadersSetting || !showHeader
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -225,11 +325,23 @@ const WidgetCard = ({
   return (
     <motion.section
       layout
-      className={`group relative flex h-full flex-col rounded-[32px] border border-gray-200 bg-white px-5 pt-4 pb-5 shadow-lg shadow-gray-200/50 backdrop-blur-none transition-shadow duration-300 sm:px-6 sm:pt-5 sm:pb-6 dark:border-gray-700 dark:bg-gray-900 ${className}`}
+      className={`group relative flex h-full flex-col rounded-[32px] border border-gray-200 bg-white px-5 py-4 shadow-lg shadow-gray-200/50 backdrop-blur-none transition-shadow duration-300 sm:px-6 sm:py-5 dark:border-gray-700 dark:bg-gray-900 ${className}`}
     >
+      {/* Invisible Drag Handle Overlay (Zen Mode) */}
+      {headerHidden && (
+        <div
+          className="absolute top-0 right-0 left-0 z-20 h-4 cursor-grab active:cursor-grabbing"
+          onPointerDown={(e) => {
+            dragStartPosition.current = { x: e.clientX, y: e.clientY }
+            dragControls?.start(e)
+          }}
+        />
+      )}
+
       <div
-        className={`flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing ${hideHeaders ? 'h-8' : ''}`}
+        className={`flex ${headerHidden ? 'h-0 min-h-0' : 'h-8'} cursor-grab items-center justify-between gap-2 active:cursor-grabbing`}
         onPointerDown={(e) => {
+          if (headerHidden) return // Handled by overlay
           dragStartPosition.current = { x: e.clientX, y: e.clientY }
           dragControls?.start(e)
         }}
@@ -250,11 +362,13 @@ const WidgetCard = ({
           }
         }}
       >
-        {!hideHeaders && (
+        {!headerHidden && (
           <div className="flex items-center gap-2">
             {/* Drag Handle (only visible when not focused) */}
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+              {title && (
+                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+              )}
               {badge && <div>{badge}</div>}
             </div>
             {/* Info Button */}
@@ -265,10 +379,10 @@ const WidgetCard = ({
                   e.stopPropagation()
                   setShowInfo(!showInfo)
                 }}
-                className={`transition-colors ${
+                className={`flex aspect-square h-8 w-8 items-center justify-center rounded-xl opacity-0 transition-all group-hover:opacity-100 ${
                   showInfo
-                    ? 'text-primary-500 dark:text-primary-400'
-                    : 'text-gray-300 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300'
+                    ? 'text-primary-500 dark:text-primary-400 opacity-100'
+                    : 'text-gray-300 hover:bg-gray-50 hover:text-gray-500 dark:text-gray-500 dark:hover:bg-gray-800/50 dark:hover:text-gray-300'
                 }`}
                 aria-label="Toggle description"
               >
@@ -277,11 +391,11 @@ const WidgetCard = ({
               <AnimatePresence>
                 {showInfo && (
                   <motion.div
-                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                    initial={{ opacity: 0, x: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 8, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full left-0 z-50 mt-2 w-56 origin-top-left"
+                    className="absolute top-1/2 left-full z-50 ml-2 w-56 origin-left -translate-y-1/2 transform"
                   >
                     <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
                       <div className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
@@ -295,12 +409,18 @@ const WidgetCard = ({
           </div>
         )}
 
-        {/* Custom Action (e.g. Settings Flip) replaces Delete if provided, or sits beside it? User said "Replace". */}
-        {/* Custom Action (Absolute positioned to match padding to ignore flow height effects) */}
-        {customAction ? (
-          <div className="absolute top-4 right-5 z-20 sm:top-5 sm:right-6">{customAction}</div>
-        ) : (
-          onDelete && (
+        {/* Actions (Custom Action replaces Delete or floats if on top) */}
+        <div
+          className={`flex shrink-0 items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100 ${
+            customActionPosition === 'top'
+              ? headerHidden
+                ? 'absolute top-3 right-4 z-10'
+                : ''
+              : ''
+          }`}
+        >
+          {customAction && customActionPosition === 'top' && customAction}
+          {!customAction && onDelete && (
             <div className="relative" ref={deleteRef}>
               <button
                 type="button"
@@ -308,10 +428,10 @@ const WidgetCard = ({
                   e.stopPropagation()
                   setShowDeleteConfirm(!showDeleteConfirm)
                 }}
-                className={`transition-colors ${
+                className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all ${
                   showDeleteConfirm
-                    ? 'text-red-500 dark:text-red-400'
-                    : 'text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400'
+                    ? 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
+                    : 'text-gray-300 hover:bg-gray-50 hover:text-red-500 dark:text-gray-500 dark:hover:bg-gray-800/50 dark:hover:text-red-400'
                 }`}
                 aria-label="Remove widget"
               >
@@ -333,18 +453,25 @@ const WidgetCard = ({
                       }}
                       className="w-full rounded-md bg-red-50 px-3 py-2 text-left font-medium text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
                     >
-                      {t.focusLab.widgets.common.remove}
+                      {t.focusLab.delete.confirmBtn}
                     </button>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-          )
-        )}
+          )}
+        </div>
 
         {/* Focus Toggle Removed for now */}
       </div>
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
+      <div className="mt-2 flex min-h-0 flex-1 flex-col">{children}</div>
+
+      {/* Floating Side Action (e.g. Right Center for Flipping) */}
+      {customAction && customActionPosition === 'right' && (
+        <div className="absolute top-1/2 -right-2 z-50 -translate-y-1/2 opacity-0 transition-all duration-300 group-hover:right-0 group-hover:opacity-100">
+          <div className="flex translate-x-1/2 items-center">{customAction}</div>
+        </div>
+      )}
     </motion.section>
   )
 }
@@ -363,36 +490,36 @@ type GridItem = {
 
 const INITIAL_LAYOUT: GridItem[] = [
   // Left Column (3 units)
-  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
-  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
+  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 2, minH: 2 },
+  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 2, minH: 2 },
 
   // Middle Left (ToDo - 3 units)
-  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 3, minH: 5 },
+  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 2, minH: 2 },
 
   // Middle Right (Brain Dump - 5 units)
-  { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 4, minH: 5 },
+  { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 2, minH: 2 },
 
   // Right Column (3 units)
-  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
-  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
+  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 2, minH: 2 },
+  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 2 },
 ]
 
 const TRIPLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'dopamine', x: 8, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'todo', x: 0, y: 5, w: 6, h: 10, minW: 4, minH: 5 },
-  { id: 'brain', x: 6, y: 5, w: 6, h: 10, minW: 4, minH: 5 },
-  { id: 'breaker', x: 0, y: 15, w: 6, h: 5, minW: 3, minH: 5 },
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
+  { id: 'dopamine', x: 8, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
+  { id: 'todo', x: 0, y: 5, w: 6, h: 10, minW: 2, minH: 2 },
+  { id: 'brain', x: 6, y: 5, w: 6, h: 10, minW: 2, minH: 2 },
+  { id: 'breaker', x: 0, y: 15, w: 6, h: 5, minW: 2, minH: 2 },
 ]
 
 const DOUBLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'todo', x: 0, y: 5, w: 4, h: 10, minW: 4, minH: 5 },
-  { id: 'dopamine', x: 4, y: 5, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'breaker', x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'brain', x: 0, y: 15, w: 8, h: 10, minW: 4, minH: 5 },
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
+  { id: 'todo', x: 0, y: 5, w: 4, h: 10, minW: 2, minH: 2 },
+  { id: 'dopamine', x: 4, y: 5, w: 4, h: 5, minW: 2, minH: 2 },
+  { id: 'breaker', x: 4, y: 10, w: 4, h: 5, minW: 2, minH: 2 },
+  { id: 'brain', x: 0, y: 15, w: 8, h: 10, minW: 2, minH: 2 },
 ]
 
 type LayoutPreset = 'desktop' | 'triple' | 'double'
@@ -413,7 +540,7 @@ const getPresetForWidth = (width: number): LayoutPreset => {
 
 const getLayoutStorageKey = (preset: LayoutPreset) => `focus-lab-layout-${preset}-v1`
 
-type FocusedTaskState = { text: string; timestamp: number } | null
+type FocusedTaskState = { text: string; timestamp: number; id: string } | null
 
 const FocusLabMobileGrid = ({
   focusedTask,
@@ -422,7 +549,7 @@ const FocusLabMobileGrid = ({
   onCommandHandled,
 }: {
   focusedTask?: FocusedTaskState
-  onStartFocus?: (task: string) => void
+  onStartFocus?: (task: string, id: string) => void
   externalCommand?: string | null
   onCommandHandled?: () => void
 }) => {
@@ -437,7 +564,7 @@ const FocusLabMobileGrid = ({
         onCommandHandled={onCommandHandled}
       />
       <BrainDumpCard className="h-auto" />
-      <ToDoCard className="h-auto" onStartFocus={onStartFocus} />
+      <ToDoCard className="h-auto" onStartFocus={onStartFocus} focusedTaskId={focusedTask?.id} />
       <TaskBreakerCard className="h-auto" />
       <DopamineMenuCard className="h-auto" />
     </div>
@@ -460,6 +587,8 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [showCustomizeMenu, setShowCustomizeMenu] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const customizeButtonRef = useRef<HTMLButtonElement | null>(null)
+  const customizeMenuRef = useRef<HTMLDivElement | null>(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
   const [focusedTask, setFocusedTask] = useState<FocusedTaskState>(null)
@@ -481,24 +610,13 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [showPricingModal, setShowPricingModal] = useState(false)
 
   const [dailyGoalHours, setDailyGoalHours] = useState(4.5)
-  const [isEditingGoal, setIsEditingGoal] = useState(false)
-  const [tempGoal, setTempGoal] = useState('4.5')
-  const goalInputRef = useRef<HTMLInputElement>(null)
-
-  const handleGoalSave = () => {
-    const val = parseFloat(tempGoal)
-    if (!isNaN(val) && val > 0) {
-      setDailyGoalHours(val)
-    }
-    setIsEditingGoal(false)
-  }
-
-  // Focus input when editing starts
-  useEffect(() => {
-    if (isEditingGoal) {
-      goalInputRef.current?.focus()
-    }
-  }, [isEditingGoal])
+  const [dailyTaskGoal, setDailyTaskGoal] = useState(5)
+  const [tempGoalHours, setTempGoalHours] = useState('4.5')
+  const [tempTaskGoal, setTempTaskGoal] = useState('5')
+  const [showGoalModal, setShowGoalModal] = useState(false)
+  const hasHydratedGoals = useRef(false)
+  const prevGoalRef = useRef<{ hours?: number; tasks?: number }>({})
+  const [tasksCompletedToday, setTasksCompletedToday] = useState(0)
 
   // Real progress tracking
   const [todayProgress, setTodayProgress] = useState(0)
@@ -506,7 +624,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   // Fetch today's progress on mount and interval
   useEffect(() => {
     const fetchProgress = () => {
-      const minutes = getTodayFocusMinutes()
+      const minutes = getTodayFocusMinutes(user?.id)
       // Convert to hours with 1 decimal
       setTodayProgress(Math.round((minutes / 60) * 10) / 10)
     }
@@ -515,11 +633,90 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     // Poll every minute to update chart
     const interval = setInterval(fetchProgress, 60000)
     return () => clearInterval(interval)
-  }, [])
+  }, [user?.id])
+
+  // Hydrate goals from settings
+  useEffect(() => {
+    const storedHours = settings.focus_lab?.stats?.goal_hours
+    const storedTasks = settings.focus_lab?.stats?.goal_tasks
+
+    if (typeof storedHours === 'number' && storedHours !== prevGoalRef.current.hours) {
+      setDailyGoalHours(storedHours)
+    }
+    if (typeof storedTasks === 'number' && storedTasks !== prevGoalRef.current.tasks) {
+      setDailyTaskGoal(storedTasks)
+    }
+    if (storedHours !== undefined || storedTasks !== undefined) {
+      hasHydratedGoals.current = true
+      prevGoalRef.current = { hours: storedHours, tasks: storedTasks }
+    }
+  }, [settings.focus_lab?.stats?.goal_hours, settings.focus_lab?.stats?.goal_tasks])
+
+  // Persist goals when changed
+  useEffect(() => {
+    const shouldUpdateHours = prevGoalRef.current.hours !== dailyGoalHours
+    const shouldUpdateTasks = prevGoalRef.current.tasks !== dailyTaskGoal
+    if (shouldUpdateHours) {
+      updateSettings('focus_lab.stats.goal_hours', dailyGoalHours)
+      prevGoalRef.current.hours = dailyGoalHours
+    }
+    if (shouldUpdateTasks) {
+      updateSettings('focus_lab.stats.goal_tasks', dailyTaskGoal)
+      prevGoalRef.current.tasks = dailyTaskGoal
+    }
+  }, [dailyGoalHours, dailyTaskGoal, updateSettings])
+
+  // Track completed tasks from Focus Station (today)
+  useEffect(() => {
+    const dayStart = (() => {
+      const now = new Date()
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    })()
+
+    const computeToday = (items: FocusItem[]) => {
+      const done = items.filter((item) => {
+        if (!item.completed) return false
+        // FocusItem 没有时间戳，先按今日列表全部算；若后续扩展 updated_at 可替换
+        if (item.created_at) return new Date(item.created_at).getTime() >= dayStart
+        return true
+      })
+      setTasksCompletedToday(done.length)
+    }
+
+    const syncFromLocal = () => {
+      const items = readStationStorage(user?.id)
+      computeToday(items)
+    }
+
+    const syncFromCloud = async () => {
+      if (!user) return
+      const cloudItems = await fetchCloudItems(user)
+      if (cloudItems) computeToday(cloudItems)
+    }
+
+    syncFromLocal()
+    syncFromCloud()
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<FocusItem[]>).detail
+      if (Array.isArray(detail)) {
+        computeToday(detail)
+      } else {
+        syncFromLocal()
+      }
+    }
+    window.addEventListener(STATION_SYNC_EVENT, handler as EventListener)
+    return () => window.removeEventListener(STATION_SYNC_EVENT, handler as EventListener)
+  }, [user?.id, user])
 
   const currentProgress = todayProgress
-  const progressPercentage = Math.min((currentProgress / dailyGoalHours) * 100, 100)
-  const isGoalReached = currentProgress >= dailyGoalHours
+  const progressPercentage =
+    dailyGoalHours > 0 ? Math.min((currentProgress / dailyGoalHours) * 100, 100) : 0
+  const taskProgressPercentage =
+    dailyTaskGoal > 0 ? Math.min((tasksCompletedToday / dailyTaskGoal) * 100, 100) : 0
+  const isGoalReached = dailyGoalHours > 0 && currentProgress >= dailyGoalHours
+  const isTaskGoalReached = dailyTaskGoal > 0 && tasksCompletedToday >= dailyTaskGoal
+  const rewardUnlocked = isGoalReached || isTaskGoalReached
 
   // Notification Logic
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
@@ -529,6 +726,30 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       setNotificationsEnabled(Notification.permission === 'granted')
     }
   }, [])
+
+  // Prefill modal inputs when opened
+  useEffect(() => {
+    if (showGoalModal) {
+      // 拉取最新任务完成数
+      if (user) {
+        fetchCloudItems(user).then((items) => {
+          if (!items) return
+          const done = items.filter((i) => i.completed)
+          setTasksCompletedToday(done.length)
+        })
+      }
+      setTempGoalHours(dailyGoalHours.toString())
+      setTempTaskGoal(dailyTaskGoal.toString())
+    }
+  }, [showGoalModal, dailyGoalHours, dailyTaskGoal, user])
+
+  const handleGoalModalSave = () => {
+    const hoursVal = Math.max(0.5, parseFloat(tempGoalHours) || dailyGoalHours)
+    const tasksVal = Math.max(0, Math.round(parseFloat(tempTaskGoal) || dailyTaskGoal))
+    setDailyGoalHours(hoursVal)
+    setDailyTaskGoal(tasksVal)
+    setShowGoalModal(false)
+  }
 
   const handleToggleNotifications = () => {
     if (!('Notification' in window)) {
@@ -728,6 +949,21 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     }
   }, [showGroupModal])
 
+  // Close Customize menu on outside click (including cards)
+  useEffect(() => {
+    if (!showCustomizeMenu) return
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node
+      const isInsideMenu = customizeMenuRef.current?.contains(target)
+      const isButton = customizeButtonRef.current?.contains(target)
+      if (!isInsideMenu && !isButton) {
+        setShowCustomizeMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showCustomizeMenu])
+
   // Register Service Worker for external commands
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -827,15 +1063,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 className="absolute top-4 right-4 rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
                 aria-label={t.focusLab.groupModal.close}
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-4 w-4"
-                >
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
+                <XIcon className="h-4 w-4" />
               </button>
               <h3
                 id="focuslab-group-modal-title"
@@ -866,6 +1094,157 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               >
                 {t.focusLab.groupModal.close}
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showGoalModal && (
+          <motion.div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowGoalModal(false)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">每日目标</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    设置专注时长与任务目标，达成后有奖励动画
+                  </p>
+                </div>
+                {rewardUnlocked && (
+                  <motion.div
+                    className="flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                    animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                  >
+                    <span className="icon-[solar--confetti-minimalistic-line-duotone] text-base" />
+                    奖励解锁
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+                  <label
+                    htmlFor="daily-goal-hours"
+                    className="text-sm font-semibold text-gray-700 dark:text-gray-200"
+                  >
+                    每日专注时长目标 (小时)
+                  </label>
+                  <div className="mt-2 flex items-center gap-3">
+                    <input
+                      id="daily-goal-hours"
+                      type="number"
+                      min="0.5"
+                      step="0.5"
+                      value={tempGoalHours}
+                      onChange={(e) => setTempGoalHours(e.target.value)}
+                      className="focus:border-primary-500 focus:ring-primary-200 w-24 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-900 focus:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>
+                          {currentProgress}h / {dailyGoalHours}h
+                        </span>
+                        <span>{Math.round(progressPercentage)}%</span>
+                      </div>
+                      <div className="mt-1 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          className="from-primary-400 to-primary-600 h-full rounded-full bg-gradient-to-r"
+                          style={{ width: `${progressPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+                  <label
+                    htmlFor="daily-task-goal"
+                    className="text-sm font-semibold text-gray-700 dark:text-gray-200"
+                  >
+                    每日任务数量目标 (个)
+                  </label>
+                  <div className="mt-2 flex items-center gap-3">
+                    <input
+                      id="daily-task-goal"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={tempTaskGoal}
+                      onChange={(e) => setTempTaskGoal(e.target.value)}
+                      className="focus:border-primary-500 focus:ring-primary-200 w-24 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-900 focus:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>
+                          {tasksCompletedToday} / {dailyTaskGoal}
+                        </span>
+                        <span>{Math.round(taskProgressPercentage)}%</span>
+                      </div>
+                      <div className="mt-1 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
+                          style={{
+                            width: `${taskProgressPercentage}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-amber-500 text-amber-900 shadow-lg"
+                      animate={
+                        rewardUnlocked
+                          ? { scale: [1, 1.05, 1], rotate: [0, 3, -3, 0] }
+                          : { scale: 1, rotate: 0 }
+                      }
+                      transition={{ duration: 1.4, repeat: rewardUnlocked ? Infinity : 0 }}
+                    >
+                      <span className="icon-[solar--medal-ribbons-star-bold-duotone] text-2xl" />
+                    </motion.div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                        奖励进度
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        达成任一目标会触发动画奖励，保持连胜吧！
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowGoalModal(false)}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleGoalModalSave}
+                  className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full px-5 py-2 text-sm font-bold text-white shadow-lg transition-colors active:scale-95"
+                >
+                  保存目标
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -1008,7 +1387,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                         style={{ backgroundColor: color }}
                         title={label}
                         aria-label={`Set theme to ${label}`}
-                      />
+                      ></button>
                     ))}
                   </div>
                 </div>
@@ -1030,7 +1409,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
         <PlanComparisonModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
       </AnimatePresence>
 
-      <div className="fixed inset-0 z-[100] flex h-full w-full overflow-hidden bg-gray-50 transition-all duration-500 dark:bg-gray-950">
+      <div className="no-scrollbar fixed inset-0 z-[100] flex h-full w-full bg-gray-50 transition-all duration-500 dark:bg-gray-950 [&::-webkit-scrollbar]:hidden">
         {/* Sidebar - Visible only in Desktop */}
         {!isMobile && (
           <motion.aside
@@ -1046,7 +1425,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               {/* Sidebar Header: User Profile */}
               <div className="flex h-16 items-center justify-between border-b border-gray-200/50 px-4 dark:border-gray-800/50">
                 <button
-                  className="ml-2 flex cursor-pointer items-center gap-3 overflow-hidden text-left transition-opacity hover:opacity-80"
+                  className="ml-2 flex cursor-pointer items-center gap-3 text-left transition-opacity hover:opacity-80"
                   onClick={() => setShowAuthModal(true)}
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-xs font-bold text-white shadow-inner">
@@ -1056,8 +1435,8 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     <span className="truncate text-sm leading-tight font-semibold text-gray-900 dark:text-gray-100">
                       {user ? user.user_metadata?.full_name || 'My Workspace' : 'Guest Space'}
                     </span>
-                    <span className="text-[10px] font-medium text-gray-500">
-                      {user ? 'Pro Member' : 'Free Plan'}
+                    <span className="animate-shine inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-[length:200%_auto] px-2 py-0.5 text-[10px] font-bold text-amber-950 shadow-sm">
+                      {isPro ? t.focusLab.sidebar.proMember : t.focusLab.sidebar.freePlan}
                     </span>
                   </div>
                 </button>
@@ -1065,16 +1444,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   onClick={() => setIsSidebarOpen(false)}
                   className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="h-4 w-4"
-                  >
-                    <path d="M18 16L14 12L18 8" />
-                    <path d="M6 6V18" />
-                  </svg>
+                  <ArrowLeftIcon className="h-4 w-4" />
                 </button>
               </div>
 
@@ -1083,7 +1453,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 {/* Focus Lab Section */}
                 <div className="mb-2 px-2">
                   <span className="text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
-                    Focus Tools
+                    {t.focusLab.sidebar.focusTools}
                   </span>
                 </div>
 
@@ -1091,15 +1461,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   onClick={() => setShowAnalytics(true)}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="group-hover:text-primary-500 h-5 w-5 text-gray-400 transition-colors"
-                  >
-                    <path d="M12 20V10M18 20V4M6 20v-6" />
-                  </svg>
+                  <StatsIcon className="group-hover:text-primary-50 h-5 w-5 text-gray-400 transition-colors" />
                   {lang === 'zh' ? '统计数据' : 'Stats'}
                 </button>
 
@@ -1107,16 +1469,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   onClick={() => setShowAuthModal(true)}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="group-hover:text-primary-500 h-5 w-5 text-gray-400 transition-colors"
-                  >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
+                  <ProfileIcon className="group-hover:text-primary-50 h-5 w-5 text-gray-400 transition-colors" />
                   {lang === 'zh' ? '会员档案' : 'Profile'}
                 </button>
 
@@ -1124,16 +1477,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   onClick={() => setShowSettingsModal(true)}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="group-hover:text-primary-500 h-5 w-5 text-gray-400 transition-colors"
-                  >
-                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-                  </svg>
+                  <SettingsIcon className="group-hover:text-primary-50 h-5 w-5 text-gray-400 transition-colors" />
                   {lang === 'zh' ? '设置' : 'Settings'}
                 </button>
               </nav>
@@ -1146,13 +1490,11 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => e.key === 'Enter' && setShowPricingModal(true)}
-                    className="group relative w-full cursor-pointer overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-4 text-left text-white shadow-lg"
+                    className="group relative w-full cursor-pointer rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-700 p-4 text-left text-white shadow-lg ring-1 ring-white/20 transition-all hover:shadow-indigo-500/20 active:scale-[0.98]"
                     onClick={() => setShowPricingModal(true)}
                   >
                     <div className="absolute top-0 right-0 p-2 opacity-10">
-                      <svg className="h-16 w-16" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
+                      <StarIcon className="h-16 w-16" />
                     </div>
                     <h3 className="relative z-10 text-sm font-bold">
                       {t.focusLab.upgradeCard?.title || 'Upgrade Plan'}
@@ -1171,11 +1513,19 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               <div className="mt-auto space-y-6 px-6">
                 {/* Daily Goal Widget */}
                 <div
-                  className={`group relative overflow-hidden rounded-xl border p-4 transition-all duration-300 ${
+                  className={`group relative cursor-pointer rounded-xl border p-4 transition-all duration-300 ${
                     isGoalReached
                       ? 'border-amber-200 bg-gradient-to-br from-yellow-100 to-amber-50 dark:border-amber-700/50 dark:from-yellow-900/30 dark:to-amber-900/20'
                       : 'transaction-colors border-gray-100 bg-white hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800'
                   }`}
+                  onClick={() => setShowGoalModal(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      setShowGoalModal(true)
+                    }
+                  }}
                 >
                   <div className="relative z-10 mb-2 flex items-end justify-between">
                     <div className="flex flex-col">
@@ -1186,63 +1536,26 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                           ? 'Goal Reached! 🎉'
                           : t.focusLab?.stats?.dailyGoal || 'Daily Goal'}
                       </span>
-                      {isEditingGoal ? (
-                        <div className="mt-0.5 flex items-center gap-1">
-                          <input
-                            ref={goalInputRef}
-                            type="number"
-                            step="0.5"
-                            value={tempGoal}
-                            onChange={(e) => setTempGoal(e.target.value)}
-                            onBlur={handleGoalSave}
-                            onKeyDown={(e) => e.key === 'Enter' && handleGoalSave()}
-                            className="border-primary-500 w-12 border-b bg-transparent p-0 text-sm font-bold text-gray-900 focus:ring-0 dark:text-white"
-                          />
-                          <span className="text-xs text-gray-400">h</span>
-                        </div>
-                      ) : (
-                        <button
-                          className="flex cursor-pointer items-baseline gap-1"
-                          onClick={() => {
-                            setTempGoal(dailyGoalHours.toString())
-                            setIsEditingGoal(true)
-                          }}
+                      <div className="flex items-baseline gap-1">
+                        <span
+                          className={`text-sm font-bold ${isGoalReached ? 'text-amber-900 dark:text-amber-100' : 'text-gray-900 dark:text-white'}`}
                         >
-                          <span
-                            className={`text-sm font-bold ${isGoalReached ? 'text-amber-900 dark:text-amber-100' : 'text-gray-900 dark:text-white'}`}
-                          >
-                            {currentProgress}h
-                          </span>
-                          <span className="text-xs text-gray-400">/ {dailyGoalHours}h</span>
-                        </button>
-                      )}
+                          {currentProgress}h
+                        </span>
+                        <span className="text-xs text-gray-400">/ {dailyGoalHours}h</span>
+                      </div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                        {`任务 ${tasksCompletedToday}/${dailyTaskGoal || '—'}`}
+                      </div>
                     </div>
 
-                    {/* Edit Icon (visible on hover) */}
-                    {!isEditingGoal && (
-                      <button
-                        onClick={() => {
-                          setTempGoal(dailyGoalHours.toString())
-                          setIsEditingGoal(true)
-                        }}
-                        className="rounded-md p-1 text-gray-400 opacity-0 transition-colors group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className="h-3.5 w-3.5"
-                        >
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                        </svg>
-                      </button>
-                    )}
+                    <div className="group-hover:bg-primary-50 group-hover:text-primary-600 dark:group-hover:bg-primary-900/30 dark:group-hover:text-primary-400 rounded-md bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-500 transition-colors dark:bg-gray-700 dark:text-gray-300">
+                      设置目标
+                    </div>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="relative z-10 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div className="relative z-10 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${progressPercentage}%` }}
@@ -1262,15 +1575,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   onClick={onExit}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-transparent bg-gray-100 py-3 text-sm font-semibold text-gray-600 transition-all hover:bg-gray-200 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="h-4 w-4"
-                  >
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-                  </svg>
+                  <LogoutIcon className="h-4 w-4" />
                   {t.focusLab.controls.exitFocus || 'Exit Focus'}
                 </button>
               </div>
@@ -1279,9 +1584,9 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
         )}
 
         {/* Main Content Area */}
-        <main className="relative flex h-full flex-1 flex-col overflow-hidden">
+        <main className="relative flex h-full flex-1 flex-col">
           {/* Background Pattern - Subtle for App Mode */}
-          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30">
+          <div className="pointer-events-none absolute inset-0 z-0 opacity-30">
             <div
               className="h-full w-full"
               style={{
@@ -1364,12 +1669,13 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     </button>
 
                     {/* Customize Layout Button & Menu */}
-                    <div className="relative z-30 ml-2">
+                    <div className="relative z-50 ml-2">
                       <button
                         onClick={(e) => {
                           e.preventDefault()
                           setShowCustomizeMenu(!showCustomizeMenu)
                         }}
+                        ref={customizeButtonRef}
                         className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-lg shadow-gray-200 transition-all active:scale-95 dark:shadow-none ${
                           showCustomizeMenu
                             ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
@@ -1383,10 +1689,11 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                       <AnimatePresence>
                         {showCustomizeMenu && (
                           <motion.div
+                            ref={customizeMenuRef}
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="absolute top-full right-0 mt-2 w-64 overflow-hidden rounded-xl border border-gray-100 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+                            className="absolute top-full right-0 z-50 mt-2 w-64 rounded-xl border border-gray-100 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900"
                           >
                             <div className="flex flex-col gap-1">
                               <h4 className="mb-1 border-b border-gray-100 px-3 py-2 text-xs font-bold tracking-wider text-gray-500 uppercase dark:border-gray-800">
@@ -1462,7 +1769,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                       {/* Click Outside Handler (Overlay) */}
                       {showCustomizeMenu && (
                         <div
-                          className="fixed inset-0 z-[-1]"
+                          className="fixed inset-0 z-40"
                           onClick={() => setShowCustomizeMenu(false)}
                           role="button"
                           tabIndex={0}
@@ -1491,13 +1798,17 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               <motion.div
                 layout
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
-                className={`flex-1 overflow-y-auto ${!isMobile ? 'p-8' : 'px-2 pb-20'}`}
+                className={`no-scrollbar flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden ${!isMobile ? 'p-8' : 'px-2 pb-20'}`}
               >
                 {isMobile ? (
                   <FocusLabMobileGrid
                     focusedTask={focusedTask}
-                    onStartFocus={(task) => {
-                      setFocusedTask({ text: task, timestamp: Date.now() })
+                    onStartFocus={(task, id) => {
+                      if (focusedTask?.id === id) {
+                        setFocusedTask(null)
+                      } else {
+                        setFocusedTask({ text: task, id, timestamp: Date.now() })
+                      }
                       // setExternalCommand('start-focus') // Removed auto-start
                     }}
                     externalCommand={externalCommand}
@@ -1512,8 +1823,12 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     // Subtract padding (p-8 = 64px) to get actual content width
                     containerWidth={Math.max(0, containerWidth - 64)}
                     focusedTask={focusedTask}
-                    onStartFocus={(task) => {
-                      setFocusedTask({ text: task, timestamp: Date.now() })
+                    onStartFocus={(task, id) => {
+                      if (focusedTask?.id === id) {
+                        setFocusedTask(null)
+                      } else {
+                        setFocusedTask({ text: task, id, timestamp: Date.now() })
+                      }
                       // setExternalCommand('start-focus') // Removed auto-start
                     }}
                     externalCommand={externalCommand}
@@ -1545,7 +1860,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800"
+              className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800"
             >
               <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">
                 {t.focusLab.controls.resetLayout || 'Reset Layout?'}
@@ -1599,7 +1914,7 @@ const FocusLabGrid = ({
   containerWidth: number
   preset: LayoutPreset
   focusedTask?: FocusedTaskState
-  onStartFocus?: (task: string) => void
+  onStartFocus?: (task: string, id: string) => void
   externalCommand?: string | null
   onCommandHandled?: () => void
 }) => {
@@ -1613,7 +1928,16 @@ const FocusLabGrid = ({
     if (isLoaded) {
       const savedLayout = settings.focus_lab?.layout?.[preset]
       if (Array.isArray(savedLayout) && savedLayout.length > 0) {
-        setLayout(savedLayout)
+        // Force update minW/minH from current preset config to ensure new limits take effect for existing users
+        const updatedLayout = savedLayout.map((item) => {
+          const defaultConfig = presetConfig.layout.find((d) => d.id === item.id)
+          return {
+            ...item,
+            minW: defaultConfig?.minW ?? 2,
+            minH: defaultConfig?.minH ?? 2,
+          }
+        })
+        setLayout(updatedLayout)
       } else {
         // Only reset to default if we have literally nothing in settings (first load)
         // or if we switched presets and that preset is empty
@@ -1678,7 +2002,7 @@ const FocusLabGrid = ({
 
   return (
     <div
-      className={`relative w-full overflow-x-hidden transition-opacity duration-500 ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
+      className={`no-scrollbar relative w-full transition-opacity duration-500 [&::-webkit-scrollbar]:hidden ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
       style={{ height: containerHeight, maxWidth: '100%' }}
     >
       <div
@@ -1730,6 +2054,7 @@ const FocusLabGrid = ({
                   cols={item.w}
                   onToggleFocus={() => onToggleFocus(item.id)}
                   onStartFocus={onStartFocus}
+                  focusedTaskId={focusedTask?.id}
                 />
               )}
               {item.id === 'breaker' && (
@@ -1798,8 +2123,8 @@ const DraggableResizableItem = ({
       const newWidth = startSizeRef.current.w + deltaX
       const newHeight = startSizeRef.current.h + deltaY
 
-      const gridW = Math.max(item.minW || 3, Math.round(newWidth / (colWidth + GAP)))
-      const gridH = Math.max(item.minH || 3, Math.round(newHeight / (ROW_HEIGHT + GAP)))
+      const gridW = Math.max(item.minW || 2, Math.round(newWidth / (colWidth + GAP)))
+      const gridH = Math.max(item.minH || 2, Math.round(newHeight / (ROW_HEIGHT + GAP)))
 
       onUpdate({ w: gridW, h: gridH })
     }
@@ -1867,7 +2192,7 @@ const DraggableResizableItem = ({
         {/* Resize Handle (Diagonal Arrow) */}
         {/* Resize Handle (Diagonal Arrow) */}
         <div
-          className="absolute right-2 bottom-2 z-50 cursor-nwse-resize p-1.5 opacity-50 transition-opacity hover:opacity-100"
+          className="group/resize absolute right-0 bottom-0 z-50 flex h-8 w-8 cursor-grab items-end justify-end p-1.5"
           onPointerDown={(e) => {
             e.stopPropagation() // Prevent drag start on the item
             e.preventDefault()
@@ -1878,19 +2203,8 @@ const DraggableResizableItem = ({
             startSizeRef.current = { w: width, h: height }
           }}
         >
-          <div className="rounded-full bg-white/90 p-1 shadow-sm ring-1 ring-black/5 backdrop-blur-md dark:bg-gray-800/90 dark:ring-white/10">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3.5 w-3.5 text-gray-500 dark:text-gray-500"
-            >
-              <path d="M15 9l6 6" />
-              <path d="M9 15l6 6" />
-            </svg>
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/90 opacity-0 shadow-sm ring-1 ring-black/5 backdrop-blur-md transition-all group-hover/resize:opacity-100 dark:bg-gray-800/90 dark:ring-white/10">
+            <HandPalmIcon className="h-3 w-3 text-gray-500" />
           </div>
         </div>
       </div>
@@ -1917,16 +2231,21 @@ function SonicShieldCard({
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      customActionPosition="right"
       customAction={
         <button
           onClick={(e) => {
             e.stopPropagation()
             setIsFlipped(!isFlipped)
           }}
-          className={`rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${isFlipped ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100' : ''}`}
-          aria-label={t.focusLab.widgets.dopamineMenu.edit || 'Edit Sounds'}
+          className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-lg ring-1 transition-all ${
+            isFlipped
+              ? 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
+              : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+          }`}
+          aria-label={t.focusLab.widgets.sonicShield.settings?.title || 'Settings'}
         >
-          <span className="icon-[solar--menu-dots-bold] text-xl" />
+          <MoreHorizontalIcon className="h-5 w-5" />
         </button>
       }
     >
@@ -1993,13 +2312,14 @@ function TimerCard({
       }
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
+      customActionPosition="right"
       customAction={
         <button
           onClick={(e) => {
             e.stopPropagation()
             setIsFlipped(!isFlipped)
           }}
-          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+          className="flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-gray-400 shadow-lg ring-1 ring-gray-100 transition-all hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300"
           aria-label={t.focusLab.widgets.timer.switchMode || 'Switch Mode'}
         >
           <MoreHorizontalIcon className="h-5 w-5" />
@@ -2070,12 +2390,14 @@ function ToDoCard({
   onDelete,
   className,
   onStartFocus,
+  focusedTaskId,
 }: {
   cols?: number
   onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
-  onStartFocus?: (task: string) => void
+  onStartFocus?: (task: string, id: string) => void
+  focusedTaskId?: string | null
 }) {
   const { t } = useTranslation()
   return (
@@ -2086,7 +2408,7 @@ function ToDoCard({
       onDelete={onDelete}
       className={className}
     >
-      <FocusStation cols={cols} onStartFocus={onStartFocus} />
+      <FocusStation cols={cols} onStartFocus={onStartFocus} focusedTaskId={focusedTaskId} />
     </WidgetCard>
   )
 }
@@ -2112,13 +2434,19 @@ function DopamineMenuCard({
       onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      customActionPosition="right"
+      showHeader={false}
       customAction={
         <button
           onClick={(e) => {
             e.stopPropagation()
             setIsFlipped(!isFlipped)
           }}
-          className={`rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${isFlipped ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100' : ''}`}
+          className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-lg ring-1 transition-all ${
+            isFlipped
+              ? 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
+              : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+          }`}
           aria-label={t.focusLab.widgets.dopamineMenu.edit || 'Edit Options'}
         >
           <MoreHorizontalIcon className="h-5 w-5" />
@@ -2163,26 +2491,47 @@ const SonicShieldWidget = ({
   const [masterVolume, setMasterVolume] = useState(0.8)
   const audioRefs = useRef<Record<string, HTMLAudioElement>>({})
   const [isLoaded, setIsLoaded] = useState(false)
+  const prevSoundSettingsRef = useRef<{
+    active_tracks?: Record<string, ActiveTrack>
+    master_volume?: number
+  }>({})
+  const prevGoalRef = useRef<{ hours?: number; tasks?: number }>({})
 
   // Ref to prevent saving immediately after loading from context
   const isRemoteUpdate = useRef(false)
 
   // Load settings from Context
   useEffect(() => {
-    if (isSettingsLoaded) {
-      const soundSettings = settings.focus_lab?.sound
-      if (soundSettings) {
-        isRemoteUpdate.current = true
-        if (soundSettings.active_tracks) setActiveTracks(soundSettings.active_tracks)
-        if (typeof soundSettings.master_volume === 'number')
-          setMasterVolume(soundSettings.master_volume)
-        setTimeout(() => {
-          isRemoteUpdate.current = false
-        }, 50)
-      }
+    if (!isSettingsLoaded) return
+    const soundSettings = settings.focus_lab?.sound
+    const nextTracks = soundSettings?.active_tracks
+    const nextVolume = soundSettings?.master_volume
+    const prev = prevSoundSettingsRef.current
+
+    const tracksEqual = isEqual(nextTracks || {}, prev.active_tracks || {})
+    const volumeEqual =
+      typeof nextVolume === 'number' && typeof prev.master_volume === 'number'
+        ? nextVolume === prev.master_volume
+        : nextVolume === prev.master_volume
+
+    if (tracksEqual && volumeEqual && isLoaded) return
+
+    isRemoteUpdate.current = true
+    if (nextTracks) setActiveTracks(nextTracks)
+    if (typeof nextVolume === 'number') setMasterVolume(nextVolume)
+    prevSoundSettingsRef.current = { active_tracks: nextTracks, master_volume: nextVolume }
+
+    setTimeout(() => {
+      isRemoteUpdate.current = false
       setIsLoaded(true)
-    }
-  }, [isSettingsLoaded, settings.focus_lab?.sound])
+    }, 50)
+  }, [
+    isSettingsLoaded,
+    settings.focus_lab?.sound,
+    settings.focus_lab?.sound?.active_tracks,
+    settings.focus_lab?.sound?.master_volume,
+    isLoaded,
+  ])
 
   // Debounced Save
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2329,7 +2678,7 @@ const SonicShieldWidget = ({
   const isGlobalPlaying = activeCount > 0 && Object.values(activeTracks).some((t) => t.isPlaying)
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden">
+    <div className="@container relative flex h-full flex-col">
       <AnimatePresence mode="wait">
         {isFlipped ? (
           // BACK: Sound Grid
@@ -2341,8 +2690,8 @@ const SonicShieldWidget = ({
             transition={{ duration: 0.3 }}
             className="flex h-full flex-col gap-3"
           >
-            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pt-2 pr-1 [&::-webkit-scrollbar]:hidden">
+              <div className="grid grid-cols-1 gap-2 @[180px]:grid-cols-2 @[300px]:grid-cols-3">
                 {allSounds.map((sound) => {
                   const isActive = !!activeTracks[sound.id]
                   const track = activeTracks[sound.id]
@@ -2350,7 +2699,7 @@ const SonicShieldWidget = ({
                   return (
                     <div
                       key={sound.id}
-                      className={`group relative flex flex-col justify-between rounded-xl border p-2.5 transition-all ${
+                      className={`group relative flex items-center justify-between gap-2 rounded-xl border p-2 transition-all ${
                         isActive
                           ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
                           : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800'
@@ -2358,7 +2707,7 @@ const SonicShieldWidget = ({
                     >
                       <button
                         onClick={() => toggleTrack(sound.id)}
-                        className="flex flex-1 flex-col items-start text-left"
+                        className="flex flex-1 items-center text-left"
                       >
                         <span
                           className={`text-xs font-bold ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
@@ -2368,7 +2717,7 @@ const SonicShieldWidget = ({
                       </button>
 
                       {isActive && (
-                        <div className="animate-in fade-in slide-in-from-bottom-2 mt-3">
+                        <div className="animate-in fade-in slide-in-from-bottom-2 flex items-center">
                           <input
                             type="range"
                             min="0"
@@ -2379,7 +2728,7 @@ const SonicShieldWidget = ({
                               updateTrackVolume(sound.id, parseFloat(e.target.value))
                             }
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400 h-1 w-full cursor-pointer rounded-full"
+                            className="bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400 h-1 w-14 cursor-pointer rounded-full"
                           />
                         </div>
                       )}
@@ -2407,14 +2756,14 @@ const SonicShieldWidget = ({
               </div>
 
               {/* Bottom: Controls */}
-              <div className="flex w-full items-center justify-between pt-4">
+              <div className="flex w-full items-center gap-4 pt-4">
                 {/* Play/Pause Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     updateSettings('focus_lab.sound.enabled', !isSoundEnabled)
                   }}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+                  className="flex h-12 w-12 items-center justify-center text-gray-900 transition-colors hover:opacity-80 dark:text-white"
                   title={isSoundEnabled ? 'Pause' : 'Play'}
                 >
                   {isSoundEnabled ? (
@@ -2425,9 +2774,9 @@ const SonicShieldWidget = ({
                 </button>
 
                 {/* Horizontal Volume Slider */}
-                <div className="group flex w-32 flex-col justify-center">
+                <div className="group flex flex-1 justify-end">
                   <div
-                    className="relative h-2 w-full cursor-pointer rounded-full bg-gray-100 dark:bg-gray-800"
+                    className="relative h-2 w-full max-w-[120px] cursor-pointer rounded-full bg-gray-100 dark:bg-gray-800"
                     onPointerDown={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect()
                       const handleMove = (moveEvent: PointerEvent) => {
@@ -2508,10 +2857,13 @@ const TimerWidget = ({
 }) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
+  const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
   const [activePreset, setActivePreset] = useState<TimerPreset>('focus')
   const [customMinutes, setCustomMinutes] = useState(15)
   const [isEditingCustom, setIsEditingCustom] = useState(false)
   const [isCustomChanged, setIsCustomChanged] = useState(false)
+  const hasHydratedCustom = useRef(false)
+  const prevCustomDurationRef = useRef<number | null>(null)
   // Internal isFlipped removed in favor of prop
 
   // Timer Core State
@@ -2529,6 +2881,9 @@ const TimerWidget = ({
   const isPaused = timerState === 'paused-focusing' || timerState === 'paused-break'
   const isCompleted = timerState === 'focus-completed' || timerState === 'break-completed'
 
+  // Derive mode from flip state (front = countdown, back = stopwatch)
+  const derivedMode = isFlipped ? 'stopwatch' : 'countdown'
+
   // Initialize Audio & Permissions
   useEffect(() => {
     audioRef.current = new Audio('/static/sounds/alarm.mp3')
@@ -2538,12 +2893,79 @@ const TimerWidget = ({
     }
   }, [])
 
+  // Hydrate custom duration from settings (seconds -> minutes)
+  useEffect(() => {
+    if (!isSettingsLoaded) return
+    const storedSeconds = settings.focus_lab?.timer?.custom_duration
+    // Skip if value unchanged to avoid loops
+    if (storedSeconds === prevCustomDurationRef.current && hasHydratedCustom.current) return
+    prevCustomDurationRef.current = storedSeconds ?? null
+
+    if (typeof storedSeconds === 'number') {
+      const minutes = Math.max(1, Math.round(storedSeconds / 60))
+      if (minutes !== customMinutes) setCustomMinutes(minutes)
+    }
+    hasHydratedCustom.current = true
+  }, [customMinutes, isSettingsLoaded, settings.focus_lab?.timer?.custom_duration])
+
+  // Persist custom duration to settings/Supabase when user changes it
+  useEffect(() => {
+    if (!hasHydratedCustom.current) return
+    const currentStored = settings.focus_lab?.timer?.custom_duration
+    const nextSeconds = customMinutes * 60
+    if (currentStored === nextSeconds) return
+    updateSettings('focus_lab.timer.custom_duration', nextSeconds)
+  }, [customMinutes, settings.focus_lab?.timer?.custom_duration, updateSettings])
+
   const playAlarmSound = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = 0
       audioRef.current.play().catch((e) => console.error('Play alarm failed:', e))
     }
   }, [])
+
+  const recordSession = useCallback(
+    ({
+      elapsedSeconds,
+      completed = true,
+    }: { elapsedSeconds?: number; completed?: boolean } = {}) => {
+      try {
+        const now = Date.now()
+        const resolvedElapsedSeconds =
+          typeof elapsedSeconds === 'number'
+            ? elapsedSeconds
+            : derivedMode === 'countdown'
+              ? Math.max(0, totalAllocatedDuration - timeLeft)
+              : timeLeft
+
+        const durationMinutes = resolvedElapsedSeconds / 60
+
+        // Ignore accidental short stops (< ~6s) when not completed
+        if (durationMinutes < 0.1 && !completed) return
+
+        const id =
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `session-${now}-${Math.random()}`
+        const finalStartTime = startTime ? startTime : now - resolvedElapsedSeconds * 1000
+
+        saveSession(
+          {
+            id,
+            taskName: focusedTask?.text || null,
+            startTime: finalStartTime,
+            durationMinutes,
+            completed,
+          },
+          user
+        )
+        if (user) syncFocusHistory(user)
+      } catch (e) {
+        console.error('Error recording session:', e)
+      }
+    },
+    [derivedMode, focusedTask, startTime, timeLeft, totalAllocatedDuration, user]
+  )
 
   // -- Data Recording --
   const handleSessionComplete = useCallback(
@@ -2590,8 +3012,6 @@ const TimerWidget = ({
   // Reset/Init when mode/preset changes (Only if Idle)
   // useEffect(() => {
   //   if (timerState !== 'idle') return
-  // Derive mode from flip state
-  const derivedMode = isFlipped ? 'stopwatch' : 'countdown'
 
   // Reset timer when flipping (changing modes)
   useEffect(() => {
@@ -2626,20 +3046,9 @@ const TimerWidget = ({
               setTimerState(timerState === 'focusing' ? 'focus-completed' : 'break-completed')
               if (timerState === 'focusing') {
                 // Log session success
-                const duration = Math.floor((totalAllocatedDuration - 0) / 60)
-                if (onTimerComplete) onTimerComplete(duration)
-                saveSession(
-                  {
-                    id: crypto.randomUUID(),
-                    startTime: startTime || Date.now() - totalAllocatedDuration * 1000,
-                    durationMinutes: duration,
-                    completed: true,
-                    taskName: focusedTask?.text || null,
-                  },
-                  user
-                ) // Pass user to saveSession
-                // Sync History
-                if (user) syncFocusHistory(user)
+                const durationMinutes = Math.floor((totalAllocatedDuration - 0) / 60)
+                if (onTimerComplete) onTimerComplete(durationMinutes)
+                recordSession({ elapsedSeconds: totalAllocatedDuration, completed: true })
               }
               return 0
             }
@@ -2660,6 +3069,7 @@ const TimerWidget = ({
     focusedTask,
     onTimerComplete,
     playAlarmSound,
+    recordSession,
     user,
   ])
 
@@ -2681,6 +3091,12 @@ const TimerWidget = ({
   }
 
   const endSession = () => {
+    if (timerState === 'focusing' || timerState === 'paused-focusing') {
+      const elapsedSeconds =
+        derivedMode === 'countdown' ? Math.max(0, totalAllocatedDuration - timeLeft) : timeLeft
+      recordSession({ elapsedSeconds, completed: false })
+    }
+
     setTimerState('idle')
     setStartTime(null)
     if (derivedMode === 'countdown') {
@@ -2737,11 +3153,11 @@ const TimerWidget = ({
     ? timerState === 'focus-completed'
       ? 'text-center text-xl font-bold text-green-500'
       : 'text-center text-xl font-bold text-primary-500'
-    : 'font-mono text-3xl font-bold tracking-tighter text-gray-800 dark:text-white'
+    : 'focuslab-numeric text-3xl font-bold tracking-tight text-gray-800 dark:text-white'
 
   // -- Render --
   return (
-    <div className="relative flex h-full flex-col overflow-hidden">
+    <div className="relative flex h-full flex-col">
       <AnimatePresence mode="wait">
         {isFlipped ? (
           // BACK: Settings
@@ -2754,53 +3170,56 @@ const TimerWidget = ({
             transition={{ duration: 0.3 }}
             className="flex h-full flex-col"
           >
-            {/* Top Right Actions: Switch to Pomodoro */}
-            <div className="absolute top-0 right-0 z-20 p-2">
-              <button
-                onClick={() => onFlip(false)}
-                className="p-2 text-gray-300 transition-colors hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400"
-                title={t.focusLab.widgets.timer.switchMode || 'Switch Mode'}
-              >
-                <MoreHorizontalIcon className="h-5 w-5" />
-              </button>
-            </div>
-
             {/* Stopwatch Display */}
             <div className="flex flex-1 flex-col items-center justify-center">
-              <div className="font-mono text-7xl leading-none font-black tracking-tighter text-gray-900 tabular-nums sm:text-8xl dark:text-white">
-                {display}
+              <div
+                className="flex w-full items-center justify-center"
+                style={{ containerType: 'inline-size' }}
+              >
+                <div
+                  className="focuslab-numeric text-primary-600 dark:text-primary-400 leading-none font-black tracking-tight"
+                  style={{ fontSize: 'clamp(2.5rem, 26cqw, 7rem)' }}
+                >
+                  {display}
+                </div>
               </div>
               <p className="mt-2 text-sm font-medium text-gray-400">
-                {isRunning ? 'Recording time...' : 'Ready to start'}
+                {isRunning
+                  ? t.focusLab.widgets.timer.recording || 'Recording time...'
+                  : t.focusLab.widgets.timer.ready || 'Ready to start'}
               </p>
             </div>
 
             {/* Stopwatch Controls */}
             <div className="w-full">
               {timerState === 'idle' && (
-                <button
-                  onClick={() => {
-                    playClickSound()
-                    startTimer()
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 py-3.5 text-lg font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-600 active:scale-95"
-                >
-                  <PlayIcon className="h-5 w-5" />
-                  {t.focusLab.widgets.timer.start}
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      startTimer()
+                    }}
+                    className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 flex w-auto min-w-[140px] items-center justify-center gap-2 rounded-full px-6 py-2.5 text-base font-bold text-white shadow-lg transition-all active:scale-95"
+                  >
+                    <PlayIcon className="h-4 w-4" />
+                    {t.focusLab.widgets.timer.start}
+                  </button>
+                </div>
               )}
 
               {isRunning && (
-                <button
-                  onClick={() => {
-                    playClickSound()
-                    pauseTimer()
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 py-3.5 text-lg font-bold text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95 dark:bg-gray-700 dark:hover:bg-gray-600"
-                >
-                  <PauseIcon className="h-5 w-5" />
-                  {t.focusLab.widgets.timer.pause}
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      pauseTimer()
+                    }}
+                    className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 flex w-auto min-w-[140px] items-center justify-center gap-2 rounded-full px-6 py-2.5 text-base font-bold text-white shadow-lg transition-all active:scale-95"
+                  >
+                    <PauseIcon className="h-4 w-4" />
+                    {t.focusLab.widgets.timer.pause}
+                  </button>
+                </div>
               )}
 
               {(isPaused || isCompleted) && (
@@ -2810,7 +3229,7 @@ const TimerWidget = ({
                       playClickSound()
                       endSession()
                     }}
-                    className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    className="flex-1 rounded-full bg-gray-100 px-4 py-3 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700"
                   >
                     {t.focusLab.widgets.timer.endSession || 'End'}
                   </button>
@@ -2819,7 +3238,7 @@ const TimerWidget = ({
                       playClickSound()
                       startTimer()
                     }}
-                    className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-blue-500 py-3.5 text-lg font-bold text-white shadow-lg transition-all hover:bg-blue-600 active:scale-95"
+                    className="bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 flex flex-[2] items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-bold text-white shadow-lg transition-all active:scale-95"
                   >
                     <PlayIcon className="h-5 w-5" />
                     {t.focusLab.widgets.timer.resume || 'Resume'}
@@ -2854,7 +3273,7 @@ const TimerWidget = ({
                         onClick={() => setActivePreset(preset)}
                         className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                           activePreset === preset
-                            ? 'text-primary-600 dark:text-primary-400 bg-white shadow-sm dark:bg-gray-700'
+                            ? 'text-primary-600 dark:text-primary-400 dark:bg-primary-800/40 bg-white shadow-sm'
                             : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
                       >
@@ -2898,8 +3317,12 @@ const TimerWidget = ({
                 style={{ containerType: 'inline-size' }}
               >
                 <div
-                  className={`font-mono leading-none font-black tracking-tighter tabular-nums ${isCompleted ? 'text-green-500' : 'text-gray-900 dark:text-white'}`}
-                  style={{ fontSize: 'clamp(2.5rem, 26cqw, 7rem)' }}
+                  className={`focuslab-numeric leading-none font-black tracking-tight ${isCompleted ? 'text-green-500' : 'text-primary-600 dark:text-primary-400'}`}
+                  style={{
+                    fontSize: isCompleted
+                      ? 'clamp(2rem, 15cqw, 4.5rem)'
+                      : 'clamp(2.5rem, 26cqw, 7rem)',
+                  }}
                 >
                   {isCompleted ? t.focusLab.widgets.timer.done : display}
                 </div>
@@ -2918,31 +3341,35 @@ const TimerWidget = ({
             {/* Bottom Action Button */}
             <div className="w-full">
               {timerState === 'idle' && (
-                <button
-                  onClick={() => {
-                    playClickSound()
-                    startTimer()
-                  }}
-                  className="bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-lg font-bold text-white shadow-lg transition-all active:scale-95"
-                >
-                  {/* Play Icon */}
-                  <span className="icon-[solar--play-bold] text-xl" />
-                  {t.focusLab.widgets.timer.start}
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      startTimer()
+                    }}
+                    className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 flex w-auto min-w-[140px] items-center justify-center gap-2 rounded-full px-6 py-2.5 text-base font-bold text-white shadow-lg transition-all active:scale-95"
+                  >
+                    {/* Play Icon */}
+                    <span className="icon-[solar--play-bold] text-lg" />
+                    {t.focusLab.widgets.timer.start}
+                  </button>
+                </div>
               )}
 
               {isRunning && (
-                <button
-                  onClick={() => {
-                    playClickSound()
-                    pauseTimer()
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 py-3.5 text-lg font-bold text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95 dark:bg-gray-700 dark:hover:bg-gray-600"
-                >
-                  {/* Pause Icon */}
-                  <span className="icon-[solar--pause-bold] text-xl" />
-                  {t.focusLab.widgets.timer.pause}
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      pauseTimer()
+                    }}
+                    className="bg-primary-500 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 flex w-auto min-w-[140px] items-center justify-center gap-2 rounded-full px-6 py-2.5 text-base font-bold text-white shadow-lg transition-all active:scale-95"
+                  >
+                    {/* Pause Icon */}
+                    <span className="icon-[solar--pause-bold] text-lg" />
+                    {t.focusLab.widgets.timer.pause}
+                  </button>
+                </div>
               )}
 
               {isPaused && (
@@ -2952,7 +3379,7 @@ const TimerWidget = ({
                       playClickSound()
                       endSession()
                     }}
-                    className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    className="flex-1 rounded-full bg-gray-100 px-4 py-3 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700"
                   >
                     {t.focusLab.widgets.timer.endSession || 'End'}
                   </button>
@@ -2961,7 +3388,7 @@ const TimerWidget = ({
                       playClickSound()
                       startTimer()
                     }}
-                    className="bg-primary-500 hover:bg-primary-600 flex flex-[2] items-center justify-center gap-2 rounded-2xl py-3.5 text-lg font-bold text-white shadow-lg transition-all active:scale-95"
+                    className="bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 flex flex-[2] items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-bold text-white shadow-lg transition-all active:scale-95"
                   >
                     <span className="icon-[solar--play-bold] text-xl" />
                     {t.focusLab.widgets.timer.resume || 'Resume'}
@@ -2970,15 +3397,26 @@ const TimerWidget = ({
               )}
 
               {isCompleted && (
-                <button
-                  onClick={() => {
-                    playClickSound()
-                    continueNewSession()
-                  }}
-                  className="w-full rounded-2xl bg-green-500 py-3.5 text-lg font-bold text-white shadow-lg shadow-green-500/30 transition-all hover:bg-green-600 active:scale-95"
-                >
-                  {t.focusLab.widgets.timer.decisionPrompt?.continueFocus || 'Start New Session'}
-                </button>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      continueNewSession()
+                    }}
+                    className="w-full rounded-full bg-green-500 px-6 py-3 text-lg font-bold text-white shadow-lg shadow-green-500/30 transition-all hover:bg-green-600 active:scale-95"
+                  >
+                    {t.focusLab.widgets.timer.decisionPrompt?.continueFocus || 'Start New Session'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      playClickSound()
+                      endSession()
+                    }}
+                    className="w-full rounded-full bg-gray-100 px-6 py-3 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  >
+                    {t.focusLab.widgets.timer.endSession || 'End'}
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>
@@ -2989,7 +3427,7 @@ const TimerWidget = ({
 }
 
 const TaskBreakerWidget = () => {
-  const { t } = useTranslation()
+  const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const [task, setTask] = useState('')
   const [visibleSteps, setVisibleSteps] = useState<string[]>([])
@@ -3088,45 +3526,36 @@ const TaskBreakerWidget = () => {
   if (isResultView) {
     return (
       <div className="flex h-full flex-col gap-4">
-        <div className="bg-primary-50 dark:bg-primary-900/20 flex flex-col gap-2 rounded-2xl p-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-primary-600/80 dark:text-primary-400/80 text-xs font-bold tracking-wider uppercase">
-              {t.focusLab.widgets.taskBreaker.currentMission}
+        <div className="flex items-stretch gap-4">
+          {/* Left: Task Content Area */}
+          <div className="bg-primary-50 dark:bg-primary-900/20 relative flex flex-1 items-center justify-center rounded-[24px] p-6">
+            <p className="text-center text-sm leading-relaxed font-bold text-gray-900 dark:text-gray-100">
+              {task}
             </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleTransferToTodo}
-                disabled={
-                  visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred
-                }
-                className="bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 dark:bg-primary-400 dark:hover:bg-primary-300 dark:disabled:bg-primary-700/60 flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-sm transition-all disabled:cursor-not-allowed"
-                aria-label={
-                  isTransferring
-                    ? t.focusLab.widgets.taskBreaker.transferInProgress
-                    : t.focusLab.widgets.taskBreaker.transferButton
-                }
-                title={t.focusLab.widgets.taskBreaker.transferButton}
-              >
-                {isTransferring ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
-                ) : (
-                  <ArrowLaunchIcon className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {isTransferring
-                    ? t.focusLab.widgets.taskBreaker.transferInProgress
-                    : t.focusLab.widgets.taskBreaker.transferButton}
-                </span>
-              </button>
-              <button
-                onClick={handleReset}
-                className="hover:text-primary-600 dark:hover:text-primary-400 flex h-9 shrink-0 items-center rounded-xl bg-white px-3 text-[11px] font-semibold text-gray-600 shadow-sm transition-colors dark:bg-gray-800 dark:text-gray-300"
-              >
-                {t.focusLab.widgets.taskBreaker.newTask}
-              </button>
-            </div>
           </div>
-          <p className="text-sm font-bold break-words text-gray-900 dark:text-gray-100">{task}</p>
+
+          {/* Right: Iconic Actions */}
+          <div className="flex shrink-0 flex-col gap-2">
+            <button
+              onClick={handleTransferToTodo}
+              disabled={visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred}
+              className="bg-primary-100 text-primary-600 hover:bg-primary-200 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 flex h-[48px] w-[48px] items-center justify-center rounded-2xl shadow-sm transition-all disabled:opacity-30"
+              title={t.focusLab.widgets.taskBreaker.transferButton}
+            >
+              {isTransferring ? (
+                <span className="border-primary-500/60 border-t-primary-500 h-4 w-4 animate-spin rounded-full border-2" />
+              ) : (
+                <ArrowLaunchIcon className="h-5 w-5" />
+              )}
+            </button>
+            <button
+              onClick={handleReset}
+              className="flex h-[48px] w-[48px] items-center justify-center rounded-2xl bg-gray-50 text-gray-400 shadow-sm transition-all hover:bg-gray-100 hover:text-gray-600 dark:bg-gray-800 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+              title={t.focusLab.widgets.taskBreaker.newTask}
+            >
+              <PlusIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         {transferStatus !== 'idle' && (
           <p
@@ -3142,7 +3571,7 @@ const TaskBreakerWidget = () => {
           </p>
         )}
 
-        <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+        <div className="no-scrollbar flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
           {isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
               <div className="border-primary-200 border-t-primary-500 h-8 w-8 animate-spin rounded-full border-4" />
@@ -3162,34 +3591,40 @@ const TaskBreakerWidget = () => {
   }
 
   return (
-    <div className="flex h-full flex-col justify-center gap-4">
-      <div className="space-y-2 text-center">
-        <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 mx-auto flex h-10 w-10 items-center justify-center rounded-2xl">
-          <MagicIcon className="h-6 w-6" />
+    <div className="flex h-full flex-col pb-0">
+      <div className="flex flex-1 items-center justify-center">
+        <div className="flex w-full max-w-xl flex-col items-center gap-2">
+          <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 flex h-12 w-12 items-center justify-center rounded-2xl">
+            <MagicIcon className="h-6 w-6" />
+          </div>
+
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            {t.focusLab.widgets.taskBreaker.overwhelmed}
+          </h3>
+
+          <textarea
+            value={task}
+            onChange={(event) => setTask(event.target.value)}
+            placeholder={
+              lang === 'zh'
+                ? '输入任务，AI帮你拆解步骤...\n\n例如： 打扫整个公寓...'
+                : 'Enter a task, AI breaks it down...\n\ne.g., Clean the entire apartment...'
+            }
+            className="focus:border-primary-500 focus:ring-primary-500 no-scrollbar mt-1 h-24 w-full resize-none rounded-2xl border border-gray-100 bg-gray-100 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800"
+          />
         </div>
-        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-          {t.focusLab.widgets.taskBreaker.overwhelmed}
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-300">
-          {t.focusLab.widgets.taskBreaker.description}
-        </p>
       </div>
 
-      <textarea
-        value={task}
-        onChange={(event) => setTask(event.target.value)}
-        placeholder={t.focusLab.widgets.taskBreaker.placeholder}
-        className="focus:border-primary-500 focus:ring-primary-500 scrollbar-none w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-800 [&::-webkit-scrollbar]:hidden"
-      />
-
-      <button
-        type="button"
-        onClick={handleBreakDown}
-        disabled={!task.trim()}
-        className="bg-primary-500 shadow-primary-200 hover:bg-primary-600 dark:bg-primary-500 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 font-bold text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:text-white dark:shadow-none"
-      >
-        {t.focusLab.widgets.taskBreaker.button}
-      </button>
+      <div className="mt-auto flex justify-center pt-2 pb-0">
+        <button
+          type="button"
+          onClick={handleBreakDown}
+          disabled={!task.trim()}
+          className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 flex w-auto min-w-[140px] items-center justify-center gap-2 rounded-full px-6 py-2.5 text-base font-bold text-white shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:text-white dark:shadow-none"
+        >
+          {t.focusLab.widgets.taskBreaker.button}
+        </button>
+      </div>
     </div>
   )
 }
@@ -3216,7 +3651,7 @@ const TaskStepItem = ({ step }: { step: string }) => {
           isChecked
             ? 'text-gray-400 line-through dark:text-gray-500'
             : 'text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100'
-        }`}
+        } `}
       >
         {step}
       </span>
@@ -3426,15 +3861,17 @@ const BrainDumpWidget = () => {
       value={item}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`group relative mb-3 break-inside-avoid overflow-hidden rounded-xl shadow-sm transition-all hover:rotate-1 hover:shadow-md ${
+      className={`group ring-primary-100/50 dark:ring-primary-900/40 relative mb-3 break-inside-avoid rounded-xl shadow-sm ring-1 transition-all hover:rotate-1 hover:shadow-md ${
         item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
-      }`}
+      } `}
     >
       {/* Header Bar (Tape/Tag look) */}
       <div
         className={`h-3 w-full ${
-          item.image ? 'bg-gray-100 dark:bg-gray-700' : 'bg-yellow-200/50 dark:bg-yellow-900/50'
-        }`}
+          item.image
+            ? 'bg-primary-100 dark:bg-primary-900/40'
+            : 'bg-yellow-200/50 dark:bg-yellow-900/50'
+        } `}
       />
 
       <div className="p-2.5 pt-2">
@@ -3462,15 +3899,7 @@ const BrainDumpWidget = () => {
             title={t.focusLab.widgets.brainDump.accessibility.moveToOtherColumn}
             aria-label={t.focusLab.widgets.brainDump.accessibility.moveToOtherColumn}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="h-3.5 w-3.5"
-            >
-              <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-            </svg>
+            <TransferIcon className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => handleDelete(item.id, column)}
@@ -3478,18 +3907,7 @@ const BrainDumpWidget = () => {
             title={t.focusLab.widgets.brainDump.accessibility.deleteNote}
             aria-label={t.focusLab.widgets.brainDump.accessibility.deleteNote}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3.5 w-3.5"
-            >
-              <path d="M18 6L6 18" />
-              <path d="M6 6l12 12" />
-            </svg>
+            <XIcon className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -3497,7 +3915,7 @@ const BrainDumpWidget = () => {
   )
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-hidden">
+    <div className="flex h-full flex-col gap-4">
       {/* Input Area */}
       <div className="relative shrink-0 space-y-2">
         <div className="flex items-center gap-2">
@@ -3515,21 +3933,10 @@ const BrainDumpWidget = () => {
               type="button"
               onClick={handleAdd}
               disabled={!inputValue.trim() && !pendingImage}
-              className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
+              className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
               aria-label={t.focusLab.widgets.brainDump.accessibility.addThought}
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <PlusIcon className="h-5 w-5" />
             </button>
           </div>
           <button
@@ -3540,19 +3947,7 @@ const BrainDumpWidget = () => {
             title={t.focusLab.widgets.brainDump.accessibility.clearBoard}
             aria-label={t.focusLab.widgets.brainDump.accessibility.clearBoard}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
+            <TrashIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -3563,7 +3958,7 @@ const BrainDumpWidget = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
+              className="relative rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={pendingImage} alt="Preview" className="h-20 w-auto object-cover p-1" />
@@ -3573,15 +3968,7 @@ const BrainDumpWidget = () => {
                 className="absolute top-1 right-1 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
                 aria-label={t.focusLab.widgets.brainDump.accessibility.removeImage}
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-3 w-3"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                <XIcon className="h-3 w-3" />
               </button>
             </motion.div>
           )}
@@ -3589,7 +3976,7 @@ const BrainDumpWidget = () => {
       </div>
 
       {/* Two-Column Masonry Grid */}
-      <div className="scrollbar-none flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-1.5 dark:border-gray-700 dark:bg-gray-800/20 [&::-webkit-scrollbar]:hidden">
+      <div className="no-scrollbar flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-1.5 dark:border-gray-700 dark:bg-gray-800/20 [&::-webkit-scrollbar]:hidden">
         {leftItems.length === 0 && rightItems.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-gray-400">
             <p className="text-sm">{t.focusLab.widgets.brainDump.emptyTitle}</p>
@@ -3623,65 +4010,6 @@ const BrainDumpWidget = () => {
   )
 }
 
-const MagicIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 3v3" />
-    <path d="M12 18v3" />
-    <path d="M5.22 5.22l2.12 2.12" />
-    <path d="M16.66 16.66l2.12 2.12" />
-    <path d="M3 12h3" />
-    <path d="M18 12h3" />
-    <path d="M5.22 18.78l2.12-2.12" />
-    <path d="M16.66 7.34l2.12-2.12" />
-    <path d="m14 9-5 5" />
-  </svg>
-)
-
-const PlayIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.4"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polygon points="7 4 20 12 7 20 7 4" />
-  </svg>
-)
-
-const PauseIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--arrow-right-up-outline] ${className}`} />
-)
-
-const InfoIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--info-circle-outline] ${className}`} />
-)
-
-const ArrowLaunchIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M7 17 17 7" />
-    <path d="M9 7h8v8" />
-  </svg>
-)
-
 const DopamineMenuWidget = ({
   cols = 6,
   isFlipped,
@@ -3693,8 +4021,8 @@ const DopamineMenuWidget = ({
 }) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
-  const defaultOptions = useMemo(() => t.focusLab.widgets.dopamineMenu.defaultOptions, [t])
-  const [options, setOptions] = useState(defaultOptions)
+  const defaultOptions = useMemo(() => [...t.focusLab.widgets.dopamineMenu.defaultOptions], [t])
+  const [options, setOptions] = useState<string[]>(defaultOptions)
   const [newOption, setNewOption] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -3787,7 +4115,7 @@ const DopamineMenuWidget = ({
   }
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden">
+    <div className="relative flex h-full flex-col">
       <AnimatePresence mode="wait">
         {isFlipped ? (
           // BACK: Settings / Options List
@@ -3797,10 +4125,9 @@ const DopamineMenuWidget = ({
             animate={{ opacity: 1, rotateY: 0 }}
             exit={{ opacity: 0, rotateY: -180 }}
             transition={{ duration: 0.3 }}
-            className="flex h-full flex-col gap-3"
+            className="flex h-full flex-col gap-2.5"
           >
             {/* Inner Header Removed as per request */}
-            <div className="pt-1" />
 
             {/* Input */}
             <div className="flex gap-2">
@@ -3821,12 +4148,12 @@ const DopamineMenuWidget = ({
             </div>
 
             {/* List */}
-            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto rounded-xl border border-dashed border-gray-200 p-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
-              <div className={`grid gap-2 ${cols >= 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto rounded-xl border border-dashed border-gray-200 p-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+              <div className={`gap - 2 grid ${cols >= 3 ? 'grid-cols-2' : 'grid-cols-1'} `}>
                 {options.map((opt, idx) => (
                   <div
                     key={idx}
-                    className="group flex items-center justify-between rounded-lg bg-white p-2 text-sm shadow-sm transition-all hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                    className="group hover:bg-primary-50 dark:hover:bg-primary-900/20 flex items-center justify-between rounded-lg bg-white p-2 text-sm shadow-sm transition-all dark:bg-gray-800 dark:text-gray-200"
                   >
                     <span className="truncate pr-2">{opt}</span>
                     <button
@@ -3849,6 +4176,7 @@ const DopamineMenuWidget = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex h-full flex-col items-center justify-center gap-6 text-center"
+            style={{ containerType: 'inline-size' }}
           >
             <div className="flex flex-col items-center gap-2">
               <div className="text-4xl">🎉</div>
@@ -3859,18 +4187,24 @@ const DopamineMenuWidget = ({
             <div className="flex gap-3">
               <button
                 onClick={() => setShowResult(false)}
-                className="rounded-xl px-4 py-2 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
               >
-                {t.focusLab.widgets.dopamineMenu.done || 'Done'}
+                <CheckIcon className="h-5 w-5" />
+                <span className="hidden @[220px]:inline">
+                  {t.focusLab.widgets.dopamineMenu.done || 'Done'}
+                </span>
               </button>
               <button
                 onClick={() => {
                   playClickSound()
                   handleSpin()
                 }}
-                className="bg-primary-500 hover:bg-primary-600 shadow-primary-200 rounded-xl px-6 py-2 text-sm font-bold text-white shadow-lg transition-transform active:scale-95"
+                className="bg-primary-500 shadow-primary-200 hover:bg-primary-600 flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white shadow-lg transition-transform active:scale-95"
               >
-                {t.focusLab.widgets.dopamineMenu.spinAgain || 'Spin Again'}
+                <MagicIcon className="h-5 w-5" />
+                <span className="hidden @[240px]:inline">
+                  {t.focusLab.widgets.dopamineMenu.spinAgain || 'Spin Again'}
+                </span>
               </button>
             </div>
           </motion.div>
@@ -3895,38 +4229,24 @@ const DopamineMenuWidget = ({
               </div>
             ) : (
               // Initial Simple State
-              <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
-                <div className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex h-16 w-16 items-center justify-center rounded-full">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    className="h-8 w-8"
-                  >
-                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                    <line x1="9" y1="9" x2="9.01" y2="9" />
-                    <line x1="15" y1="9" x2="15.01" y2="9" />
-                  </svg>
+              <div className="flex h-full flex-col justify-between">
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 pt-0 text-center">
+                  <div className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 mt-2 flex h-14 w-14 items-center justify-center rounded-full">
+                    <SmileCircleIcon className="h-9 w-9" />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                    {t.focusLab.widgets.dopamineMenu.needBoost || 'Need a boost?'}
-                  </h3>
-                  {/* <p className="text-xs text-gray-500">
-                     {t.focusLab.widgets.dopamineMenu.needBoostDesc || 'Get a random hit of simple joy.'}
-                   </p> */}
+
+                <div className="w-full">
+                  <div className="flex justify-center">
+                    <button
+                      onClick={handleSpin}
+                      disabled={options.length === 0}
+                      className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 flex w-auto min-w-[140px] items-center justify-center gap-2 rounded-full px-6 py-2.5 text-base font-bold text-white shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:text-white dark:shadow-none"
+                    >
+                      {t.focusLab.widgets.dopamineMenu.spinButton || 'Get Dopamine'}
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => {
-                    playClickSound()
-                    handleSpin()
-                  }}
-                  className="w-full max-w-[160px] rounded-2xl bg-gray-800 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-transform hover:bg-gray-900 active:scale-95 dark:bg-gray-700 dark:hover:bg-gray-600"
-                >
-                  {t.focusLab.widgets.dopamineMenu.getDopamine || 'Get Dopamine'}
-                </button>
               </div>
             )}
           </motion.div>
@@ -3935,19 +4255,3 @@ const DopamineMenuWidget = ({
     </div>
   )
 }
-
-const ArrowLeftIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--arrow-left-outline] ${className}`} />
-)
-
-const MinusIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--minus-circle-outline] ${className}`} />
-)
-
-const TrashIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--trash-bin-trash-outline] ${className}`} />
-)
-
-const MoreHorizontalIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--menu-dots-bold] ${className}`} />
-)
