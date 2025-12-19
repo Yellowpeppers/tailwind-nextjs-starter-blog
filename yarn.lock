@@ -3408,7 +3408,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@radix-ui/react-slot@npm:1.2.4":
+"@radix-ui/react-slot@npm:1.2.4, @radix-ui/react-slot@npm:^1.2.4":
   version: 1.2.4
   resolution: "@radix-ui/react-slot@npm:1.2.4"
   dependencies:
@@ -5273,6 +5273,15 @@ __metadata:
   version: 2.4.63
   resolution: "citeproc@npm:2.4.63"
   checksum: 15a22d857cabca6e28b79d52cff094949031145b3ff223ec17cb1b7f1be68b9ad63e8fcaa8621685f10c3c09daf72be58f9e9d20ef322e70e2b60dfbade27dc7
+  languageName: node
+  linkType: hard
+
+"class-variance-authority@npm:^0.7.1":
+  version: 0.7.1
+  resolution: "class-variance-authority@npm:0.7.1"
+  dependencies:
+    clsx: ^2.1.1
+  checksum: e05ba26ef9ec38f7c675047ce366b067d60af6c954dba08f7802af19a9460a534ae752d8fe1294fff99d0fa94a669b16ccebd87e8a20f637c0736cf2751dd2c5
   languageName: node
   linkType: hard
 
@@ -12880,6 +12889,7 @@ __metadata:
     "@iconify/tailwind4": ^1.2.0
     "@next/bundle-analyzer": 15.2.4
     "@playwright/test": ^1.57.0
+    "@radix-ui/react-slot": ^1.2.4
     "@supabase/ssr": ^0.8.0
     "@supabase/supabase-js": ^2.87.3
     "@svgr/webpack": ^8.0.1
@@ -12896,6 +12906,7 @@ __metadata:
     algoliasearch: ^4.24.0
     body-scroll-lock: ^4.0.0-beta.0
     chrome-devtools-mcp: ^0.12.0
+    class-variance-authority: ^0.7.1
     clsx: ^2.1.1
     contentlayer2: 0.5.5
     cross-env: ^7.0.3
