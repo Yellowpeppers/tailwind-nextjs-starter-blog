@@ -58,17 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check if profile exists
       const { data, error } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, email, tier')
         .eq('id', user.id)
         .single()
 
       if (error || !data) {
         console.warn('Profile missing for authenticated user, attempting to heal...')
         // Create profile manually (Self-healing)
-        // We use upsert to be safe, though insert would work if it's truly missing
         const { error: insertError } = await supabase
           .from('profiles')
-          .upsert({ id: user.id, tier: 'free' }, { onConflict: 'id' })
+          .upsert({ id: user.id, email: user.email, tier: 'free' }, { onConflict: 'id' })
 
         if (insertError) {
           console.error('Failed to auto-create profile:', insertError)
@@ -77,16 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTier('free')
         }
       } else {
-        // Fetch tier
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('tier')
-          .eq('id', user.id)
-          .single()
-
-        if (profileData) {
-          setTier(profileData.tier || 'free')
+        // Profile exists, sync email if missing
+        if (!data.email && user.email) {
+          await supabase.from('profiles').update({ email: user.email }).eq('id', user.id)
         }
+
+        setTier(data.tier || 'free')
       }
     }
 
