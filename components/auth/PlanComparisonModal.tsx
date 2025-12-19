@@ -19,18 +19,22 @@ export default function PlanComparisonModal({ isOpen, onClose }: PlanComparisonM
       free: t.comparePlans.values.basic,
       pro: t.comparePlans.values.allAccess,
     },
-    { name: t.comparePlans.features.aiTaskBreaker, free: false, pro: true },
-    { name: t.comparePlans.features.cloudSync, free: false, pro: true },
-    { name: t.comparePlans.features.stats, free: false, pro: true },
+    {
+      name: t.comparePlans.features.aiTaskBreaker,
+      free: t.comparePlans.values.limitedTimes,
+      pro: true,
+    },
+    { name: t.comparePlans.features.cloudSync, free: true, pro: true },
+    { name: t.comparePlans.features.stats, free: true, pro: true },
     {
       name: t.comparePlans.features.customBackgrounds,
-      free: t.comparePlans.values.inDev,
+      free: false,
       pro: t.comparePlans.values.inDev,
     },
     { name: t.comparePlans.features.prioritySupport, free: false, pro: true },
     {
       name: t.comparePlans.features.unlimitedTasks,
-      free: t.comparePlans.values.limit20,
+      free: t.comparePlans.values.limit10,
       pro: t.comparePlans.values.unlimited,
     },
   ]
@@ -111,7 +115,7 @@ export default function PlanComparisonModal({ isOpen, onClose }: PlanComparisonM
                               <div className="flex flex-col">
                                 <span>{t.comparePlans.columns.pro}</span>
                                 <span className="mt-1 text-sm font-extrabold text-indigo-600 dark:text-indigo-400">
-                                  $5<span className="text-xs font-normal">/mo</span>
+                                  ?
                                 </span>
                               </div>
                             </th>

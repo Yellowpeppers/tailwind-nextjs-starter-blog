@@ -31,9 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Handle "Invalid Refresh Token" or explicit sign out
+      if (event === 'SIGNED_OUT' || !session) {
+        setSession(null)
+        setUser(null)
+        setLoading(false)
+        setTier('free')
+        // Clear any lingering local storage if needed, though supabase client handles it
+        return
+      }
+
       setSession(session)
-      setUser(session?.user ?? null)
+      setUser(session.user)
       setLoading(false)
     })
 

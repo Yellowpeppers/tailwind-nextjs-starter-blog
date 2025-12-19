@@ -183,9 +183,12 @@ export const dictionary = {
           reset: 'Reset',
           pause: 'PAUSE',
           start: 'START',
-          resume: 'RESUME',
-          endSession: 'End Session',
-          done: 'Focus Complete!',
+          resume: 'Resume',
+          endSession: 'End',
+          congratulations: 'Congratulations',
+          continueFocus: 'One more round',
+          endFocus: 'End Focus',
+          done: 'Done',
           ready: 'Ready to start',
           recording: 'Recording time...',
           decisionPrompt: {
@@ -822,6 +825,8 @@ export const dictionary = {
         limit20: 'Limit 20',
         unlimited: 'Unlimited',
         inDev: 'In Development',
+        limit10: 'Limit 10',
+        limitedTimes: 'Limited Times',
       },
       beta: {
         msgPre: 'Good News! You are currently on the ',
@@ -833,6 +838,133 @@ export const dictionary = {
     userProfile: {
       betaBadge: 'Pro Plan (Internal Beta)',
       betaDescription: 'All features are currently free.',
+    },
+    focusLabLanding: {
+      hero: {
+        newVersion: 'v1.0 Internal Beta: New Interface & Focus Stats',
+        titlePre: 'Lock Your Attention in',
+        titlePost: 'Focus Lab',
+        descPre: 'Stop fighting your brain. The',
+        descHighlight: 'Electronic Workstation',
+        descPost: 'designed for ADHD minds to reduce attention loss from screen switching.',
+        enterBtn: 'Enter Focus Lab',
+        noCreditCard: 'No registration required · Instant access',
+        screenshotPlaceholder: 'Dashboard Screenshot will be placed here',
+      },
+      painPoints: {
+        title: 'Why traditional productivity tools fail us',
+        desc: "Standard tools aren't built for neurodivergent minds.",
+        items: [
+          {
+            title: 'Attention Loss',
+            desc: "Too many tabs open in your brain? You freeze and do nothing because you don't know where to start.",
+          },
+          {
+            title: 'Dopamine Traps',
+            desc: 'Checking one notification turns into 2 hours of doom-scrolling before you realize it.',
+          },
+          {
+            title: 'Time Blindness',
+            desc: 'Thinking a task will take 5 minutes when it takes 50, leading to chronic lateness and guilt.',
+          },
+          {
+            title: 'Task Paralysis',
+            desc: 'Hard to start? Break down any difficult task into small, actionable steps immediately.',
+          },
+        ],
+      },
+      howItWorks: {
+        title: 'How to Enter Flow State',
+        steps: [
+          {
+            title: 'Attention Hub',
+            desc: 'Clear your mental RAM. Capture distracting thoughts here to deal with them later.',
+          },
+          {
+            title: 'White Noise',
+            desc: 'Turn on white noise or brainwave audio to physically shield yourself from auditory distractions.',
+          },
+          {
+            title: 'Focus Timer',
+            desc: 'Start the focus clock to quickly switch your state into focus mode.',
+          },
+        ],
+      },
+      features: {
+        title: "Everything you need, nothing you don't",
+        items: [
+          {
+            title: 'Focus Timer',
+            desc: 'A flexible timer that helps you track focused work sessions.',
+          },
+          {
+            title: 'Task Breaker',
+            desc: 'AI-powered tool that crushes intimidating tasks into tiny, manageable steps.',
+          },
+          {
+            title: 'Dopamine Menu',
+            desc: 'A menu of healthy rewards to boost energy without getting sucked into social media.',
+          },
+          {
+            title: 'Focus Stats',
+            desc: 'Track your deep work hours and energy patterns over time.',
+          },
+        ],
+      },
+      testimonials: {
+        title: 'Trusted by 1,000+ ADHDers',
+        items: [
+          {
+            quote: '“With the White Noise tool, I wrote 4 chapters in a week. Magic.”',
+            name: 'Sarah J.',
+            role: 'Writer',
+          },
+          {
+            quote: '“The Attention Hub saved me during finals. My anxiety was cut in half.”',
+            name: 'David L.',
+            role: 'Student',
+          },
+          {
+            quote:
+              "“Finally a dashboard that doesn't feel cluttered. Just looking at it calms me.”",
+            name: 'Elena R.',
+            role: 'Developer',
+          },
+          {
+            quote: '“I recommend Focus Lab to all my clients. It builds the right rituals.”',
+            name: 'Mike T.',
+            role: 'ADHD Coach',
+          },
+        ],
+      },
+      faq: {
+        title: 'Frequently Asked Questions',
+        items: [
+          {
+            question: 'Is Focus Lab free?',
+            answer: 'Yes! It is completely free to use. No credit card required.',
+          },
+          {
+            question: 'Do I need to create an account?',
+            answer:
+              'No. You can use it instantly as a guest. Your data is stored locally in your browser.',
+          },
+          {
+            question: 'Does this really help with ADHD?',
+            answer:
+              'Yes, it is designed with high-stimulation control in mind, making it perfect for ADHD brains.',
+          },
+          {
+            question: ' What devices does it work on?',
+            answer:
+              'It works on any modern web browser on desktop and mobile (Chrome, Safari, Edge, Firefox).',
+          },
+        ],
+      },
+      cta: {
+        title: 'Ready to reclaim your attention?',
+        button: 'Start Focusing - Free',
+      },
     },
   },
   zh: {
@@ -1018,6 +1150,9 @@ export const dictionary = {
           start: '开始',
           resume: '继续',
           endSession: '结束专注',
+          congratulations: '恭喜',
+          continueFocus: '我还能行',
+          endFocus: '结束专注',
           done: '又完成了一次专注',
           ready: '准备开始',
           recording: '正在记录',
@@ -1152,6 +1287,7 @@ export const dictionary = {
       common: {
         cancel: '取消',
       },
+
       groupModal: {
         title: '加入 NeuroHacks Lab 微信群',
         description: '微信扫码进群，与其他 Focus Lab 用户一同交流 ADHD 效率工具。',
@@ -1663,6 +1799,8 @@ export const dictionary = {
         limit20: '限20个',
         unlimited: '无限',
         inDev: '正在开发',
+        limit10: '限10个',
+        limitedTimes: '有限次数',
       },
       beta: {
         msgPre: '好消息！您当前处于',
@@ -1674,6 +1812,131 @@ export const dictionary = {
     userProfile: {
       betaBadge: '专业版计划（内测中）',
       betaDescription: '当前所有功能均可免费体验。',
+    },
+    focusLabLanding: {
+      hero: {
+        newVersion: 'v1.0 正在内测中：全新界面 & 专注统计',
+        titlePre: '将你的注意力锁定在',
+        titlePost: 'Focus Lab',
+        descPre: '别再和大脑对抗了。这是一个专为注意力缺陷（ADHD）设计的',
+        descHighlight: '电子工位',
+        descPost: '助你瞬间进入心流状态，减少切换屏幕带来的注意丢失。',
+        enterBtn: '进入 Focus Lab',
+        noCreditCard: '无需注册 · 即刻使用',
+        screenshotPlaceholder: '仪表盘截图将放置于此',
+      },
+      painPoints: {
+        title: '为什么传统的待办清单会失效',
+        desc: '标准的效率工具并不是为神经多样性的大脑设计的。',
+        items: [
+          {
+            title: '注意力丧失',
+            desc: '大脑里打开了太多标签页？你僵住了，什么也做不了，因为不知道从哪里开始。',
+          },
+          {
+            title: '多巴胺陷阱',
+            desc: '本来只想看一条通知，结果不知不觉刷了两小时手机。',
+          },
+          {
+            title: '时间盲区',
+            desc: '以为这事只要 5 分钟，结果花了 50 分钟，导致永远迟到和内疚。',
+          },
+          {
+            title: '难以启动任务',
+            desc: '通过任务拆解的方式，将任何困难任务拆解成可以随时启动的小任务。',
+          },
+        ],
+      },
+      howItWorks: {
+        title: '如何进入心流状态',
+        steps: [
+          {
+            title: '注意力中转站',
+            desc: '清空你的大脑内存。把所有让你分心的事情打出来，存好以后再处理。',
+          },
+          {
+            title: '白噪音',
+            desc: '开启白噪音或脑波音频，物理屏蔽听觉干扰。',
+          },
+          {
+            title: '专注时钟',
+            desc: '通过启动专注时钟，让你的状态快速切换到专注状态。',
+          },
+        ],
+      },
+      features: {
+        title: '你需要的都有，不需要的都没有',
+        items: [
+          {
+            title: '专注时钟',
+            desc: '灵活的番茄钟，允许此时被打断。',
+          },
+          {
+            title: '任务拆解器',
+            desc: 'AI 驱动的工具，把吓人的大任务拆成微小的步骤。',
+          },
+          {
+            title: '多巴胺菜单',
+            desc: '健康的奖励列表，补充能量而不必刷手机。',
+          },
+          {
+            title: '专注分析',
+            desc: '追踪你的深度工作时长和能量模式。',
+          },
+        ],
+      },
+      testimonials: {
+        title: '受到 1,000+ ADHD 用户的信赖',
+        items: [
+          {
+            quote: '“用白噪音工具，我也在一个星期内写了4章。太神奇了。”',
+            name: 'Sarah J.',
+            role: '作家',
+          },
+          {
+            quote: '“注意力中转站功能在期末考试期间救了我的命。我的焦虑减少了一半。”',
+            name: 'David L.',
+            role: '学生',
+          },
+          {
+            quote: '“终于有一个感觉不杂乱的仪表盘了。光是看着它就让人平静。”',
+            name: 'Elena R.',
+            role: '开发者',
+          },
+          {
+            quote: '“我向所有客户推荐 Focus Lab。它能建立正确的仪式感。”',
+            name: 'Mike T.',
+            role: 'ADHD 教练',
+          },
+        ],
+      },
+      faq: {
+        title: '常见问题',
+        items: [
+          {
+            question: 'Focus Lab 是免费的吗？',
+            answer: '是的！Focus Lab 完全免费使用。它完全在你的浏览器中运行。',
+          },
+          {
+            question: '我需要创建账户吗？',
+            answer:
+              '不需要。你可以立即使用，你的数据将存储在浏览器的本地。无需注册即可体验所有功能。',
+          },
+          {
+            question: '这是如何帮助我专注的？',
+            answer:
+              '通过将所有抗干扰工具（白噪音、计时器、任务拆解）集成在一个界面，减少切换窗口，从而减少注意力流失。',
+          },
+          {
+            question: '我的数据安全吗？',
+            answer: '您的数据默认存储在本地浏览器中。如果您选择登录，数据将加密同步到云端。',
+          },
+        ],
+      },
+      cta: {
+        title: '准备好找回你的注意力了吗？',
+        button: '立即开始专注 - 免费使用',
+      },
     },
   },
 } as const
