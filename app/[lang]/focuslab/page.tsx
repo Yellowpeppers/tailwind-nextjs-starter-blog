@@ -4,20 +4,20 @@ import { FocusLabDashboard } from './FocusLabDashboard'
 import { genPageMetadata } from 'app/seo'
 
 const focusLabDescription =
-  'Free ADHD workspace with Brown Noise, Body Doubling, and Pomodoro timer. Beat executive dysfunction and enter flow state.'
+  'Free ADHD workspace with Brown Noise, AI Task Breaker, and Pomodoro timer. Beat executive dysfunction and enter flow state.'
 
 export async function generateMetadata(props: {
   params: Promise<{ lang: string }>
 }): Promise<Metadata> {
   const params = await props.params
   return genPageMetadata({
-    title: 'Focus Lab: ADHD Productivity Dashboard',
+    title: 'ADHD Productivity Online Tools - Focus Lab',
     params: { lang: params.lang },
     description: focusLabDescription,
     appendSiteName: false,
     keywords: [
       'ADHD productivity tools',
-      'body doubling',
+      'AI task breaker',
       'brown noise',
       'pomodoro timer',
       'executive dysfunction',
@@ -48,7 +48,6 @@ const focusLabSchema = {
   featureList: [
     'Brown, pink, and white noise soundboard',
     'AI task breaker and dopamine menu',
-    'Body doubling rituals and Pomodoro timers',
     'Drag-and-drop ADHD workspace widgets',
     'Local-first data privacy',
   ],
