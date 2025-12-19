@@ -274,9 +274,9 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                 onChange={(e) => {
                                   const file = e.target.files?.[0]
                                   if (file) {
-                                    if (file.size > 5 * 1024 * 1024) {
-                                      // 5MB limit
-                                      setError('Image too large. Please use < 5MB.')
+                                    if (file.size > 100000) {
+                                      // 100KB limit for base64
+                                      alert('Image too large. Please use < 100KB for now.')
                                       return
                                     }
                                     const reader = new FileReader()
@@ -298,9 +298,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                       supabase.auth
                                         .updateUser({ data: { avatar_url: base64 } })
                                         .then(() => {
-                                          setError(null)
-                                          // Avatar updated!
-
+                                          alert('Avatar updated!')
                                           // Force refresh?
                                           // The AuthContext should pick it up if it listens to onAuthStateChange.
                                           // But standard useAuth might not refetch user object deep change immediately unless event fires.
@@ -345,8 +343,6 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                           />
                         </div>
 
-                        {error && <p className="text-center text-sm text-red-500">{error}</p>}
-
                         <div className="flex gap-3 pt-2">
                           <button
                             onClick={() => setIsEditingProfile(false)}
@@ -368,11 +364,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                   // For now, Name and Color update.
                                 },
                               })
-                              if (error) {
-                                setError('Error saving profile: ' + error.message)
-                                return
-                              }
-                              setError(null)
+                              if (error) alert('Error saving profile: ' + error.message)
                               setIsEditingProfile(false)
                             }}
                             className="bg-primary-600 hover:bg-primary-500 flex-1 rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm"

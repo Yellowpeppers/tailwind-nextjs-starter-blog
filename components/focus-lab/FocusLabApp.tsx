@@ -1399,27 +1399,8 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   className="ml-2 flex cursor-pointer items-center gap-3 text-left transition-opacity hover:opacity-80"
                   onClick={() => setShowAuthModal(true)}
                 >
-                  <div
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white shadow-inner ${
-                      user?.user_metadata?.avatar_url
-                        ? 'bg-transparent'
-                        : user?.user_metadata?.avatar_color === 'pink'
-                          ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
-                          : user?.user_metadata?.avatar_color === 'emerald'
-                            ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
-                            : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
-                    }`}
-                  >
-                    {user?.user_metadata?.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={user.user_metadata.avatar_url}
-                        alt="Avatar"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      user?.user_metadata?.full_name?.charAt(0) || 'U'
-                    )}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-xs font-bold text-white shadow-inner">
+                    {user ? user.user_metadata?.full_name?.charAt(0) || 'U' : 'G'}
                   </div>
                   <div className="flex flex-col truncate">
                     <span className="truncate text-sm leading-tight font-semibold text-gray-900 dark:text-gray-100">

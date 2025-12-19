@@ -110,9 +110,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
+    const locale = window.location.pathname.split('/')[1] || 'en'
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/${locale}/auth/callback`,
+      },
     })
     return { error }
   }

@@ -27,3 +27,30 @@ export const createClient = async () => {
     }
   )
 }
+
+export const createAdminClient = async () => {
+  const cookieStore = await cookies()
+
+  // WARN: This client bypasses RLS. Use with caution.
+  // Requires SUPABASE_SERVICE_ROLE_KEY in .env
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // The `setAll` method was called from a Server Component.
+          }
+        },
+      },
+    }
+  )
+}

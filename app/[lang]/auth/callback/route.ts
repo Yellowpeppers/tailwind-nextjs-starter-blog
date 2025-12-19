@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '../../../../lib/supabase-server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -29,7 +29,12 @@ export async function GET(request: Request) {
   // Simple heuristic: remove /auth/callback from the end
   const next = requestUrl.pathname.replace(/\/auth\/callback$/, '') || '/'
 
-  const redirectUrl = new URL(next, request.url)
+  // Use NEXT_PUBLIC_SITE_URL if available to ensure we redirect to the correct public domain
+  // This fixes issues where the server sees 'localhost' or an internal IP
+  // Use request origin to ensure we redirect to the same domain the user is on (localhost vs 127.0.0.1)
+  // preventing cookie mismatch issues.
+  const origin = requestUrl.origin
+  const redirectUrl = new URL(next, origin)
 
   return NextResponse.redirect(redirectUrl)
 }
