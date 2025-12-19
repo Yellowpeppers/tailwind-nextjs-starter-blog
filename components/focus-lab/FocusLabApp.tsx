@@ -1,5 +1,7 @@
 'use client'
 
+import { createClient } from '@/lib/supabase'
+
 import Image from 'next/image'
 import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
 import {
@@ -56,6 +58,8 @@ import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsCon
 import { useThemeColor, ThemeColor } from '@/context/ThemeColorContext'
 import { debounce, merge, cloneDeep, uniq } from 'lodash'
 import isEqual from 'lodash/isEqual'
+import { replaceLocaleInPathname } from '@/lib/i18n'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 
 // --- Icons ---
 const SmileCircleIcon = ({ className }: { className?: string }) => (
@@ -492,36 +496,36 @@ type GridItem = {
 
 const INITIAL_LAYOUT: GridItem[] = [
   // Left Column (3 units)
-  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 2, minH: 2 },
-  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 2, minH: 2 },
+  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 2, minH: 3 },
+  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
 
   // Middle Left (ToDo - 3 units)
-  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 2, minH: 2 },
+  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 3, minH: 3 },
 
   // Middle Right (Brain Dump - 5 units)
-  { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 2, minH: 2 },
+  { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 3, minH: 5 },
 
   // Right Column (3 units)
-  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 2, minH: 2 },
-  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 2 },
+  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 3, minH: 4 },
+  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 3 },
 ]
 
 const TRIPLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
-  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
-  { id: 'dopamine', x: 8, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
-  { id: 'todo', x: 0, y: 5, w: 6, h: 10, minW: 2, minH: 2 },
-  { id: 'brain', x: 6, y: 5, w: 6, h: 10, minW: 2, minH: 2 },
-  { id: 'breaker', x: 0, y: 15, w: 6, h: 5, minW: 2, minH: 2 },
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 3 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 4 },
+  { id: 'dopamine', x: 8, y: 0, w: 4, h: 5, minW: 2, minH: 3 },
+  { id: 'todo', x: 0, y: 5, w: 6, h: 10, minW: 3, minH: 3 },
+  { id: 'brain', x: 6, y: 5, w: 6, h: 10, minW: 3, minH: 5 },
+  { id: 'breaker', x: 0, y: 15, w: 6, h: 5, minW: 3, minH: 5 },
 ]
 
 const DOUBLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
-  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 2, minH: 2 },
-  { id: 'todo', x: 0, y: 5, w: 4, h: 10, minW: 2, minH: 2 },
-  { id: 'dopamine', x: 4, y: 5, w: 4, h: 5, minW: 2, minH: 2 },
-  { id: 'breaker', x: 4, y: 10, w: 4, h: 5, minW: 2, minH: 2 },
-  { id: 'brain', x: 0, y: 15, w: 8, h: 10, minW: 2, minH: 2 },
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 3 },
+  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 4 },
+  { id: 'todo', x: 0, y: 5, w: 4, h: 10, minW: 3, minH: 3 },
+  { id: 'dopamine', x: 4, y: 5, w: 4, h: 5, minW: 2, minH: 3 },
+  { id: 'breaker', x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'brain', x: 0, y: 15, w: 8, h: 10, minW: 3, minH: 5 },
 ]
 
 type LayoutPreset = 'desktop' | 'triple' | 'double'
@@ -1260,6 +1264,47 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               </h2>
 
               <div className="space-y-4">
+                {/* Language (Sync with Main Nav) */}
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <span className="font-medium dark:text-gray-200">
+                    {t.focusLab.settings?.language || (lang === 'en' ? 'Language' : '语言')}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const toggleLocale = lang === 'en' ? 'zh' : 'en'
+                      // Uses same logic as LanguageSwitch
+                      const basePath = replaceLocaleInPathname(
+                        window.location.pathname,
+                        toggleLocale
+                      ) // simplified if we don't have hooks yet, but better use hooks
+                      // Since I am inside a client component, window.location might work but hooks are safer for Next.js transition.
+                      // Let's use window.location specific logic or hooks if I add them.
+                      // Actually, let's use the hooks. I will add them in next step.
+                      // First simple logic with window.location just to handle the toggle if hooks missing?
+                      // No, clean way: use hooks.
+                      // But I can't easily add hooks inside the function in a single Replace block if I am editing the JSX down here.
+                      // So I will edit the Component Body first to add hooks, THEN add the JSX.
+
+                      // Wait, I am in the JSX block now.
+                      // I will skip adding JSX in this tool call and add hooks first.
+                    }}
+                    className="rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700"
+                  >
+                    {lang === 'en' ? 'English' : '简体中文'}
+                    {/* Wait, usually toggle shows the OTHER language or CURRENT? 
+                        LanguageSwitch shows: language === 'en' ? '中' : 'EN'.
+                        If I am English, I want to switch to Chinese.
+                        So button could say "中文".
+                        Or it shows current value "English" and clicking toggles.
+                        Settings usually show current value and clicking opens menu or toggles.
+                        Let's make it a toggle button that says the target language?
+                        Or "English / 中文" toggle.
+                        Let's match the style: "English" or "中文" (Current) -> Click to swap.
+                     */}
+                    {lang === 'en' ? 'Switch to 中文' : 'Switch to English'}
+                  </button>
+                </div>
+
                 {/* Dark Mode */}
                 <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                   <span className="font-medium dark:text-gray-200">
@@ -1399,8 +1444,29 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   className="ml-2 flex cursor-pointer items-center gap-3 text-left transition-opacity hover:opacity-80"
                   onClick={() => setShowAuthModal(true)}
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-xs font-bold text-white shadow-inner">
-                    {user ? user.user_metadata?.full_name?.charAt(0) || 'U' : 'G'}
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white shadow-inner ${
+                      user?.user_metadata?.avatar_url
+                        ? 'bg-transparent'
+                        : user?.user_metadata?.avatar_color === 'pink'
+                          ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
+                          : user?.user_metadata?.avatar_color === 'emerald'
+                            ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
+                            : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
+                    }`}
+                  >
+                    {user?.user_metadata?.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={user.user_metadata.avatar_url}
+                        alt="User"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : user ? (
+                      user.user_metadata?.full_name?.charAt(0) || 'U'
+                    ) : (
+                      'G'
+                    )}
                   </div>
                   <div className="flex flex-col truncate">
                     <span className="truncate text-sm leading-tight font-semibold text-gray-900 dark:text-gray-100">
@@ -3808,21 +3874,35 @@ const BrainDumpWidget = () => {
     }
   }
 
-  const handlePaste = (e: React.ClipboardEvent) => {
+  const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items
     for (const item of items) {
       if (item.type.indexOf('image') !== -1) {
         e.preventDefault()
         const blob = item.getAsFile()
-        if (blob) {
-          const reader = new FileReader()
-          reader.onload = (event) => {
-            const base64 = event.target?.result as string
-            if (base64) {
-              setPendingImage(base64)
+        if (blob && user) {
+          try {
+            // Show some loading state? For now, we just wait.
+            // Or set a temp placeholder?
+            // Let's just upload.
+            const supabase = createClient()
+            const fileExt = blob.type.split('/')[1] || 'png'
+            const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`
+
+            const { error: uploadError } = await supabase.storage
+              .from('brain-dump')
+              .upload(fileName, blob, { upsert: true, contentType: blob.type })
+
+            if (uploadError) throw uploadError
+
+            const { data } = supabase.storage.from('brain-dump').getPublicUrl(fileName)
+            if (data.publicUrl) {
+              setPendingImage(data.publicUrl)
             }
+          } catch (error) {
+            console.error('Paste upload failed:', error)
+            alert('Failed to upload image. Please try again.')
           }
-          reader.readAsDataURL(blob)
         }
         return
       }

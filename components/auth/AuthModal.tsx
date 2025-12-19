@@ -17,7 +17,7 @@ type AuthModalProps = {
 
 export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModalProps) {
   const { t } = useTranslation()
-  const { signInWithGoogle, signInWithEmail, signUp, user, signOut } = useAuth()
+  const { signInWithGoogle, signInWithEmail, signUp, user, signOut, refreshUser } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editName, setEditName] = useState('')
@@ -27,6 +27,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [showCheckEmail, setShowCheckEmail] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -271,41 +272,59 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                 type="file"
                                 accept="image/*"
                                 className="absolute inset-0 cursor-pointer opacity-0"
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                   const file = e.target.files?.[0]
                                   if (file) {
-                                    if (file.size > 100000) {
-                                      // 100KB limit for base64
-                                      alert('Image too large. Please use < 100KB for now.')
+                                    setSuccess(null)
+                                    setError(null)
+                                    if (file.size > 5 * 1024 * 1024) {
+                                      setError('Image too large. Please use < 5MB.')
                                       return
                                     }
-                                    const reader = new FileReader()
-                                    reader.onloadend = () => {
-                                      // Save to metadata immediately or state?
-                                      // Let's simpler: triggering update immediately might be confusing UI-wise if they don't click Save.
-                                      // But file input is local. I will save content to a state valid 'preview' and then save on 'Save Changes'.
-                                      // Ideally. For now, I'll direct update or add `editAvatarFile` state.
-                                      // Too complex to add state without defining it in component body which I can't easily multireplace.
-                                      // So I will just direct upload to Supabase on selection for "Avatar Upload" separate flow?
-                                      // No, "Save Changes" is better.
-                                      // I will assume I can't add new state variable easily via MultiReplace without regexing the whole block.
-                                      // Hack: store in `editAvatarColor` if it starts with 'data:'? No, type safety.
-                                      // I will insert `const [editAvatarBase64, setEditAvatarBase64] = useState<string|null>(null)` at top of component.
-                                      // Wait, I can only replace chunks.
-                                      // I will just perform the upload immediately inside this handler to simpler Metadata updates.
-                                      const base64 = reader.result as string
+
+                                    try {
+                                      setLoading(true) // Reuse component loading state or add local? Local is safer but component state works for disabling buttons.
+                                      // Actually, let's just use a simple alert/loading indication via text since we can't easily add state hooks.
+                                      // Or assume 'loading' state affects the whole modal, which might be jarring.
+                                      // I'll stick to async logic without extra state for now, relying on browser pending.
+
                                       const supabase = createClient()
-                                      supabase.auth
-                                        .updateUser({ data: { avatar_url: base64 } })
-                                        .then(() => {
-                                          alert('Avatar updated!')
-                                          // Force refresh?
-                                          // The AuthContext should pick it up if it listens to onAuthStateChange.
-                                          // But standard useAuth might not refetch user object deep change immediately unless event fires.
-                                          // Supabase onAuthStateChange usually fires on USER_UPDATED.
+                                      const fileExt = file.name.split('.').pop()
+                                      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+
+                                      const { error: uploadError } = await supabase.storage
+                                        .from('avatars')
+                                        .upload(fileName, file, {
+                                          upsert: true,
+                                          contentType: file.type,
                                         })
+
+                                      if (uploadError) throw uploadError
+
+                                      const {
+                                        data: { publicUrl },
+                                      } = supabase.storage.from('avatars').getPublicUrl(fileName)
+
+                                      const { error: updateError } = await supabase.auth.updateUser(
+                                        {
+                                          data: { avatar_url: publicUrl },
+                                        }
+                                      )
+
+                                      if (updateError) throw updateError
+
+                                      await refreshUser()
+                                      setSuccess('Avatar updated successfully!')
+                                      setTimeout(() => setSuccess(null), 3000)
+                                      // Trigger re-render by updating local state indirectly?
+                                      // AuthContext should handle user update.
+                                    } catch (error: unknown) {
+                                      const msg =
+                                        error instanceof Error ? error.message : String(error)
+                                      setError(msg)
+                                    } finally {
+                                      setLoading(false)
                                     }
-                                    reader.readAsDataURL(file)
                                   }
                                 }}
                               />
@@ -322,8 +341,10 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                               </svg>
                             </div>
                           </div>
-                          <span className="text-xs text-gray-400">
-                            Select color or upload image
+                          <span
+                            className={`text-xs ${success ? 'font-medium text-green-600 dark:text-green-400' : error ? 'text-red-500' : 'text-gray-400'}`}
+                          >
+                            {success || error || 'Select color or upload image'}
                           </span>
                         </div>
 
@@ -359,13 +380,16 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                   avatar_color: editAvatarColor,
                                   // avatar_url handling is in file input for now or we clear it if color selected?
                                   // If color selected, we might want to clear avatar_url.
-                                  // Let's clear avatar_url if they picked a color explicitly effectively "Removing" the image.
                                   // But capturing that intent is hard.
                                   // For now, Name and Color update.
                                 },
                               })
-                              if (error) alert('Error saving profile: ' + error.message)
-                              setIsEditingProfile(false)
+                              if (error) {
+                                alert('Error saving profile: ' + error.message)
+                              } else {
+                                await refreshUser()
+                                setIsEditingProfile(false)
+                              }
                             }}
                             className="bg-primary-600 hover:bg-primary-500 flex-1 rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm"
                           >

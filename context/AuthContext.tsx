@@ -16,6 +16,7 @@ type AuthContextType = {
     full_name?: string
     avatar_url?: string
   }) => Promise<{ error: Error | null }>
+  refreshUser: () => Promise<void>
   tier: string
 }
 
@@ -92,6 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, supabase])
 
+  const refreshUser = async () => {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
+    if (user) {
+      setUser(user)
+    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (session) setSession(session)
+  }
+
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -145,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         updateProfile,
+        refreshUser,
         tier,
       }}
     >

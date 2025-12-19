@@ -75,7 +75,7 @@ export const fetchCloudBrainDump = async (user: User): Promise<BrainDumpState | 
         const parsed = JSON.parse(item.content)
         if (parsed.text !== undefined) text = parsed.text
         if (parsed.image !== undefined) image = parsed.image
-      } else if (item.content.startsWith('data:image')) {
+      } else if (item.content.startsWith('data:image') || item.content.startsWith('http')) {
         text = ''
         image = item.content
       }
@@ -107,6 +107,45 @@ export const saveBrainDump = async (state: BrainDumpState, user?: User | null) =
   if (user) {
     const supabase = createClient()
 
+    // Helper: Convert Data URI to Blob
+    const dataURItoBlob = (dataURI: string) => {
+      const split = dataURI.split(',')
+      const byteString = atob(split[1])
+      const mimeString = split[0].split(':')[1].split(';')[0]
+      const ab = new ArrayBuffer(byteString.length)
+      const ia = new Uint8Array(ab)
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i)
+      }
+      return new Blob([ab], { type: mimeString })
+    }
+
+    // Helper: Upload base64 image and return public URL
+    const processItemForCloud = async (item: BrainDumpItem): Promise<BrainDumpItem> => {
+      let imageUrl = item.image
+      if (item.image && item.image.startsWith('data:')) {
+        try {
+          const blob = dataURItoBlob(item.image)
+          const fileExt =
+            item.image.substring('data:image/'.length, item.image.indexOf(';base64')) || 'png'
+          // Unique filename per item per user
+          const fileName = `${user.id}/${item.id}.${fileExt}`
+
+          const { error: uploadError } = await supabase.storage
+            .from('brain-dump')
+            .upload(fileName, blob, { upsert: true, contentType: blob.type })
+
+          if (!uploadError) {
+            const { data } = supabase.storage.from('brain-dump').getPublicUrl(fileName)
+            imageUrl = data.publicUrl
+          }
+        } catch (e) {
+          console.error('Failed to upload image', e)
+        }
+      }
+      return { ...item, image: imageUrl }
+    }
+
     // Helper to serialize content
     const serializeContent = (item: BrainDumpItem) => {
       if (item.text && item.image) {
@@ -117,8 +156,12 @@ export const saveBrainDump = async (state: BrainDumpState, user?: User | null) =
       return item.text || item.image || ''
     }
 
+    // Process items (upload images)
+    const leftItems = await Promise.all(state.left.map(processItemForCloud))
+    const rightItems = await Promise.all(state.right.map(processItemForCloud))
+
     // Prepare payloads
-    const leftPayload = state.left.map((item) => ({
+    const leftPayload = leftItems.map((item) => ({
       id: item.id,
       user_id: user.id,
       content: serializeContent(item),
@@ -126,7 +169,7 @@ export const saveBrainDump = async (state: BrainDumpState, user?: User | null) =
       created_at: new Date().toISOString(),
     }))
 
-    const rightPayload = state.right.map((item) => ({
+    const rightPayload = rightItems.map((item) => ({
       id: item.id,
       user_id: user.id,
       content: serializeContent(item),
