@@ -34,6 +34,10 @@ export type Settings = {
       master_volume?: number
       active_tracks?: Record<string, ActiveTrack>
     }
+    stats?: {
+      goal_hours?: number
+      goal_tasks?: number
+    }
     timer?: {
       custom_duration?: number
     }
@@ -49,6 +53,7 @@ const defaultSettings: Settings = {
     layout: {},
     hide_headers: false,
     sound: { master_volume: 0.8, active_tracks: {} },
+    stats: {},
     timer: { custom_duration: 1500 },
   },
 }
