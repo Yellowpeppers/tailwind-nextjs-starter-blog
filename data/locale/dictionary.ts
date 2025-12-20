@@ -280,6 +280,7 @@ export const dictionary = {
       },
       settings: {
         title: 'Settings',
+        language: 'Language',
         darkMode: 'Dark Mode',
         notifications: 'Notifications',
         soundEffects: 'Sound Effects',
@@ -1249,6 +1250,7 @@ export const dictionary = {
       },
       settings: {
         title: '设置',
+        language: '语言',
         darkMode: '深色模式',
         notifications: '通知提醒',
         soundEffects: '音效',
