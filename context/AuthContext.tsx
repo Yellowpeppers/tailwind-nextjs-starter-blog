@@ -71,7 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .upsert({ id: user.id, email: user.email, tier: 'free' }, { onConflict: 'id' })
 
         if (insertError) {
-          console.error('Failed to auto-create profile:', insertError)
+          console.error('Failed to auto-create profile:', {
+            message: insertError.message,
+            details: insertError.details,
+            hint: insertError.hint,
+            code: insertError.code,
+            fullError: JSON.stringify(insertError, null, 2),
+          })
         } else {
           console.log('Profile successfully restored.')
           setTier('free')
