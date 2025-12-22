@@ -110,8 +110,8 @@ const StatsIcon = ({ className }: { className?: string }) => (
   <span className={`icon-[solar--chart-2-outline] ${className}`} />
 )
 
-const ProfileIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--user-circle-outline] ${className}`} />
+const CrownIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--crown-bold] ${className}`} />
 )
 
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -499,12 +499,14 @@ const FocusSidebarProfile = ({
   planLabel,
   avatarUrl,
   avatarColor,
+  isPro,
   onClick,
 }: {
   userName: string
   planLabel: string
   avatarUrl?: string
   avatarColor?: string
+  isPro?: boolean
   onClick?: () => void
 }) => {
   const { open, animate } = useSidebar()
@@ -516,23 +518,35 @@ const FocusSidebarProfile = ({
         onClick={onClick}
         className="group/sidebar flex h-12 w-full items-center justify-start gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-white/80 dark:hover:bg-white/10"
       >
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white shadow-inner ring-1 ring-black/5 dark:ring-white/10 ${
-            avatarUrl
-              ? 'bg-transparent'
-              : avatarColor === 'pink'
-                ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
-                : avatarColor === 'emerald'
-                  ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
-                  : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
-          }`}
-        >
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="User" className="h-full w-full object-cover object-center" />
-          ) : (
-            <span className="leading-none">{initial}</span>
-          )}
+        <div className="relative">
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white shadow-inner ring-1 ring-black/5 dark:ring-white/10 ${
+              avatarUrl
+                ? 'bg-transparent'
+                : avatarColor === 'pink'
+                  ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
+                  : avatarColor === 'emerald'
+                    ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
+                    : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
+            }`}
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt="User"
+                className="h-full w-full object-cover object-center"
+              />
+            ) : (
+              <span className="leading-none">{initial}</span>
+            )}
+          </div>
+          {isPro ? (
+            <span className="absolute -right-1 -bottom-1 flex h-4 items-center gap-1 rounded-full bg-amber-400 px-1 text-[10px] font-extrabold text-amber-950 uppercase shadow ring-1 ring-amber-500/60">
+              <span className="icon-[solar--crown-bold] text-[11px]" aria-hidden="true" />
+              PRO
+            </span>
+          ) : null}
         </div>
         <motion.div
           animate={{
@@ -670,6 +684,13 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [authTrigger, setAuthTrigger] = useState<'generic' | 'stats'>('generic')
   const { user } = useAuth()
   const isPro = user?.user_metadata?.plan === 'pro'
+  const upgradeLabel = isPro
+    ? lang === 'zh'
+      ? '会员权益'
+      : 'Member Perks'
+    : lang === 'zh'
+      ? '升级会员'
+      : 'Upgrade'
   const { themeColor, setThemeColor } = useThemeColor()
   const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
 
@@ -1787,45 +1808,44 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
                 <div className="mt-8 flex flex-col gap-2 px-1">
                   <FocusSidebarAction
-                    icon={<StatsIcon className="h-6 w-6" />}
-                    label={lang === 'zh' ? '统计数据' : 'Stats'}
-                    onClick={handleOpenStats}
-                  />
-                  <FocusSidebarAction
                     icon={<StarIcon className="h-6 w-6" />}
                     label={t.focusLab.sidebar.dailyGoal || 'Daily Goal'}
                     onClick={() => setShowGoalModal(true)}
                   />
                   <FocusSidebarAction
-                    icon={<MagicIcon className="h-6 w-6" />}
-                    label={t.focusLab.sidebar.planComparison || 'Compare Plans'}
-                    onClick={() => setShowPricingModal(true)}
-                  />
-                  <FocusSidebarAction
-                    icon={<ProfileIcon className="h-6 w-6" />}
-                    label={lang === 'zh' ? '会员档案' : 'Profile'}
-                    onClick={() => setShowAuthModal(true)}
+                    icon={<StatsIcon className="h-6 w-6" />}
+                    label={lang === 'zh' ? '统计数据' : 'Stats'}
+                    onClick={handleOpenStats}
                   />
                   <FocusSidebarAction
                     icon={<SettingsIcon className="h-6 w-6" />}
                     label={lang === 'zh' ? '设置' : 'Settings'}
                     onClick={() => setShowSettingsModal(true)}
                   />
+                  <div className="my-1 h-2" aria-hidden />
                   <FocusSidebarAction
-                    icon={<LogoutIcon className="h-6 w-6" />}
-                    label={t.focusLab.controls.exitFocus || 'Exit Focus'}
-                    onClick={onExit}
+                    icon={<CrownIcon className="h-6 w-6 text-amber-500" />}
+                    label={upgradeLabel}
+                    onClick={() => setShowPricingModal(true)}
                   />
                 </div>
               </div>
 
-              <FocusSidebarProfile
-                userName={user ? user.user_metadata?.full_name || 'Guest Space' : 'Guest Space'}
-                planLabel={isPro ? t.focusLab.sidebar.proMember : t.focusLab.sidebar.freePlan}
-                avatarUrl={user?.user_metadata?.avatar_url}
-                avatarColor={user?.user_metadata?.avatar_color}
-                onClick={() => setShowAuthModal(true)}
-              />
+              <div className="mt-auto flex flex-col gap-2 px-1">
+                <FocusSidebarAction
+                  icon={<LogoutIcon className="h-6 w-6" />}
+                  label={t.focusLab.controls.exitFocus || 'Exit Focus'}
+                  onClick={onExit}
+                />
+                <FocusSidebarProfile
+                  userName={user ? user.user_metadata?.full_name || 'Guest Space' : 'Guest Space'}
+                  planLabel={isPro ? t.focusLab.sidebar.proMember : t.focusLab.sidebar.freePlan}
+                  avatarUrl={user?.user_metadata?.avatar_url}
+                  avatarColor={user?.user_metadata?.avatar_color}
+                  isPro={isPro}
+                  onClick={() => setShowAuthModal(true)}
+                />
+              </div>
             </SidebarBody>
           </Sidebar>
         )}
