@@ -186,7 +186,7 @@ export function CardShell({
       exit={finalMotionEnabled ? 'exit' : undefined}
       variants={finalMotionEnabled ? variants : undefined}
       transition={finalMotionEnabled ? { duration: 0.25, ease: 'easeOut' } : undefined}
-      className={`group relative flex h-full flex-col rounded-[32px] border bg-white/95 px-5 py-4 shadow-lg shadow-gray-200/40 transition-all sm:px-6 sm:py-5 dark:bg-gray-900/90 ${isFocused ? 'ring-2 ring-[color:var(--card-accent)] ring-offset-[3px] ring-offset-white/80 dark:ring-offset-gray-950/80' : ''} ${className}`}
+      className={`group relative flex h-full flex-col rounded-[32px] border bg-white/95 px-4 py-3 shadow-lg shadow-gray-200/40 transition-all sm:px-4 sm:py-3 dark:bg-gray-900/90 ${isFocused ? 'ring-2 ring-[color:var(--card-accent)] ring-offset-[3px] ring-offset-white/80 dark:ring-offset-gray-950/80' : ''} ${className}`}
       style={cardStyle}
     >
       {headerHidden && (
@@ -194,7 +194,7 @@ export function CardShell({
       )}
 
       <div
-        className={`focuslab-drag-handle flex items-center justify-between gap-2 ${headerHidden ? 'h-0 min-h-0' : 'h-9'} min-w-0 cursor-grab active:cursor-grabbing`}
+        className={`focuslab-drag-handle flex items-center justify-between gap-2 ${headerHidden ? 'h-0 min-h-0' : 'h-7'} min-w-0 cursor-grab active:cursor-grabbing`}
         onClick={() => onHeaderClick?.()}
         role="button"
         tabIndex={0}
@@ -271,7 +271,7 @@ export function CardShell({
         </div>
       </div>
 
-      <div className={`mt-2 flex min-h-0 flex-1 flex-col ${bodyClassName}`}>{children}</div>
+      <div className={`mt-1.5 flex min-h-0 flex-1 flex-col ${bodyClassName}`}>{children}</div>
 
       {customAction && customActionPosition === 'right' && (
         <div className="absolute top-1/2 -right-2 z-50 -translate-y-1/2 opacity-0 transition-all duration-300 group-hover:right-0 group-hover:opacity-100">

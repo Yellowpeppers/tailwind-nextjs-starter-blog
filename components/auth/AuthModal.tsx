@@ -17,7 +17,7 @@ type AuthModalProps = {
 
 export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModalProps) {
   const { t } = useTranslation()
-  const { signInWithGoogle, signInWithEmail, signUp, user, signOut, refreshUser } = useAuth()
+  const { signInWithGoogle, signInWithEmail, signUp, user, signOut, refreshUser, tier } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editName, setEditName] = useState('')
@@ -199,7 +199,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                           as="h3"
                           className="mb-1 text-xl leading-6 font-bold text-gray-900 dark:text-gray-100"
                         >
-                          {user.user_metadata?.full_name || 'User'}
+                          {user.user_metadata?.full_name || t.auth.profile.userFallback}
                         </Dialog.Title>
                         <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
                           {user.email}
@@ -209,10 +209,12 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                           <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-gray-500 dark:text-gray-400">
-                                Platform Status
+                                {t.auth.profile.platformStatus}
                               </span>
                               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                Focus Member
+                                {tier === 'free'
+                                  ? t.auth.profile.freeMember
+                                  : t.auth.profile.focusMember}
                               </span>
                             </div>
                           </div>
@@ -225,7 +227,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                             }}
                             className="w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
                           >
-                            Edit Profile
+                            {t.auth.profile.editProfile}
                           </button>
 
                           <button
@@ -236,7 +238,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                             }}
                             className="w-full rounded-md px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
                           >
-                            Sign Out
+                            {t.auth.profile.signOut}
                           </button>
                         </div>
                       </>
@@ -244,13 +246,13 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                       // Edit Mode
                       <div className="space-y-4">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                          Edit Profile
+                          {t.auth.profile.editProfile}
                         </h3>
 
                         {/* Avatar Mockup Selector + Upload */}
                         <div className="flex flex-col items-center gap-3">
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Avatar
+                            {t.auth.profile.avatar}
                           </span>
                           <div className="flex gap-3">
                             {['indigo', 'pink', 'emerald'].map((color) => (
@@ -278,7 +280,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                     setSuccess(null)
                                     setError(null)
                                     if (file.size > 5 * 1024 * 1024) {
-                                      setError('Image too large. Please use < 5MB.')
+                                      setError(t.auth.profile.uploadTooLarge)
                                       return
                                     }
 
@@ -314,7 +316,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                       if (updateError) throw updateError
 
                                       await refreshUser()
-                                      setSuccess('Avatar updated successfully!')
+                                      setSuccess(t.auth.profile.uploadSuccess)
                                       setTimeout(() => setSuccess(null), 3000)
                                       // Trigger re-render by updating local state indirectly?
                                       // AuthContext should handle user update.
@@ -344,7 +346,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                           <span
                             className={`text-xs ${success ? 'font-medium text-green-600 dark:text-green-400' : error ? 'text-red-500' : 'text-gray-400'}`}
                           >
-                            {success || error || 'Select color or upload image'}
+                            {success || error || t.auth.profile.uploadHint}
                           </span>
                         </div>
 
@@ -353,7 +355,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                             htmlFor="displayName"
                             className="mb-1 block text-left text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
-                            Display Name
+                            {t.auth.profile.displayName}
                           </label>
                           <input
                             id="displayName"
@@ -369,7 +371,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                             onClick={() => setIsEditingProfile(false)}
                             className="flex-1 rounded-md px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                           >
-                            Cancel
+                            {t.auth.profile.cancel}
                           </button>
                           <button
                             onClick={async () => {
@@ -385,7 +387,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                                 },
                               })
                               if (error) {
-                                alert('Error saving profile: ' + error.message)
+                                alert(`${t.auth.profile.saveErrorPrefix}${error.message}`)
                               } else {
                                 await refreshUser()
                                 setIsEditingProfile(false)
@@ -393,7 +395,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                             }}
                             className="bg-primary-600 hover:bg-primary-500 flex-1 rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm"
                           >
-                            Save Changes
+                            {t.auth.profile.saveChanges}
                           </button>
                         </div>
                       </div>

@@ -36,29 +36,45 @@ export async function POST(request: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    let result
-    try {
-      // First try the requested model
-      const modelName = 'gemini-2.5-flash'
+    const prompt = `
+      You are an expert productivity coach specializing in ADHD-friendly task breakdown.
+      Break down the following task into 3-6 very small, actionable, and non-intimidating steps.
+      The steps should be easy to start.
+      CRITICAL: Keep each step extremely short (max 10 words). No explanations, just the action.
+      CRITICAL: You MUST reply in the SAME LANGUAGE as the task input. If the task is in Chinese, reply in Chinese.
+      CRITICAL: Do NOT end steps with punctuation like periods or full stops.
+      Return ONLY a JSON array of strings. Do not include markdown formatting or "json" code blocks.
+
+      Task: "${task}"
+    `
+
+    const modelCandidates = ['gemini-2.5-flash', 'gemini-1.5-flash']
+    const attemptErrors: { model: string; message: string; code?: string }[] = []
+
+    const runModel = async (modelName: string) => {
       console.log(`[Gemini API] Attempting with model: ${modelName}`)
       const model = genAI.getGenerativeModel({ model: modelName })
+      return model.generateContent(prompt)
+    }
 
-      const prompt = `
-        You are an expert productivity coach specializing in ADHD-friendly task breakdown.
-        Break down the following task into 3-6 very small, actionable, and non-intimidating steps.
-        The steps should be easy to start.
-        CRITICAL: Keep each step extremely short (max 10 words). No explanations, just the action.
-        CRITICAL: You MUST reply in the SAME LANGUAGE as the task input. If the task is in Chinese, reply in Chinese.
-        CRITICAL: Do NOT end steps with punctuation like periods or full stops.
-        Return ONLY a JSON array of strings. Do not include markdown formatting or "json" code blocks.
+    let result
+    for (const modelName of modelCandidates) {
+      try {
+        result = await runModel(modelName)
+        break
+      } catch (error) {
+        const err = error as Error & { cause?: { code?: string } }
+        const message = err?.message || 'Unknown error'
+        attemptErrors.push({ model: modelName, message, code: err?.cause?.code })
+        console.error(`[Gemini API] Model ${modelName} failed:`, message, err?.cause || '')
+      }
+    }
 
-        Task: "${task}"
-      `
-      result = await model.generateContent(prompt)
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[Gemini API] Model generation failed:`, errorMessage)
-      throw error
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Failed to generate steps', detail: attemptErrors },
+        { status: 502 }
+      )
     }
 
     const response = await result.response

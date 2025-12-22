@@ -205,7 +205,7 @@ export const FocusStation = ({
         </div>
 
         {/* Item List */}
-        <div className="scrollbar-none -mx-2 flex-1 overflow-y-auto px-2 pb-2 [&::-webkit-scrollbar]:hidden">
+        <div className="scrollbar-none -mx-1 flex-1 overflow-y-auto px-1 pt-2 pb-2 [&::-webkit-scrollbar]:hidden">
           {items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-6 text-center text-gray-400 dark:border-gray-800 dark:bg-gray-900/20">
               <p className="text-sm">{t.focusLab.widgets.todo.emptyTitle}</p>

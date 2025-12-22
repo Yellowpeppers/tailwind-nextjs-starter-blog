@@ -671,7 +671,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const { user } = useAuth()
   const isPro = user?.user_metadata?.plan === 'pro'
   const { themeColor, setThemeColor } = useThemeColor()
-  const { settings, updateSettings } = useFocusSettingsContext()
+  const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
 
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showPricingModal, setShowPricingModal] = useState(false)
@@ -813,6 +813,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const isTaskGoalReached = dailyTaskGoal > 0 && tasksCompletedToday >= dailyTaskGoal
   const rewardUnlocked = isGoalReached || isTaskGoalReached
   const { burst: triggerCelebration, preload: preloadCelebration } = useCelebration()
+  const formatHours = (value: number) => (Math.round(value * 10) / 10).toFixed(1)
   const renderGreetingText = (size: 'mobile' | 'desktop' = 'desktop') => (
     <div className={`flex items-center gap-2 ${size === 'desktop' ? 'px-1 pb-3' : 'px-1 pb-2'}`}>
       <h1
@@ -831,6 +832,16 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       triggerCelebration({ variant: 'fireworks', spread: 110, particleCount: 140 })
     }
   }, [rewardUnlocked, triggerCelebration])
+
+  // 统计功能仅对登录用户开放
+  const handleOpenStats = useCallback(() => {
+    if (!user) {
+      setAuthTrigger('stats')
+      setShowAuthModal(true)
+      return
+    }
+    setShowAnalytics(true)
+  }, [user])
 
   // --- Fireworks Effect ---
 
@@ -1140,7 +1151,8 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
   useEffect(() => {
     // 布局设置同步：从 settings 加载各断点布局，未保存或损坏/版本不匹配时回退默认并写回
-    if (!settings || !settings.focus_lab || hasHydratedLayout.current === true) return
+    if (!isSettingsLoaded || !settings || !settings.focus_lab || hasHydratedLayout.current === true)
+      return
 
     const defaults: Record<LayoutPreset, GridItem[]> = {
       desktop: cloneLayout(GRID_PRESETS.desktop.layout),
@@ -1199,7 +1211,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     }
 
     hasHydratedLayout.current = true
-  }, [settings, updateSettings])
+  }, [isSettingsLoaded, settings, updateSettings])
 
   useEffect(() => {
     if (!hasHydratedLayout.current) return
@@ -1397,7 +1409,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                         <span>
-                          {currentProgressHours}h / {dailyGoalHours}h
+                          {formatHours(currentProgressHours)}h / {formatHours(dailyGoalHours)}h
                         </span>
                         <span>{Math.round(progressPercentage)}%</span>
                       </div>
@@ -1777,7 +1789,17 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   <FocusSidebarAction
                     icon={<StatsIcon className="h-6 w-6" />}
                     label={lang === 'zh' ? '统计数据' : 'Stats'}
-                    onClick={() => setShowAnalytics(true)}
+                    onClick={handleOpenStats}
+                  />
+                  <FocusSidebarAction
+                    icon={<StarIcon className="h-6 w-6" />}
+                    label={t.focusLab.sidebar.dailyGoal || 'Daily Goal'}
+                    onClick={() => setShowGoalModal(true)}
+                  />
+                  <FocusSidebarAction
+                    icon={<MagicIcon className="h-6 w-6" />}
+                    label={t.focusLab.sidebar.planComparison || 'Compare Plans'}
+                    onClick={() => setShowPricingModal(true)}
                   />
                   <FocusSidebarAction
                     icon={<ProfileIcon className="h-6 w-6" />}
@@ -1959,7 +1981,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       {/* Reset Confirmation Modal */}
       <AnimatePresence>
         {showResetConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[260] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2665,6 +2687,7 @@ const TimerWidget = ({
   const [timerState, setTimerState] = useState<TimerState>('idle')
   const [timerMode, setTimerMode] = useState<'countdown' | 'stopwatch'>('countdown')
   const [totalAllocatedDuration, setTotalAllocatedDuration] = useState(timerPresets.focus.duration) // For accurate countdown accounting
+  const prevModeRef = useRef<'countdown' | 'stopwatch'>('countdown')
 
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -2678,6 +2701,36 @@ const TimerWidget = ({
 
   // Derive mode from flip state (front = countdown, back = stopwatch)
   const derivedMode = isFlipped ? 'stopwatch' : 'countdown'
+  // 追踪模式切换，用于在运行中切换时妥善结算并重置
+  useEffect(() => {
+    if (prevModeRef.current === derivedMode) return
+    const previousMode = prevModeRef.current
+    prevModeRef.current = derivedMode
+
+    const isFocusActive =
+      timerState === 'focusing' ||
+      timerState === 'paused-focusing' ||
+      timerState === 'focus-completed'
+    if (isFocusActive) {
+      const elapsedSeconds =
+        previousMode === 'countdown' ? Math.max(0, totalAllocatedDuration - timeLeft) : timeLeft
+      finalizeSession({ elapsedSeconds, completed: false })
+    }
+
+    // 切换后从头开始
+    hasLoggedRef.current = false
+    setTimerState('idle')
+    setStartTime(null)
+    if (derivedMode === 'countdown') {
+      const d = activePreset === 'long' ? customMinutes * 60 : timerPresets[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    } else {
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [derivedMode])
 
   // Initialize Audio & Permissions
   useEffect(() => {
@@ -3714,7 +3767,7 @@ const BrainDumpWidget = () => {
   )
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full flex-col gap-3">
       {/* Input Area */}
       <div className="relative shrink-0 space-y-2">
         <div className="flex items-center gap-2">
@@ -3775,7 +3828,7 @@ const BrainDumpWidget = () => {
       </div>
 
       {/* Two-Column Masonry Grid */}
-      <div className="no-scrollbar flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-1.5 dark:border-gray-700 dark:bg-gray-800/20 [&::-webkit-scrollbar]:hidden">
+      <div className="no-scrollbar flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 px-2 pt-1.5 pb-2 dark:border-gray-700 dark:bg-gray-800/20 [&::-webkit-scrollbar]:hidden">
         {leftItems.length === 0 && rightItems.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-gray-400">
             <p className="text-sm">{t.focusLab.widgets.brainDump.emptyTitle}</p>
