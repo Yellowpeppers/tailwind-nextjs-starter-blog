@@ -12,7 +12,7 @@ export type ThemeColor =
   | 'red'
   | 'slate'
 
-export type UIStyle = 'modern' | 'warm'
+export type UIStyle = 'modern' | 'warm' | 'green'
 
 interface ThemeColorContextType {
   themeColor: ThemeColor

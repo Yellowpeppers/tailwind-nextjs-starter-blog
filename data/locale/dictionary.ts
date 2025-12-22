@@ -1,5 +1,14 @@
 import { Locale } from '@/lib/i18n'
 
+export const GREEN_STYLE_TOKENS = {
+  background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F9F7 100%)',
+  borderColor: '#E2E8E2',
+  accentColor: '#7A9F7A',
+  headerColor: '#374151',
+  textColor: '#4B5563',
+  subTextColor: '#9CA3AF',
+  iconColor: '#7A9F7A',
+}
 export const dictionary = {
   en: {
     nav: {
@@ -1170,7 +1179,7 @@ export const dictionary = {
           pause: '暂停',
           start: '开始',
           resume: '继续',
-          endSession: '结束专注',
+          endSession: '结束',
           congratulations: '恭喜',
           continueFocus: '我还能行',
           endFocus: '结束专注',

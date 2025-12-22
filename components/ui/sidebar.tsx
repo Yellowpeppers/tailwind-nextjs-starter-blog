@@ -88,15 +88,17 @@ export const DesktopSidebar = ({
   const { open, setOpen, animate } = useSidebar()
   const { uiStyle } = useThemeColor()
   const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
 
   return (
     <motion.div
       className={cn(
         'flex h-full w-[220px] flex-shrink-0 flex-col px-5 py-4',
-        'flex h-full w-[220px] flex-shrink-0 flex-col px-5 py-4',
         isWarm
           ? 'border-r border-[#ECE8E0] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
-          : 'bg-neutral-100 dark:bg-neutral-800',
+          : isGreen
+            ? 'border-r border-[#E2E8E2] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
+            : 'bg-neutral-100 dark:bg-neutral-800',
         className
       )}
       animate={{
@@ -115,16 +117,18 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
   const { open, setOpen } = useSidebar()
   const { uiStyle } = useThemeColor()
   const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
 
   return (
     <>
       <div
         className={cn(
           'flex h-10 w-full flex-row items-center justify-between px-4 py-4 md:hidden',
-          'flex h-10 w-full flex-row items-center justify-between px-4 py-4 md:hidden',
           isWarm
             ? 'border-b border-[#ECE8E0] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
-            : 'bg-neutral-100 dark:bg-neutral-800',
+            : isGreen
+              ? 'border-b border-[#E2E8E2] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
+              : 'bg-neutral-100 dark:bg-neutral-800',
           className
         )}
         {...props}

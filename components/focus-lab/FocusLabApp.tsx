@@ -49,7 +49,7 @@ import {
   syncDopamine,
 } from '@/components/focus-lab/dopamineStorage'
 import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
-import { useThemeColor, ThemeColor } from '@/context/ThemeColorContext'
+import { useThemeColor, ThemeColor, UIStyle } from '@/context/ThemeColorContext'
 import { useCelebration } from '@/components/focus-lab/useCelebration'
 import { debounce, uniq } from 'lodash'
 import isEqual from 'lodash/isEqual'
@@ -663,9 +663,9 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const { theme, setTheme } = useTheme()
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
 
-  // Enforce Light Mode for Warm Style
+  // Enforce Light Mode for Warm/Green Style
   useEffect(() => {
-    if (uiStyle === 'warm' && theme !== 'light') {
+    if ((uiStyle === 'warm' || uiStyle === 'green') && theme !== 'light') {
       setTheme('light')
     }
   }, [uiStyle, theme, setTheme])
@@ -1582,21 +1582,21 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               <div className="space-y-4">
                 {/* Dark Mode */}
                 <div
-                  className={`flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800 ${uiStyle === 'warm' ? 'opacity-50' : ''}`}
+                  className={`flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800 ${uiStyle === 'warm' || uiStyle === 'green' ? 'opacity-50' : ''}`}
                 >
                   <span className="font-medium dark:text-gray-200">
                     {t.focusLab.settings?.darkMode || 'Dark Mode'}
                   </span>
                   <button
-                    disabled={uiStyle === 'warm'}
+                    disabled={uiStyle === 'warm' || uiStyle === 'green'}
                     onClick={() => {
-                      if (uiStyle !== 'warm') {
+                      if (uiStyle !== 'warm' && uiStyle !== 'green') {
                         setTheme(theme === 'dark' ? 'light' : 'dark')
                       }
                     }}
-                    className={`rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700 ${uiStyle === 'warm' ? 'cursor-not-allowed opacity-50' : ''}`}
+                    className={`rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700 ${uiStyle === 'warm' || uiStyle === 'green' ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
-                    {uiStyle === 'warm'
+                    {uiStyle === 'warm' || uiStyle === 'green'
                       ? 'Light Only'
                       : theme === 'dark'
                         ? t.focusLab.settings?.on || 'On'
@@ -1768,7 +1768,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 {/* Visual Style */}
                 <div className="mb-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                   <span className="mb-3 block font-medium dark:text-gray-200">Visual Style</span>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => {
                         setUiStyle('modern')
@@ -1796,6 +1796,20 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                       )}
                     >
                       Warm
+                    </button>
+                    <button
+                      onClick={() => {
+                        setUiStyle('green')
+                        updateSettings('theme.style', 'green')
+                      }}
+                      className={cn(
+                        'flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-all',
+                        uiStyle === 'green'
+                          ? 'border-[#7A9F7A] bg-[#F8F9F7] text-[#7A9F7A]'
+                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'
+                      )}
+                    >
+                      Green
                     </button>
                   </div>
                 </div>
@@ -1864,7 +1878,11 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       <div
         className={cn(
           'fixed inset-0 z-[100] flex h-full w-full overflow-hidden transition-all duration-500',
-          uiStyle === 'warm' ? 'bg-[#FDFBF7] text-gray-900' : 'bg-gray-50 dark:bg-gray-950'
+          uiStyle === 'warm'
+            ? 'bg-[#FDFBF7] text-gray-900'
+            : uiStyle === 'green'
+              ? 'bg-[#F8F9F7] text-gray-900'
+              : 'bg-gray-50 dark:bg-gray-950'
         )}
       >
         {/* Sidebar - Visible only in Desktop */}
@@ -1951,7 +1969,9 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     'z-20 flex flex-none items-center justify-between border-b p-4',
                     uiStyle === 'warm'
                       ? 'border-[#ECE8E0] bg-white'
-                      : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+                      : uiStyle === 'green'
+                        ? 'border-[#CCFBF1] bg-white'
+                        : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
                   )}
                 >
                   <span className="text-lg font-bold dark:text-white">Focus Lab</span>
@@ -2250,7 +2270,7 @@ const TimerCard = ({
         onFlip={setIsFlipped}
         onTimerComplete={onTimerComplete}
         onSessionLogged={onSessionLogged}
-        isWarm={uiStyle === 'warm'}
+        uiStyle={uiStyle}
       />
     </CardShell>
   )
@@ -2275,7 +2295,7 @@ const TaskBreakerCard = ({
       isFocused={isFocused}
       variant="ai-assistant"
     >
-      <TaskBreakerWidget isWarm={uiStyle === 'warm'} />
+      <TaskBreakerWidget uiStyle={uiStyle} />
     </CardShell>
   )
 }
@@ -2298,7 +2318,7 @@ const BrainDumpCard = ({
       className={className}
       isFocused={isFocused}
     >
-      <BrainDumpWidget isWarm={uiStyle === 'warm'} />
+      <BrainDumpWidget uiStyle={uiStyle} />
     </CardShell>
   )
 }
@@ -2331,7 +2351,7 @@ const ToDoCard = ({
         cols={cols}
         onStartFocus={onStartFocus}
         focusedTaskId={focusedTaskId}
-        isWarm={uiStyle === 'warm'}
+        uiStyle={uiStyle}
       />
     </CardShell>
   )
@@ -2381,7 +2401,7 @@ const DopamineMenuCard = ({
         cols={cols}
         isFlipped={isFlipped}
         onFlip={setIsFlipped}
-        isWarm={uiStyle === 'warm'}
+        uiStyle={uiStyle}
       />
     </CardShell>
   )
@@ -2777,7 +2797,7 @@ const TimerWidget = ({
   onCommandHandled,
   isFlipped,
   onFlip,
-  isWarm,
+  uiStyle,
 }: {
   onTimerComplete?: (minutes: number) => void
   onSessionLogged?: (minutes: number) => void
@@ -2786,8 +2806,10 @@ const TimerWidget = ({
   onCommandHandled?: () => void
   isFlipped: boolean
   onFlip: (flipped: boolean) => void
-  isWarm?: boolean
+  uiStyle?: UIStyle
 }) => {
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
@@ -3155,8 +3177,10 @@ const TimerWidget = ({
                     className={`${
                       isWarm
                         ? 'rounded-lg bg-[#C27B4A] text-white shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-                        : 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full text-white'
-                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95`}
+                        : isGreen
+                          ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                          : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-1 rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-6 py-2 text-sm font-medium transition-all active:scale-95`}
                   >
                     <PlayIcon className="h-4 w-4" />
                     {t.focusLab.widgets.timer.start}
@@ -3173,9 +3197,11 @@ const TimerWidget = ({
                     }}
                     className={`${
                       isWarm
-                        ? 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-lg' // Keeping primary/dark logic but changing shape? Or keep full circle? Let's just do rounded-lg for shape consistency.
-                        : 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-full'
-                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-white shadow-lg transition-all active:scale-95`}
+                        ? 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-lg text-white'
+                        : isGreen
+                          ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                          : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-1 rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-6 py-2 text-sm font-medium transition-all active:scale-95`}
                   >
                     <PauseIcon className="h-4 w-4" />
                     {t.focusLab.widgets.timer.pause}
@@ -3186,11 +3212,14 @@ const TimerWidget = ({
               {(isPaused || isCompleted) && (
                 <div className="flex gap-3">
                   <button
-                    onClick={() => {
-                      playClickSound()
-                      endSession()
-                    }}
-                    className={`flex-1 ${isWarm ? 'rounded-lg' : 'rounded-full'} bg-gray-100 px-4 py-3 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700`}
+                    onClick={endSession}
+                    className={`flex-1 px-6 py-2 text-sm font-medium transition-colors ${
+                      isWarm
+                        ? 'rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 dark:bg-gray-800 dark:hover:bg-gray-700'
+                        : isGreen
+                          ? 'h-10 rounded-xl bg-[#E2E8E2] text-[#7A9F7A] hover:bg-[#D1DAD1]'
+                          : 'h-10 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
+                    }`}
                   >
                     {t.focusLab.widgets.timer.endSession || 'End'}
                   </button>
@@ -3201,12 +3230,13 @@ const TimerWidget = ({
                     }}
                     className={`${
                       isWarm
-                        ? 'rounded-lg bg-[#C27B4A] shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-                        : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 rounded-full'
-                    } flex flex-[2] items-center justify-center gap-2 px-6 py-3 text-base font-bold text-white shadow-lg transition-all active:scale-95`}
+                        ? 'rounded-lg bg-[#C27B4A] text-white shadow-lg shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
+                        : isGreen
+                          ? 'h-10 flex-[2] rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                          : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-[2] rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                    } flex flex-[2] items-center justify-center gap-2 px-6 py-2 text-sm font-medium transition-all active:scale-95`}
                   >
-                    <PlayIcon className="h-5 w-5" />
-                    {t.focusLab.widgets.timer.resume || 'Resume'}
+                    {t.focusLab.widgets.timer.resume}
                   </button>
                 </div>
               )}
@@ -3317,8 +3347,10 @@ const TimerWidget = ({
                     className={`${
                       isWarm
                         ? 'rounded-lg bg-[#C27B4A] text-white shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-                        : 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full text-white'
-                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95`}
+                        : isGreen
+                          ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                          : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-1 rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-6 py-2 text-sm font-medium transition-all active:scale-95`}
                   >
                     {/* Play Icon */}
                     <span className="icon-[solar--play-bold] text-lg" />
@@ -3336,9 +3368,11 @@ const TimerWidget = ({
                     }}
                     className={`${
                       isWarm
-                        ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-lg' // Keeping original colors for Pause, just shape
-                        : 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-full'
-                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-white shadow-lg transition-all active:scale-95`}
+                        ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-lg' // Note: Warm pause used primary blue originally? Or C27B4A? Original trace showed primary for pause in one view, C27B4A for Start. Let's assume Play=C27B4A, Pause=Primary(Blue/Gray)? Actually Pause was Primary-500.
+                        : isGreen
+                          ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                          : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-1 rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                    } flex w-auto min-w-[100px] items-center justify-center gap-2 px-6 py-2 text-sm font-medium transition-all active:scale-95`}
                   >
                     {/* Pause Icon */}
                     <span className="icon-[solar--pause-bold] text-lg" />
@@ -3354,7 +3388,13 @@ const TimerWidget = ({
                       playClickSound()
                       endSession()
                     }}
-                    className={`flex-1 ${isWarm ? 'rounded-lg' : 'rounded-full'} bg-gray-100 px-4 py-3 text-sm font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95 dark:bg-gray-800 dark:hover:bg-gray-700`}
+                    className={`flex-1 px-6 py-2 text-sm font-medium transition-colors ${
+                      isWarm
+                        ? 'rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 dark:bg-gray-800 dark:hover:bg-gray-700'
+                        : isGreen
+                          ? 'h-10 rounded-xl bg-[#E2E8E2] text-[#7A9F7A] hover:bg-[#D1DAD1]'
+                          : 'h-10 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
+                    }`}
                   >
                     {t.focusLab.widgets.timer.endSession || 'End'}
                   </button>
@@ -3365,9 +3405,11 @@ const TimerWidget = ({
                     }}
                     className={`${
                       isWarm
-                        ? 'rounded-lg bg-[#C27B4A] shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-                        : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 rounded-full'
-                    } flex flex-[2] items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-white shadow-lg transition-all active:scale-95`}
+                        ? 'rounded-lg bg-[#C27B4A] text-white shadow-lg shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
+                        : isGreen
+                          ? 'h-10 flex-[2] rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                          : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-[2] rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                    } flex flex-[2] items-center justify-center gap-2 px-6 py-2 text-sm font-medium transition-all active:scale-95`}
                   >
                     <span className="icon-[solar--play-bold] text-xl" />
                     {t.focusLab.widgets.timer.resume || 'Resume'}
@@ -3394,7 +3436,9 @@ const TimerWidget = ({
                     className={`${
                       isWarm
                         ? 'rounded-lg bg-[#C27B4A] shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-                        : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/25 rounded-full'
+                        : isGreen
+                          ? 'rounded-lg bg-[#7A9F7A] shadow-[#7A9F7A]/30 hover:bg-[#688868]'
+                          : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/25 rounded-full'
                     } w-full px-4 py-2 text-sm font-extrabold text-white shadow-lg transition-all active:scale-95 sm:flex-1`}
                   >
                     {t.focusLab.widgets.timer.continueFocus || 'One more round'}
@@ -3409,7 +3453,9 @@ const TimerWidget = ({
   )
 }
 
-const TaskBreakerWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
+const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const [task, setTask] = useState('')
@@ -3556,7 +3602,9 @@ const TaskBreakerWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
 
         <div className="no-scrollbar flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
           {isLoading ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
+            <div
+              className={`flex h-full flex-col items-center justify-center gap-3 ${isWarm || isGreen ? 'text-white/70' : 'text-gray-400'}`}
+            >
               <div className="border-primary-200 border-t-primary-500 h-8 w-8 animate-spin rounded-full border-4" />
               <p className="text-xs font-medium">{t.focusLab.widgets.taskBreaker.summoning}</p>
             </div>
@@ -3578,13 +3626,13 @@ const TaskBreakerWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
       <div className="flex flex-1 items-center justify-center">
         <div className="flex w-full max-w-xl flex-col items-center gap-2">
           <div
-            className={`${isWarm ? 'bg-white/10 text-[#C27B4A]' : 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'} flex h-12 w-12 items-center justify-center rounded-2xl`}
+            className={`${isWarm ? 'bg-white/10 text-[#C27B4A]' : isGreen ? 'bg-[#F8F9F7] text-[#7A9F7A]' : 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'} flex h-12 w-12 items-center justify-center rounded-2xl`}
           >
             <MagicIcon className="h-6 w-6" />
           </div>
 
           <h3
-            className={`text-lg font-bold ${isWarm ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}
+            className={`text-lg font-bold ${isWarm || isGreen ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}
           >
             {t.focusLab.widgets.taskBreaker.overwhelmed}
           </h3>
@@ -3598,7 +3646,7 @@ const TaskBreakerWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
                 : 'Enter a task, AI breaks it down...\n\ne.g., Clean the entire apartment...'
             }
             className={`${
-              isWarm
+              isWarm || isGreen
                 ? 'focus:ring-accent border-white/10 bg-white/10 text-white placeholder:text-white/50'
                 : 'focus:border-primary-500 focus:ring-primary-500 border-gray-100 bg-gray-100 text-gray-900 placeholder:text-gray-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800'
             } no-scrollbar mt-1 h-24 w-full resize-none rounded-2xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none`}
@@ -3614,7 +3662,9 @@ const TaskBreakerWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
           className={`flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95 disabled:active:scale-100 dark:shadow-none ${
             isWarm
               ? 'rounded-lg bg-[#C27B4A] text-white shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-              : 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full text-white dark:text-white'
+              : isGreen
+                ? 'rounded-lg bg-[#7A9F7A] text-white shadow-[#7A9F7A]/30 hover:bg-[#688868]'
+                : 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full text-white dark:text-white'
           }`}
         >
           {t.focusLab.widgets.taskBreaker.button}
@@ -3626,6 +3676,8 @@ const TaskBreakerWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
 
 const TaskStepItem = ({ step }: { step: string }) => {
   const [isChecked, setIsChecked] = useState(false)
+  const { uiStyle } = useThemeColor()
+  const isCustomAi = uiStyle === 'warm' || uiStyle === 'green'
 
   return (
     <motion.li
@@ -3633,19 +3685,29 @@ const TaskStepItem = ({ step }: { step: string }) => {
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
       onClick={() => setIsChecked(!isChecked)}
-      className="group flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+      className={`group flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors ${
+        isCustomAi
+          ? 'hover:bg-white/10 dark:hover:bg-white/10'
+          : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+      }`}
     >
       <input
         type="checkbox"
         checked={isChecked}
         onChange={() => {}} // Handled by parent onClick
-        className="text-primary-500 focus:ring-primary-500 pointer-events-none h-5 w-5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+        className={`pointer-events-none h-5 w-5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 ${
+          isCustomAi ? 'text-white focus:ring-white' : 'text-primary-500 focus:ring-primary-500'
+        }`}
       />
       <span
         className={`text-sm transition-all ${
           isChecked
-            ? 'text-gray-400 line-through dark:text-gray-500'
-            : 'text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100'
+            ? isCustomAi
+              ? 'text-white/50 line-through'
+              : 'text-gray-400 line-through dark:text-gray-500'
+            : isCustomAi
+              ? 'text-white group-hover:text-white'
+              : 'text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100'
         } `}
       >
         {step}
@@ -3654,7 +3716,9 @@ const TaskStepItem = ({ step }: { step: string }) => {
   )
 }
 
-const BrainDumpWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
+const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const [leftItems, setLeftItems] = useState<BrainDumpItem[]>([])
@@ -3939,7 +4003,9 @@ const BrainDumpWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
               className={`focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
                 isWarm
                   ? 'border-[#ECE8E0] bg-[#F5F2EC] dark:border-gray-700 dark:bg-gray-800'
-                  : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                  : isGreen
+                    ? 'border-[#E2E8E2] bg-[#F8F9F7] dark:border-gray-700 dark:bg-gray-800'
+                    : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
               }`}
             />
             <button
@@ -3959,7 +4025,9 @@ const BrainDumpWidget = ({ isWarm = false }: { isWarm?: boolean }) => {
             className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 ${
               isWarm
                 ? 'border border-[#ECE8E0] bg-[#F5F2EC] text-gray-600'
-                : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
+                : isGreen
+                  ? 'border border-[#E2E8E2] bg-[#F8F9F7] text-[#7A9F7A]'
+                  : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
             }`}
             title={t.focusLab.widgets.brainDump.accessibility.clearBoard}
             aria-label={t.focusLab.widgets.brainDump.accessibility.clearBoard}
@@ -4031,13 +4099,15 @@ const DopamineMenuWidget = ({
   cols = 6,
   isFlipped,
   onFlip,
-  isWarm,
+  uiStyle,
 }: {
   cols?: number
   isFlipped: boolean
   onFlip: (v: boolean) => void
-  isWarm?: boolean
+  uiStyle?: UIStyle
 }) => {
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const defaultOptions = useMemo(() => [...t.focusLab.widgets.dopamineMenu.defaultOptions], [t])
@@ -4227,7 +4297,9 @@ const DopamineMenuWidget = ({
                 className={`${
                   isWarm
                     ? 'rounded-lg bg-[#C27B4A] shadow-[#C27B4A]/20 hover:bg-[#A6663E]'
-                    : 'bg-primary-500 hover:bg-primary-600 shadow-primary-200 rounded-full'
+                    : isGreen
+                      ? 'rounded-lg bg-[#7A9F7A] shadow-[#7A9F7A]/20 hover:bg-[#688868]'
+                      : 'bg-primary-500 hover:bg-primary-600 shadow-primary-200 rounded-full'
                 } flex items-center gap-2 px-5 py-2 text-sm font-bold text-white shadow-lg transition-transform active:scale-95`}
               >
                 <MagicIcon className="h-5 w-5" />
@@ -4270,11 +4342,13 @@ const DopamineMenuWidget = ({
                     <button
                       onClick={handleSpin}
                       disabled={options.length === 0}
-                      className={`flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95 disabled:active:scale-100 dark:shadow-none ${
+                      className={`${
                         isWarm
                           ? 'rounded-lg bg-[#C27B4A] text-white shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-                          : 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full text-white dark:text-white'
-                      }`}
+                          : isGreen
+                            ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                            : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-1 rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                      } flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95 disabled:active:scale-100 dark:shadow-none`}
                     >
                       {t.focusLab.widgets.dopamineMenu.spinButton || 'Get Dopamine'}
                     </button>

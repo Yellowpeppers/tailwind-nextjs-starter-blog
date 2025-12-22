@@ -157,6 +157,23 @@ const WARM_STYLE_TOKENS = {
   darkActiveShadow: 'none',
 }
 
+const GREEN_STYLE_TOKENS = {
+  ...createThemeTokens(
+    '#7A9F7A',
+    'linear-gradient(135deg, #FFFFFF, #FFFFFF)', // Flat white for cards
+    'rgba(122, 159, 122, 0.05)',
+    {
+      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F9F7 100%)',
+      borderColor: '#E2E8E2',
+      accentColor: '#7A9F7A',
+      headerColor: '#374151',
+      textColor: '#4B5563',
+      subTextColor: '#9CA3AF',
+      iconColor: '#7A9F7A',
+    }
+  ),
+}
+
 const motionPresets: Record<CardAnimationPreset, Variants> = {
   float: {
     initial: { opacity: 0, y: 10, scale: 0.98 },
@@ -206,8 +223,10 @@ export function CardShell({
   })
 
   // If UI style is warm, use specific tokens, otherwise use theme tokens
+  // If UI style is custom (warm/green), use specific tokens, otherwise use theme tokens
   const cardTokens = useMemo(() => {
     if (uiStyle === 'warm') return WARM_STYLE_TOKENS
+    if (uiStyle === 'green') return GREEN_STYLE_TOKENS
     return THEME_TOKENS[themeColor] || THEME_TOKENS.pink
   }, [themeColor, uiStyle])
 
@@ -244,16 +263,17 @@ export function CardShell({
   const mutedLayer = isDark ? cardTokens.darkMuted : cardTokens.muted
 
   // Special handling for AI Assistant in Warm mode
-  const isAiWarm = uiStyle === 'warm' && variant === 'ai-assistant'
-  const isWarmMode = uiStyle === 'warm'
+  // Special handling for AI Assistant in Warm/Green mode
+  const isCustomAi = (uiStyle === 'warm' || uiStyle === 'green') && variant === 'ai-assistant'
+  const isCustomMode = uiStyle === 'warm' || uiStyle === 'green'
 
-  const backgroundValue = isAiWarm
+  const backgroundValue = isCustomAi
     ? 'linear-gradient(135deg, #1A1A1A, #2A2A2A)'
-    : surface === 'glass' && !isWarmMode
+    : surface === 'glass' && !isCustomMode
       ? `${surfaceLayer}, radial-gradient(circle at 15% 20%, ${mutedLayer}, transparent 42%)`
       : surfaceLayer
 
-  const borderColor = isAiWarm ? '#3A3A3A' : isDark ? cardTokens.darkBorder : cardTokens.border
+  const borderColor = isCustomAi ? '#3A3A3A' : isDark ? cardTokens.darkBorder : cardTokens.border
   const shadowColor = isFocused
     ? isDark
       ? cardTokens.darkActiveShadow
@@ -268,12 +288,12 @@ export function CardShell({
     : ''
 
   const cardStyle: CSSProperties = {
-    '--card-accent': isAiWarm ? '#C27B4A' : cardTokens.accent, // Force copper accent for AI card
+    '--card-accent': isCustomAi ? (uiStyle === 'green' ? '#0d9488' : '#C27B4A') : cardTokens.accent, // Force copper/green accent for AI card
     background: backgroundValue,
     borderColor: borderColor,
-    borderWidth: uiStyle === 'warm' ? '1px' : '1px',
+    borderWidth: isCustomMode ? '1px' : '1px',
     boxShadow: shadowColor,
-    color: isAiWarm ? '#FFFFFF' : undefined, // Force white text for AI card
+    color: isCustomAi ? '#FFFFFF' : undefined, // Force white text for AI card
     backdropFilter: surface === 'glass' ? 'blur(12px)' : undefined,
   } as CSSProperties
 
@@ -286,8 +306,8 @@ export function CardShell({
       variants={finalMotionEnabled ? variants : undefined}
       transition={finalMotionEnabled ? { duration: 0.25, ease: 'easeOut' } : undefined}
       className={`group relative flex h-full flex-col overflow-hidden px-4 py-3 transition-all duration-300 sm:px-4 sm:py-3 ${className} ${
-        // Override rounded-xl for Warm style if needed, but keeping consistent for now
-        uiStyle === 'warm' ? 'rounded-xl' : 'rounded-3xl'
+        // Override rounded-xl for Warm/Green style
+        uiStyle === 'warm' || uiStyle === 'green' ? 'rounded-xl' : 'rounded-3xl'
       } ${focusRingClass}`}
       style={cardStyle}
     >
@@ -295,8 +315,8 @@ export function CardShell({
         <div className="focuslab-drag-handle absolute inset-x-0 top-0 z-20 h-4 cursor-grab active:cursor-grabbing" />
       )}
 
-      {/* Sparkles decoration for AI Assistant card (Warm style) */}
-      {isAiWarm && (
+      {/* Sparkles decoration for AI Assistant card (Warm/Green style) */}
+      {isCustomAi && (
         <div className="pointer-events-none absolute top-0 right-0 p-4 opacity-10">
           <Sparkles className="h-24 w-24 text-white" strokeWidth={1} />
         </div>
@@ -318,7 +338,7 @@ export function CardShell({
             <div className="flex min-w-0 items-center gap-2">
               {title && (
                 <h2
-                  className={`max-w-full truncate text-base font-bold whitespace-nowrap ${isAiWarm ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}
+                  className={`max-w-full truncate text-base font-bold whitespace-nowrap ${isCustomAi ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}
                 >
                   {title}
                 </h2>
