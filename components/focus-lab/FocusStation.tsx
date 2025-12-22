@@ -16,7 +16,7 @@ import {
   uploadImage,
   type FocusItem,
 } from './focusStationStorage'
-import { type UIStyle } from '@/context/ThemeColorContext'
+import { useThemeColor, type UIStyle } from '@/context/ThemeColorContext'
 import PlanComparisonModal from '@/components/auth/PlanComparisonModal'
 
 const UpgradeModal = PlanComparisonModal
@@ -49,15 +49,16 @@ export const FocusStation = ({
   cols = 1,
   onStartFocus,
   focusedTaskId,
-  uiStyle,
 }: {
   cols?: number
   onStartFocus?: (task: string, id: string) => void
   focusedTaskId?: string | null
-  uiStyle?: UIStyle
 }) => {
+  const { uiStyle } = useThemeColor()
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
+  const isBlue = uiStyle === 'blue'
+  const isCartoon = uiStyle === 'cartoon'
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const [items, setItems] = useState<FocusItem[]>([])
@@ -187,7 +188,11 @@ export const FocusStation = ({
                   ? 'border-[#ECE8E0] bg-[#F5F2EC] focus:bg-[#F5F2EC] dark:border-gray-700 dark:bg-gray-800'
                   : isGreen
                     ? 'border-[#E2E8E2] bg-[#F8F9F7] text-gray-900 placeholder:text-gray-400 focus:ring-[#7A9F7A]'
-                    : 'focus:border-primary-500 focus:ring-primary-500 border-gray-100 bg-gray-100 text-gray-900 placeholder:text-gray-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800'
+                    : isBlue
+                      ? 'border-[#D1E3F3] bg-[#E0EEF8] text-gray-900 placeholder:text-gray-400 focus:ring-[#5B84B1]'
+                      : isCartoon
+                        ? 'border-2 border-black bg-[#FFF8E7] text-black shadow-[2px_2px_0px_0px_#000000] placeholder:text-gray-500 focus:ring-0 dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_#FFFFFF]'
+                        : 'focus:border-primary-500 focus:ring-primary-500 border-gray-100 bg-gray-100 text-gray-900 placeholder:text-gray-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800'
               }`}
             />
             <button
@@ -213,7 +218,11 @@ export const FocusStation = ({
                 ? 'border border-[#ECE8E0] bg-[#F5F2EC] text-gray-600'
                 : isGreen
                   ? 'text-[#7A9F7A] hover:bg-[#E2E8E2] hover:text-[#5e7c5e]'
-                  : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800'
+                  : isBlue
+                    ? 'text-[#5B84B1] hover:bg-[#E0EEF8] hover:hover:text-[#4A6E94]'
+                    : isCartoon
+                      ? 'border-2 border-transparent text-black hover:border-black hover:bg-[#FFF8E7] hover:text-black dark:text-white dark:hover:border-white dark:hover:bg-[#2A2A2A]'
+                      : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
             }`}
             title={lang === 'en' ? 'Clear all tasks' : '清空所有任务'}
           >
@@ -262,7 +271,11 @@ export const FocusStation = ({
                             ? 'border-[#C27B4A] bg-[#C27B4A] text-white'
                             : isGreen
                               ? 'border-[#7A9F7A] bg-[#7A9F7A] text-white'
-                              : 'border-primary-500 bg-primary-500 text-white'
+                              : isBlue
+                                ? 'border-[#5B84B1] bg-[#5B84B1] text-white'
+                                : isCartoon
+                                  ? 'border-2 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                                  : 'border-primary-500 bg-primary-500 text-white'
                           : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
                       }`}
                       onPointerDown={(e) => e.stopPropagation()}

@@ -6,6 +6,7 @@ import Link, { type LinkProps } from 'next/link'
 import React, { useState, createContext, useContext } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 
 interface Links {
   label: string
@@ -83,22 +84,29 @@ export const SidebarBody = ({
 export const DesktopSidebar = ({
   className,
   children,
+  lang, // Assuming 'lang' is passed as a prop for currentPath calculation
   ...props
-}: React.ComponentProps<typeof motion.div>) => {
+}: React.ComponentProps<typeof motion.div> & { lang?: string }) => {
+  // Added lang to props type
   const { open, setOpen, animate } = useSidebar()
   const { uiStyle } = useThemeColor()
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
+  const isBlue = uiStyle === 'blue' // Added isBlue constant
+  const pathname = usePathname()
+  const currentPath = `/${lang}${pathname.replace(new RegExp(`^/${lang}`), '')}` // Added currentPath calculation
 
   return (
     <motion.div
       className={cn(
         'flex h-full w-[220px] flex-shrink-0 flex-col px-5 py-4',
         isWarm
-          ? 'border-r border-[#ECE8E0] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
+          ? 'border-r border-[#E5E0D6] bg-[#FDFBF7]'
           : isGreen
-            ? 'border-r border-[#E2E8E2] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
-            : 'bg-neutral-100 dark:bg-neutral-800',
+            ? 'border-r border-[#E2E8E2] bg-[#F8F9F7]'
+            : isBlue
+              ? 'border-r border-[#D1E3F3] bg-[#E0EEF8]'
+              : 'border-r border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-950',
         className
       )}
       animate={{
@@ -118,6 +126,7 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
   const { uiStyle } = useThemeColor()
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
+  const isBlue = uiStyle === 'blue'
 
   return (
     <>
@@ -128,7 +137,9 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
             ? 'border-b border-[#ECE8E0] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
             : isGreen
               ? 'border-b border-[#E2E8E2] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
-              : 'bg-neutral-100 dark:bg-neutral-800',
+              : isBlue
+                ? 'border-b border-[#D1E3F3] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
+                : 'bg-neutral-100 dark:bg-neutral-800',
           className
         )}
         {...props}

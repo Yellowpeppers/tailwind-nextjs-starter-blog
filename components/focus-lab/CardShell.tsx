@@ -163,15 +163,34 @@ const GREEN_STYLE_TOKENS = {
     'linear-gradient(135deg, #FFFFFF, #FFFFFF)', // Flat white for cards
     'rgba(122, 159, 122, 0.05)',
     {
-      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F9F7 100%)',
       borderColor: '#E2E8E2',
-      accentColor: '#7A9F7A',
-      headerColor: '#374151',
-      textColor: '#4B5563',
-      subTextColor: '#9CA3AF',
-      iconColor: '#7A9F7A',
     }
   ),
+}
+
+const BLUE_STYLE_TOKENS = {
+  ...createThemeTokens(
+    '#5B84B1',
+    'linear-gradient(135deg, #FFFFFF, #FFFFFF)', // Flat white for cards
+    'rgba(91, 132, 177, 0.05)',
+    {
+      borderColor: '#D1E3F3',
+    }
+  ),
+}
+
+const CARTOON_STYLE_TOKENS = {
+  accent: '#000000',
+  border: '#000000',
+  shadow: '4px 4px 0px 0px #000000',
+  activeShadow: '2px 2px 0px 0px #000000',
+  surface: '#FFF8E7', // Creamy white
+  muted: 'rgba(0, 0, 0, 0.05)',
+  darkSurface: '#2A2A2A',
+  darkMuted: 'rgba(255, 255, 255, 0.05)',
+  darkBorder: '#FFFFFF',
+  darkShadow: '4px 4px 0px 0px #FFFFFF',
+  darkActiveShadow: '2px 2px 0px 0px #FFFFFF',
 }
 
 const motionPresets: Record<CardAnimationPreset, Variants> = {
@@ -225,9 +244,15 @@ export function CardShell({
   // If UI style is warm, use specific tokens, otherwise use theme tokens
   // If UI style is custom (warm/green), use specific tokens, otherwise use theme tokens
   const cardTokens = useMemo(() => {
-    if (uiStyle === 'warm') return WARM_STYLE_TOKENS
-    if (uiStyle === 'green') return GREEN_STYLE_TOKENS
-    return THEME_TOKENS[themeColor] || THEME_TOKENS.pink
+    return uiStyle === 'warm'
+      ? WARM_STYLE_TOKENS
+      : uiStyle === 'green'
+        ? GREEN_STYLE_TOKENS
+        : uiStyle === 'blue'
+          ? BLUE_STYLE_TOKENS
+          : uiStyle === 'cartoon'
+            ? CARTOON_STYLE_TOKENS
+            : THEME_TOKENS[themeColor] || THEME_TOKENS.pink
   }, [themeColor, uiStyle])
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -263,9 +288,12 @@ export function CardShell({
   const mutedLayer = isDark ? cardTokens.darkMuted : cardTokens.muted
 
   // Special handling for AI Assistant in Warm mode
-  // Special handling for AI Assistant in Warm/Green mode
-  const isCustomAi = (uiStyle === 'warm' || uiStyle === 'green') && variant === 'ai-assistant'
-  const isCustomMode = uiStyle === 'warm' || uiStyle === 'green'
+  // Special handling for AI Assistant in Warm/Green/Cartoon mode
+  const isCustomAi =
+    (uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' || uiStyle === 'cartoon') &&
+    variant === 'ai-assistant'
+  const isCustomMode =
+    uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' || uiStyle === 'cartoon'
 
   const backgroundValue = isCustomAi
     ? 'linear-gradient(135deg, #1A1A1A, #2A2A2A)'
@@ -291,7 +319,7 @@ export function CardShell({
     '--card-accent': isCustomAi ? (uiStyle === 'green' ? '#0d9488' : '#C27B4A') : cardTokens.accent, // Force copper/green accent for AI card
     background: backgroundValue,
     borderColor: borderColor,
-    borderWidth: isCustomMode ? '1px' : '1px',
+    borderWidth: uiStyle === 'cartoon' ? '2px' : isCustomMode ? '1px' : '1px',
     boxShadow: shadowColor,
     color: isCustomAi ? '#FFFFFF' : undefined, // Force white text for AI card
     backdropFilter: surface === 'glass' ? 'blur(12px)' : undefined,
@@ -306,8 +334,10 @@ export function CardShell({
       variants={finalMotionEnabled ? variants : undefined}
       transition={finalMotionEnabled ? { duration: 0.25, ease: 'easeOut' } : undefined}
       className={`group relative flex h-full flex-col overflow-hidden px-4 py-3 transition-all duration-300 sm:px-4 sm:py-3 ${className} ${
-        // Override rounded-xl for Warm/Green style
-        uiStyle === 'warm' || uiStyle === 'green' ? 'rounded-xl' : 'rounded-3xl'
+        // Override rounded-xl for Warm/Green/Blue style
+        uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' || uiStyle === 'cartoon'
+          ? 'rounded-xl'
+          : 'rounded-3xl'
       } ${focusRingClass}`}
       style={cardStyle}
     >
