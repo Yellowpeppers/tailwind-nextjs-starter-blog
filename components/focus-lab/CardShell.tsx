@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useTheme } from 'next-themes'
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor, type ThemeColor } from '@/context/ThemeColorContext'
 import { type CardAnimationPreset, type CardSurface } from '@/components/focus-lab/types'
+import { Sparkles } from 'lucide-react'
 
 type CardShellProps = {
   title?: ReactNode
@@ -22,6 +24,7 @@ type CardShellProps = {
   animationPreset?: CardAnimationPreset
   surface?: CardSurface
   isFocused?: boolean
+  variant?: 'default' | 'ai-assistant'
 }
 
 type CardThemeTokens = {
@@ -31,73 +34,127 @@ type CardThemeTokens = {
   activeShadow: string
   surface: string
   muted: string
+  darkSurface: string
+  darkMuted: string
+  darkBorder: string
+  darkShadow: string
+  darkActiveShadow: string
+}
+
+const DARK_BASE_SURFACE = 'rgba(5, 8, 12, 0.94)'
+
+const hexToRgb = (hex: string) => {
+  const normalized = hex.replace('#', '')
+  const parsed = parseInt(normalized, 16)
+  return {
+    r: (parsed >> 16) & 255,
+    g: (parsed >> 8) & 255,
+    b: parsed & 255,
+  }
+}
+
+const createThemeTokens = (
+  accent: string,
+  surface: string,
+  muted: string,
+  options: {
+    borderAlpha?: number
+    borderColor?: string
+    shadow?: string
+    activeShadow?: string
+  } = {}
+): CardThemeTokens => {
+  const { borderAlpha = 0.2, borderColor, shadow, activeShadow } = options
+
+  const accentRgb = hexToRgb(accent)
+  const defaultBorder = `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, ${borderAlpha})`
+  const defaultShadow = `0 8px 30px -4px ${accent}25`
+  const defaultActiveShadow = `0 20px 40px -4px ${accent}40`
+
+  return {
+    accent,
+    border: borderColor ?? defaultBorder,
+    shadow: shadow ?? defaultShadow,
+    activeShadow: activeShadow ?? defaultActiveShadow,
+    surface,
+    muted,
+    darkSurface: `linear-gradient(145deg, rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.16), ${DARK_BASE_SURFACE})`,
+    darkMuted: `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.24)`,
+    darkBorder: `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.42)`,
+    darkShadow: '0 22px 60px rgba(0, 0, 0, 0.55)',
+    darkActiveShadow: '0 28px 80px rgba(0, 0, 0, 0.72)',
+  }
 }
 
 const THEME_TOKENS: Record<ThemeColor, CardThemeTokens> = {
-  pink: {
-    accent: '#f472b6',
-    border: 'rgba(244, 114, 182, 0.32)',
-    shadow: '0 18px 48px rgba(244, 114, 182, 0.12)',
-    activeShadow: '0 22px 60px rgba(244, 114, 182, 0.2)',
-    surface: 'linear-gradient(135deg, rgba(255, 245, 248, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(244, 114, 182, 0.1)',
-  },
-  blue: {
-    accent: '#2563eb',
-    border: 'rgba(37, 99, 235, 0.28)',
-    shadow: '0 18px 48px rgba(37, 99, 235, 0.12)',
-    activeShadow: '0 22px 60px rgba(37, 99, 235, 0.2)',
-    surface: 'linear-gradient(135deg, rgba(235, 243, 255, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(37, 99, 235, 0.1)',
-  },
-  green: {
-    accent: '#0f6b61',
-    border: 'rgba(15, 107, 97, 0.28)',
-    shadow: '0 18px 48px rgba(15, 107, 97, 0.12)',
-    activeShadow: '0 22px 60px rgba(15, 107, 97, 0.2)',
-    surface: 'linear-gradient(135deg, rgba(226, 244, 238, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(15, 107, 97, 0.12)',
-  },
-  yellow: {
-    accent: '#c6a15b',
-    border: 'rgba(198, 161, 91, 0.32)',
-    shadow: '0 18px 48px rgba(198, 161, 91, 0.12)',
-    activeShadow: '0 22px 60px rgba(198, 161, 91, 0.2)',
-    surface: 'linear-gradient(135deg, rgba(255, 248, 231, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(198, 161, 91, 0.12)',
-  },
-  violet: {
-    accent: '#3b3a82',
-    border: 'rgba(59, 58, 130, 0.32)',
-    shadow: '0 18px 48px rgba(59, 58, 130, 0.14)',
-    activeShadow: '0 22px 60px rgba(59, 58, 130, 0.22)',
-    surface: 'linear-gradient(135deg, rgba(241, 239, 252, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(59, 58, 130, 0.12)',
-  },
-  orange: {
-    accent: '#b85c4a',
-    border: 'rgba(184, 92, 74, 0.3)',
-    shadow: '0 18px 48px rgba(184, 92, 74, 0.14)',
-    activeShadow: '0 22px 60px rgba(184, 92, 74, 0.22)',
-    surface: 'linear-gradient(135deg, rgba(255, 240, 232, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(184, 92, 74, 0.12)',
-  },
-  red: {
-    accent: '#7a8f86',
-    border: 'rgba(122, 143, 134, 0.32)',
-    shadow: '0 18px 48px rgba(122, 143, 134, 0.14)',
-    activeShadow: '0 22px 60px rgba(122, 143, 134, 0.22)',
-    surface: 'linear-gradient(135deg, rgba(238, 244, 241, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(122, 143, 134, 0.12)',
-  },
-  slate: {
-    accent: '#1f2933',
-    border: 'rgba(31, 41, 51, 0.35)',
-    shadow: '0 18px 48px rgba(31, 41, 51, 0.12)',
-    activeShadow: '0 22px 60px rgba(31, 41, 51, 0.22)',
-    surface: 'linear-gradient(135deg, rgba(242, 244, 247, 0.95), rgba(255, 255, 255, 0.9))',
-    muted: 'rgba(31, 41, 51, 0.12)',
-  },
+  pink: createThemeTokens(
+    '#f472b6',
+    'linear-gradient(135deg, rgba(255, 245, 248, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(244, 114, 182, 0.1)',
+    { borderAlpha: 0.32 }
+  ),
+  blue: createThemeTokens(
+    '#2563eb',
+    'linear-gradient(135deg, rgba(235, 243, 255, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(37, 99, 235, 0.1)',
+    { borderAlpha: 0.28 }
+  ),
+  green: createThemeTokens(
+    '#0f6b61',
+    'linear-gradient(135deg, rgba(226, 244, 238, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(15, 107, 97, 0.12)',
+    { borderAlpha: 0.28 }
+  ),
+  yellow: createThemeTokens(
+    '#c6a15b',
+    'linear-gradient(135deg, rgba(255, 248, 231, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(198, 161, 91, 0.12)',
+    { borderAlpha: 0.32 }
+  ),
+  violet: createThemeTokens(
+    '#3b3a82',
+    'linear-gradient(135deg, rgba(241, 239, 252, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(59, 58, 130, 0.12)',
+    { borderAlpha: 0.32 }
+  ),
+  orange: createThemeTokens(
+    '#b85c4a',
+    'linear-gradient(135deg, rgba(255, 240, 232, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(184, 92, 74, 0.12)',
+    { borderAlpha: 0.3 }
+  ),
+  red: createThemeTokens(
+    '#7a8f86',
+    'linear-gradient(135deg, rgba(238, 244, 241, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(122, 143, 134, 0.12)',
+    { borderAlpha: 0.32 }
+  ),
+  slate: createThemeTokens(
+    '#1f2933',
+    'linear-gradient(135deg, rgba(242, 244, 247, 0.95), rgba(255, 255, 255, 0.9))',
+    'rgba(31, 41, 51, 0.12)',
+    { borderAlpha: 0.35 }
+  ),
+}
+
+const WARM_STYLE_TOKENS = {
+  ...createThemeTokens(
+    '#c27b4a',
+    'linear-gradient(135deg, #FFFFFF, #FFFFFF)', // Flat white for cards
+    'rgba(194, 123, 74, 0.05)',
+    {
+      borderAlpha: 1, // Solid border
+      borderColor: '#ECE8E0', // Specific border color from reference
+      shadow: 'none', // Remove shadow
+      activeShadow: 'none',
+    }
+  ),
+  // Override dark tokens to match light tokens (enforce white "Warm" look in dark mode)
+  darkSurface: 'linear-gradient(135deg, #FFFFFF, #FFFFFF)',
+  darkMuted: 'rgba(194, 123, 74, 0.05)',
+  darkBorder: '#ECE8E0',
+  darkShadow: 'none',
+  darkActiveShadow: 'none',
 }
 
 const motionPresets: Record<CardAnimationPreset, Variants> = {
@@ -134,21 +191,33 @@ export function CardShell({
   bodyClassName = '',
   showHeader = true,
   motionEnabled,
-  animationPreset,
+  animationPreset = 'float',
   surface = 'glass',
   isFocused = false,
+  variant = 'default',
 }: CardShellProps) {
+  const { themeColor, uiStyle } = useThemeColor()
+  const { resolvedTheme } = useTheme()
   const { settings } = useFocusSettingsContext()
-  const { themeColor } = useThemeColor()
   const { t } = useTranslation()
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return document.documentElement.classList.contains('dark')
+  })
+
+  // If UI style is warm, use specific tokens, otherwise use theme tokens
+  const cardTokens = useMemo(() => {
+    if (uiStyle === 'warm') return WARM_STYLE_TOKENS
+    return THEME_TOKENS[themeColor] || THEME_TOKENS.pink
+  }, [themeColor, uiStyle])
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const deleteRef = useRef<HTMLDivElement>(null)
 
   const hideHeadersSetting = settings.focus_lab?.hide_headers
   const headerHidden = hideHeadersSetting || !showHeader
 
-  const cardTokens = useMemo(() => THEME_TOKENS[themeColor] || THEME_TOKENS.pink, [themeColor])
-
+  // Removed redundant requestedMotionEnabled logic or keep it but ensure 'settings' is correct
   const requestedMotionEnabled = motionEnabled ?? settings.focus_lab?.motion?.enabled ?? true
   const finalMotionEnabled = requestedMotionEnabled && false // 强制关闭入场动效
   const finalPreset =
@@ -166,15 +235,45 @@ export function CardShell({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    const nextDark = resolvedTheme === 'dark' || document.documentElement.classList.contains('dark')
+    setIsDark(nextDark)
+  }, [resolvedTheme])
+
+  const surfaceLayer = isDark ? cardTokens.darkSurface : cardTokens.surface
+  const mutedLayer = isDark ? cardTokens.darkMuted : cardTokens.muted
+
+  // Special handling for AI Assistant in Warm mode
+  const isAiWarm = uiStyle === 'warm' && variant === 'ai-assistant'
+  const isWarmMode = uiStyle === 'warm'
+
+  const backgroundValue = isAiWarm
+    ? 'linear-gradient(135deg, #1A1A1A, #2A2A2A)'
+    : surface === 'glass' && !isWarmMode
+      ? `${surfaceLayer}, radial-gradient(circle at 15% 20%, ${mutedLayer}, transparent 42%)`
+      : surfaceLayer
+
+  const borderColor = isAiWarm ? '#3A3A3A' : isDark ? cardTokens.darkBorder : cardTokens.border
+  const shadowColor = isFocused
+    ? isDark
+      ? cardTokens.darkActiveShadow
+      : cardTokens.activeShadow
+    : isDark
+      ? cardTokens.darkShadow
+      : cardTokens.shadow
+  const focusRingClass = isFocused
+    ? `ring-2 ring-[color:var(--card-accent)] ring-offset-[3px] ${
+        isDark ? 'ring-offset-[rgba(5,8,12,0.9)]' : 'ring-offset-white/80'
+      }`
+    : ''
+
   const cardStyle: CSSProperties = {
-    '--card-accent': cardTokens.accent,
-    '--card-muted': cardTokens.muted,
-    borderColor: cardTokens.border,
-    boxShadow: isFocused ? cardTokens.activeShadow : cardTokens.shadow,
-    backgroundImage:
-      surface === 'glass'
-        ? `${cardTokens.surface}, radial-gradient(circle at 15% 20%, ${cardTokens.muted}, transparent 40%)`
-        : undefined,
+    '--card-accent': isAiWarm ? '#C27B4A' : cardTokens.accent, // Force copper accent for AI card
+    background: backgroundValue,
+    borderColor: borderColor,
+    borderWidth: uiStyle === 'warm' ? '1px' : '1px',
+    boxShadow: shadowColor,
+    color: isAiWarm ? '#FFFFFF' : undefined, // Force white text for AI card
     backdropFilter: surface === 'glass' ? 'blur(12px)' : undefined,
   } as CSSProperties
 
@@ -186,11 +285,21 @@ export function CardShell({
       exit={finalMotionEnabled ? 'exit' : undefined}
       variants={finalMotionEnabled ? variants : undefined}
       transition={finalMotionEnabled ? { duration: 0.25, ease: 'easeOut' } : undefined}
-      className={`group relative flex h-full flex-col rounded-[32px] border bg-white/95 px-4 py-3 shadow-lg shadow-gray-200/40 transition-all sm:px-4 sm:py-3 dark:bg-gray-900/90 ${isFocused ? 'ring-2 ring-[color:var(--card-accent)] ring-offset-[3px] ring-offset-white/80 dark:ring-offset-gray-950/80' : ''} ${className}`}
+      className={`group relative flex h-full flex-col overflow-hidden px-4 py-3 transition-all duration-300 sm:px-4 sm:py-3 ${className} ${
+        // Override rounded-xl for Warm style if needed, but keeping consistent for now
+        uiStyle === 'warm' ? 'rounded-xl' : 'rounded-3xl'
+      } ${focusRingClass}`}
       style={cardStyle}
     >
       {headerHidden && (
         <div className="focuslab-drag-handle absolute inset-x-0 top-0 z-20 h-4 cursor-grab active:cursor-grabbing" />
+      )}
+
+      {/* Sparkles decoration for AI Assistant card (Warm style) */}
+      {isAiWarm && (
+        <div className="pointer-events-none absolute top-0 right-0 p-4 opacity-10">
+          <Sparkles className="h-24 w-24 text-white" strokeWidth={1} />
+        </div>
       )}
 
       <div
@@ -208,7 +317,9 @@ export function CardShell({
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div className="flex min-w-0 items-center gap-2">
               {title && (
-                <h2 className="max-w-full truncate text-base font-bold whitespace-nowrap text-gray-900 dark:text-gray-100">
+                <h2
+                  className={`max-w-full truncate text-base font-bold whitespace-nowrap ${isAiWarm ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}
+                >
                   {title}
                 </h2>
               )}

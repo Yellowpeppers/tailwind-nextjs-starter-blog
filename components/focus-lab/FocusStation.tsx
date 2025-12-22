@@ -48,10 +48,12 @@ export const FocusStation = ({
   cols = 1,
   onStartFocus,
   focusedTaskId,
+  isWarm = false,
 }: {
   cols?: number
   onStartFocus?: (task: string, id: string) => void
   focusedTaskId?: string | null
+  isWarm?: boolean
 }) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
@@ -177,7 +179,11 @@ export const FocusStation = ({
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addTextItem()}
               placeholder={t.focusLab.widgets.todo.placeholder}
-              className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-800"
+              className={`focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
+                isWarm
+                  ? 'border-[#ECE8E0] bg-[#F5F2EC] focus:bg-[#F5F2EC] dark:border-gray-700 dark:bg-gray-800'
+                  : 'border-gray-200 bg-gray-50 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:focus:bg-gray-800'
+              }`}
             />
             <button
               onClick={addTextItem}
@@ -197,7 +203,11 @@ export const FocusStation = ({
           <button
             onClick={handleClearAll}
             disabled={items.length === 0}
-            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:bg-gray-100 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 ${
+              isWarm
+                ? 'border border-[#ECE8E0] bg-[#F5F2EC] text-gray-600'
+                : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
+            }`}
             title={lang === 'en' ? 'Clear all tasks' : '清空所有任务'}
           >
             <TrashIcon className="h-5 w-5" />

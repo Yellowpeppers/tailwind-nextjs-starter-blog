@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { useThemeColor } from '@/context/ThemeColorContext'
 import Link, { type LinkProps } from 'next/link'
 import React, { useState, createContext, useContext } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -85,10 +86,17 @@ export const DesktopSidebar = ({
   ...props
 }: React.ComponentProps<typeof motion.div>) => {
   const { open, setOpen, animate } = useSidebar()
+  const { uiStyle } = useThemeColor()
+  const isWarm = uiStyle === 'warm'
+
   return (
     <motion.div
       className={cn(
-        'flex h-full w-[220px] flex-shrink-0 flex-col bg-neutral-100 px-5 py-4 dark:bg-neutral-800',
+        'flex h-full w-[220px] flex-shrink-0 flex-col px-5 py-4',
+        'flex h-full w-[220px] flex-shrink-0 flex-col px-5 py-4',
+        isWarm
+          ? 'border-r border-[#ECE8E0] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
+          : 'bg-neutral-100 dark:bg-neutral-800',
         className
       )}
       animate={{
@@ -105,11 +113,18 @@ export const DesktopSidebar = ({
 
 export const MobileSidebar = ({ className, children, ...props }: React.ComponentProps<'div'>) => {
   const { open, setOpen } = useSidebar()
+  const { uiStyle } = useThemeColor()
+  const isWarm = uiStyle === 'warm'
+
   return (
     <>
       <div
         className={cn(
-          'flex h-10 w-full flex-row items-center justify-between bg-neutral-100 px-4 py-4 md:hidden dark:bg-neutral-800',
+          'flex h-10 w-full flex-row items-center justify-between px-4 py-4 md:hidden',
+          'flex h-10 w-full flex-row items-center justify-between px-4 py-4 md:hidden',
+          isWarm
+            ? 'border-b border-[#ECE8E0] bg-white dark:border-[#3A3A3A] dark:bg-[#1A1A1A]'
+            : 'bg-neutral-100 dark:bg-neutral-800',
           className
         )}
         {...props}

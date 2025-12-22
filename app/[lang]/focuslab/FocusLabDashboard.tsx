@@ -18,7 +18,7 @@ export const FocusLabDashboard = ({ onExitHref }: { onExitHref?: string }) => {
   const handleExit = onExitHref ? () => router.push(onExitHref) : undefined
 
   return (
-    <div className="focuslab-typography relative min-h-screen font-sans">
+    <div className="focuslab-typography focuslab-dark relative min-h-screen font-sans">
       <FocusSettingsProvider>
         <FocusLabAppLazy onExit={handleExit} />
       </FocusSettingsProvider>
