@@ -3,21 +3,13 @@
 import { createClient } from '@/lib/supabase'
 
 import Image from 'next/image'
-import { motion, AnimatePresence, Reorder, useDragControls, DragControls } from 'framer-motion'
-import {
-  ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useCallback,
-  createContext,
-  useContext,
-} from 'react'
-import confetti from 'canvas-confetti'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { FocusStation } from '@/components/focus-lab/FocusStation'
 import DataMigrationModal from '@/components/focus-lab/DataMigrationModal'
+import { FocusGridLayout } from '@/components/focus-lab/FocusGridLayout'
+import { CardShell } from '@/components/focus-lab/CardShell'
 import {
   syncLocalToCloud,
   createFocusItem,
@@ -56,10 +48,10 @@ import {
 } from '@/components/focus-lab/dopamineStorage'
 import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
 import { useThemeColor, ThemeColor } from '@/context/ThemeColorContext'
-import { debounce, merge, cloneDeep, uniq } from 'lodash'
+import { useCelebration } from '@/components/focus-lab/useCelebration'
+import { debounce, uniq } from 'lodash'
 import isEqual from 'lodash/isEqual'
-import { replaceLocaleInPathname } from '@/lib/i18n'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
 
 // --- Icons ---
 const SmileCircleIcon = ({ className }: { className?: string }) => (
@@ -86,20 +78,12 @@ const PauseIcon = ({ className }: { className?: string }) => (
   <span className={`icon-[solar--pause-bold] ${className}`} />
 )
 
-const InfoIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--info-circle-outline] ${className}`} />
-)
-
 const ArrowLaunchIcon = ({ className }: { className?: string }) => (
   <span className={`icon-[solar--arrow-right-up-outline] ${className}`} />
 )
 
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
   <span className={`icon-[solar--arrow-left-outline] ${className}`} />
-)
-
-const MinusIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--minus-circle-outline] ${className}`} />
 )
 
 const TrashIcon = ({ className }: { className?: string }) => (
@@ -155,8 +139,6 @@ const LogoutIcon = ({ className }: { className?: string }) => (
 )
 
 // --- Shared Components ---
-const DragHandleContext = createContext<DragControls | null>(null)
-
 // --- Helper Functions ---
 
 // --- Helper Functions ---
@@ -227,7 +209,6 @@ const SegmentedControl = <T extends string>({
     </div>
   )
 }
-
 // --- Data & Types ---
 
 type SoundOption = {
@@ -238,6 +219,51 @@ type SoundOption = {
 }
 
 const SOUND_LIBRARY: SoundOption[] = []
+
+type GreetingInfo = {
+  title: string
+  subtitle: string
+  iconClass: string
+  emoji: string
+}
+
+const computeGreeting = (lang: string): GreetingInfo => {
+  const hour = new Date().getHours()
+  const isMorning = hour >= 5 && hour < 12
+  const isAfternoon = hour >= 12 && hour < 17
+  const isEvening = hour >= 17 && hour < 21
+
+  if (isMorning) {
+    return {
+      title: lang === 'zh' ? '早上好' : 'Good Morning',
+      subtitle: lang === 'zh' ? '开启今天的专注旅程吧' : "Let's start fresh today",
+      iconClass: 'icon-[solar--sunrise-bold-duotone]',
+      emoji: '☀️',
+    }
+  }
+  if (isAfternoon) {
+    return {
+      title: lang === 'zh' ? '下午好' : 'Good Afternoon',
+      subtitle: lang === 'zh' ? '保持节奏，继续推进' : 'Keep the momentum going',
+      iconClass: 'icon-[solar--sun-2-bold-duotone]',
+      emoji: '🌤️',
+    }
+  }
+  if (isEvening) {
+    return {
+      title: lang === 'zh' ? '傍晚好' : 'Good Evening',
+      subtitle: lang === 'zh' ? '收个尾，轻松结束今天' : 'Wrap up and wind down',
+      iconClass: 'icon-[solar--sunset-bold-duotone]',
+      emoji: '🌇',
+    }
+  }
+  return {
+    title: lang === 'zh' ? '晚安' : 'Good Night',
+    subtitle: lang === 'zh' ? '好好休息，明天见' : 'Rest well and recharge',
+    iconClass: 'icon-[solar--moon-stars-bold-duotone]',
+    emoji: '🌙',
+  }
+}
 
 const SoundVisualizer = ({ activeCount }: { activeCount: number }) => {
   if (activeCount === 0) {
@@ -278,210 +304,6 @@ type ActiveTrack = {
 
 // --- Widget Card Component ---
 
-type WidgetCardProps = {
-  title?: ReactNode
-  subtitle?: ReactNode
-  children: ReactNode
-  onHeaderClick?: () => void
-  onDelete?: () => void
-  badge?: ReactNode
-  customAction?: ReactNode
-  customActionPosition?: 'top' | 'right'
-  className?: string
-  showHeader?: boolean
-}
-
-const WidgetCard = ({
-  title,
-  subtitle,
-  children,
-  onHeaderClick,
-  onDelete,
-  badge,
-  customAction,
-  customActionPosition = 'top',
-  className = '',
-  showHeader = true,
-}: WidgetCardProps) => {
-  const [showInfo, setShowInfo] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const infoRef = useRef<HTMLDivElement>(null)
-  const deleteRef = useRef<HTMLDivElement>(null)
-  const { settings } = useFocusSettingsContext()
-  const { t } = useTranslation()
-  const hideHeadersSetting = settings.focus_lab?.hide_headers
-  const headerHidden = hideHeadersSetting || !showHeader
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (infoRef.current && !infoRef.current.contains(event.target as Node)) {
-        setShowInfo(false)
-      }
-      if (deleteRef.current && !deleteRef.current.contains(event.target as Node)) {
-        setShowDeleteConfirm(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const dragControls = useContext(DragHandleContext)
-  const dragStartPosition = useRef({ x: 0, y: 0 })
-
-  return (
-    <motion.section
-      layout
-      className={`group relative flex h-full flex-col rounded-[32px] border border-gray-200 bg-white px-5 py-4 shadow-lg shadow-gray-200/50 backdrop-blur-none transition-shadow duration-300 sm:px-6 sm:py-5 dark:border-gray-700 dark:bg-gray-900 ${className}`}
-    >
-      {/* Invisible Drag Handle Overlay (Zen Mode) */}
-      {headerHidden && (
-        <div
-          className="absolute top-0 right-0 left-0 z-20 h-4 cursor-grab active:cursor-grabbing"
-          onPointerDown={(e) => {
-            dragStartPosition.current = { x: e.clientX, y: e.clientY }
-            dragControls?.start(e)
-          }}
-        />
-      )}
-
-      <div
-        className={`flex ${headerHidden ? 'h-0 min-h-0' : 'h-8'} cursor-grab items-center justify-between gap-2 active:cursor-grabbing`}
-        onPointerDown={(e) => {
-          if (headerHidden) return // Handled by overlay
-          dragStartPosition.current = { x: e.clientX, y: e.clientY }
-          dragControls?.start(e)
-        }}
-        onClick={(e) => {
-          const dist = Math.sqrt(
-            Math.pow(e.clientX - dragStartPosition.current.x, 2) +
-              Math.pow(e.clientY - dragStartPosition.current.y, 2)
-          )
-          if (dist < 5) {
-            onHeaderClick?.()
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            onHeaderClick?.()
-          }
-        }}
-      >
-        {!headerHidden && (
-          <div className="flex items-center gap-2">
-            {/* Drag Handle (only visible when not focused) */}
-            <div className="flex items-center gap-2">
-              {title && (
-                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h2>
-              )}
-              {badge && <div>{badge}</div>}
-            </div>
-            {/* Info Button */}
-            <div className="relative" ref={infoRef}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowInfo(!showInfo)
-                }}
-                className={`flex aspect-square h-8 w-8 items-center justify-center rounded-xl opacity-0 transition-all group-hover:opacity-100 ${
-                  showInfo
-                    ? 'text-primary-500 dark:text-primary-400 opacity-100'
-                    : 'text-gray-300 hover:bg-gray-50 hover:text-gray-500 dark:text-gray-500 dark:hover:bg-gray-800/50 dark:hover:text-gray-300'
-                }`}
-                aria-label="Toggle description"
-              >
-                <InfoIcon className="h-4 w-4" />
-              </button>
-              <AnimatePresence>
-                {showInfo && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 8, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute top-1/2 left-full z-50 ml-2 w-56 origin-left -translate-y-1/2 transform"
-                  >
-                    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:ring-white/10">
-                      <div className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
-                        {subtitle}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        )}
-
-        {/* Actions (Custom Action replaces Delete or floats if on top) */}
-        <div
-          className={`flex shrink-0 items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100 ${
-            customActionPosition === 'top'
-              ? headerHidden
-                ? 'absolute top-3 right-4 z-10'
-                : ''
-              : ''
-          }`}
-        >
-          {customAction && customActionPosition === 'top' && customAction}
-          {!customAction && onDelete && (
-            <div className="relative" ref={deleteRef}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowDeleteConfirm(!showDeleteConfirm)
-                }}
-                className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all ${
-                  showDeleteConfirm
-                    ? 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
-                    : 'text-gray-300 hover:bg-gray-50 hover:text-red-500 dark:text-gray-500 dark:hover:bg-gray-800/50 dark:hover:text-red-400'
-                }`}
-                aria-label="Remove widget"
-              >
-                <MinusIcon className="h-4 w-4" />
-              </button>
-              {/* Delete Confirm */}
-              <AnimatePresence>
-                {showDeleteConfirm && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="absolute top-full right-0 z-10 mt-2 w-32 rounded-lg border border-gray-100 bg-white p-1 text-xs shadow-xl dark:border-gray-700 dark:bg-gray-800"
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete()
-                      }}
-                      className="w-full rounded-md bg-red-50 px-3 py-2 text-left font-medium text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
-                    >
-                      {t.focusLab.delete.confirmBtn}
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-
-        {/* Focus Toggle Removed for now */}
-      </div>
-      <div className="mt-2 flex min-h-0 flex-1 flex-col">{children}</div>
-
-      {/* Floating Side Action (e.g. Right Center for Flipping) */}
-      {customAction && customActionPosition === 'right' && (
-        <div className="absolute top-1/2 -right-2 z-50 -translate-y-1/2 opacity-0 transition-all duration-300 group-hover:right-0 group-hover:opacity-100">
-          <div className="flex translate-x-1/2 items-center">{customAction}</div>
-        </div>
-      )}
-    </motion.section>
-  )
-}
-
 // --- Grid System ---
 
 type GridItem = {
@@ -495,58 +317,240 @@ type GridItem = {
 }
 
 const INITIAL_LAYOUT: GridItem[] = [
-  // Left Column (3 units)
-  { id: 'sonic', x: 0, y: 0, w: 3, h: 5, minW: 2, minH: 3 },
-  { id: 'breaker', x: 0, y: 5, w: 3, h: 5, minW: 3, minH: 5 },
+  // 第一行：白噪音（3x3）、多巴胺（3x3）、任务拆解（4x5）、右侧 Attention Hub（6x9）
+  { id: 'sonic', x: 0, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
+  { id: 'dopamine', x: 3, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
+  { id: 'breaker', x: 6, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'brain', x: 10, y: 0, w: 6, h: 9, minW: 3, minH: 3 },
 
-  // Middle Left (ToDo - 3 units)
-  { id: 'todo', x: 3, y: 0, w: 3, h: 10, minW: 3, minH: 3 },
-
-  // Middle Right (Brain Dump - 5 units)
-  { id: 'brain', x: 6, y: 0, w: 5, h: 10, minW: 3, minH: 5 },
-
-  // Right Column (3 units)
-  { id: 'timer', x: 11, y: 0, w: 3, h: 5, minW: 3, minH: 4 },
-  { id: 'dopamine', x: 11, y: 5, w: 3, h: 5, minW: 2, minH: 3 },
+  // 第二行：Today’s Tasks（6x6）、Focus Timer（4x4）
+  { id: 'todo', x: 0, y: 3, w: 6, h: 6, minW: 3, minH: 3 },
+  { id: 'timer', x: 6, y: 5, w: 4, h: 4, minW: 3, minH: 3 },
 ]
 
 const TRIPLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 3 },
-  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 4 },
-  { id: 'dopamine', x: 8, y: 0, w: 4, h: 5, minW: 2, minH: 3 },
-  { id: 'todo', x: 0, y: 5, w: 6, h: 10, minW: 3, minH: 3 },
-  { id: 'brain', x: 6, y: 5, w: 6, h: 10, minW: 3, minH: 5 },
-  { id: 'breaker', x: 0, y: 15, w: 6, h: 5, minW: 3, minH: 5 },
+  { id: 'sonic', x: 0, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
+  { id: 'dopamine', x: 3, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
+  { id: 'breaker', x: 6, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
+  { id: 'brain', x: 9, y: 0, w: 3, h: 9, minW: 3, minH: 3 },
+  { id: 'todo', x: 0, y: 3, w: 6, h: 6, minW: 3, minH: 3 },
+  { id: 'timer', x: 6, y: 5, w: 3, h: 4, minW: 3, minH: 3 },
 ]
 
 const DOUBLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 4, h: 5, minW: 2, minH: 3 },
-  { id: 'timer', x: 4, y: 0, w: 4, h: 5, minW: 3, minH: 4 },
-  { id: 'todo', x: 0, y: 5, w: 4, h: 10, minW: 3, minH: 3 },
-  { id: 'dopamine', x: 4, y: 5, w: 4, h: 5, minW: 2, minH: 3 },
-  { id: 'breaker', x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'brain', x: 0, y: 15, w: 8, h: 10, minW: 3, minH: 5 },
+  { id: 'sonic', x: 0, y: 0, w: 4, h: 3, minW: 3, minH: 3 },
+  { id: 'dopamine', x: 4, y: 0, w: 4, h: 3, minW: 3, minH: 3 },
+  { id: 'breaker', x: 0, y: 3, w: 4, h: 5, minW: 3, minH: 5 },
+  { id: 'brain', x: 4, y: 3, w: 4, h: 9, minW: 3, minH: 3 },
+  { id: 'todo', x: 0, y: 8, w: 4, h: 6, minW: 3, minH: 3 },
+  { id: 'timer', x: 4, y: 12, w: 4, h: 4, minW: 3, minH: 3 },
 ]
 
 type LayoutPreset = 'desktop' | 'triple' | 'double'
 
 const GRID_PRESETS: Record<LayoutPreset, { columns: number; layout: GridItem[] }> = {
-  desktop: { columns: 14, layout: INITIAL_LAYOUT },
+  desktop: { columns: 16, layout: INITIAL_LAYOUT },
   triple: { columns: 12, layout: TRIPLE_LAYOUT },
   double: { columns: 8, layout: DOUBLE_LAYOUT },
+}
+const LAYOUT_VERSION = 'focuslab-layout-v10'
+
+const mergeLayoutWithDefaults = (preset: LayoutPreset, incoming: GridItem[] | null | undefined) => {
+  const defaults = GRID_PRESETS[preset].layout
+  const map = new Map<string, GridItem>()
+  defaults.forEach((d) => map.set(d.id, { ...d }))
+  if (Array.isArray(incoming)) {
+    incoming.forEach((item) => {
+      if (!item || !item.id) return
+      const target = map.get(item.id)
+      if (!target) return
+      const defMinW = target.minW
+      const defMinH = target.minH
+      map.set(item.id, {
+        ...target,
+        x: Number.isFinite(item.x) ? item.x : target.x,
+        y: Number.isFinite(item.y) ? item.y : target.y,
+        w: Number.isFinite(item.w) ? item.w : target.w,
+        h: Number.isFinite(item.h) ? item.h : target.h,
+        // 统一使用最新默认最小值，避免旧缓存把 minH/minW 锁大
+        minW: defMinW ?? item.minW ?? target.minW,
+        minH: defMinH ?? item.minH ?? target.minH,
+      })
+    })
+  }
+  return Array.from(map.values())
+}
+
+const isCollapsedLayout = (items: GridItem[] | null | undefined) => {
+  if (!Array.isArray(items) || items.length === 0) return true
+  return items.every((i) => (i?.x ?? 0) === 0 && (i?.y ?? 0) === 0)
+}
+
+const isLayoutValid = (preset: LayoutPreset, items: GridItem[] | null | undefined) => {
+  if (!Array.isArray(items)) return false
+  const defaults = GRID_PRESETS[preset].layout
+  const maxCols = GRID_PRESETS[preset].columns
+  const maxY = 40 // 防止异常极大位移导致回到原点或全部重叠
+  if (items.length !== defaults.length) return false
+
+  const allowedIds = new Set(defaults.map((d) => d.id))
+  return items.every((item) => {
+    if (!item || !allowedIds.has(item.id)) return false
+    const { x, y, w, h } = item
+    if (![x, y, w, h].every(Number.isFinite)) return false
+    if (x < 0 || y < 0 || w <= 0 || h <= 0) return false
+    if (x + w > maxCols) return false
+    if (y > maxY) return false
+    return true
+  })
 }
 
 const cloneLayout = (items: GridItem[]) => items.map((item) => ({ ...item }))
 
-const getPresetForWidth = (width: number): LayoutPreset => {
-  if (width >= 1200) return 'desktop'
-  if (width >= 900) return 'triple'
-  return 'double'
-}
-
 const getLayoutStorageKey = (preset: LayoutPreset) => `focus-lab-layout-${preset}-v1`
+const SIDEBAR_BTN_BASE =
+  'group flex w-full min-h-[44px] items-center gap-3 rounded-2xl px-3 py-2.5 text-base font-semibold text-gray-700 transition-all hover:bg-white/90 hover:shadow-sm dark:text-gray-200 dark:hover:bg-white/5'
 
 type FocusedTaskState = { text: string; timestamp: number; id: string } | null
+
+const SidebarLabel = ({
+  show,
+  children,
+  delay = 0,
+}: {
+  show: boolean
+  children: ReactNode
+  delay?: number
+}) => (
+  <AnimatePresence initial={false}>
+    {show ? (
+      <motion.span
+        key="sidebar-label"
+        initial={{ opacity: 0, x: -6, width: 0 }}
+        animate={{ opacity: 1, x: 0, width: 'auto' }}
+        exit={{ opacity: 0, x: -6, width: 0 }}
+        transition={{ duration: 0.18, ease: 'easeOut', delay }}
+        className="inline-flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap"
+      >
+        {children}
+      </motion.span>
+    ) : null}
+  </AnimatePresence>
+)
+
+const FocusSidebarAction = ({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: ReactNode
+  label: string
+  onClick: () => void
+}) => {
+  const { open, animate } = useSidebar()
+  return (
+    <button
+      onClick={onClick}
+      className="group/sidebar flex w-full items-center justify-start gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-white/80 dark:hover:bg-white/10"
+    >
+      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-gray-600 transition-colors group-hover:text-gray-900 dark:text-gray-300">
+        {icon}
+      </span>
+      <motion.span
+        animate={{
+          display: animate ? (open ? 'inline-block' : 'none') : 'inline-block',
+          opacity: animate ? (open ? 1 : 0) : 1,
+        }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
+        className="inline-block text-sm whitespace-pre text-gray-800 transition duration-150 group-hover/sidebar:translate-x-1 dark:text-gray-100"
+      >
+        {label}
+      </motion.span>
+    </button>
+  )
+}
+
+const FocusSidebarBrand = () => {
+  const { open, animate } = useSidebar()
+  return (
+    <div className="group/sidebar flex h-12 items-center justify-start gap-3 rounded-xl px-3 py-1">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900">
+        <span className="icon-[solar--layers-minimalistic-bold] text-lg" />
+      </div>
+      <motion.div
+        animate={{
+          opacity: animate ? (open ? 1 : 0) : 1,
+          display: animate ? (open ? 'flex' : 'none') : 'flex',
+        }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
+        className="min-w-0 flex-col"
+      >
+        <span className="font-limelight truncate text-lg leading-tight font-bold text-gray-900 dark:text-gray-100">
+          Focus Lab
+        </span>
+        <span className="text-xs font-medium text-gray-400">Dashboard</span>
+      </motion.div>
+    </div>
+  )
+}
+
+const FocusSidebarProfile = ({
+  userName,
+  planLabel,
+  avatarUrl,
+  avatarColor,
+  onClick,
+}: {
+  userName: string
+  planLabel: string
+  avatarUrl?: string
+  avatarColor?: string
+  onClick?: () => void
+}) => {
+  const { open, animate } = useSidebar()
+  const initial = (userName.trim().charAt(0) || 'G').toUpperCase()
+  return (
+    <div className="border-t border-white/70 pt-3 pb-6 dark:border-white/10">
+      <button
+        type="button"
+        onClick={onClick}
+        className="group/sidebar flex h-12 w-full items-center justify-start gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-white/80 dark:hover:bg-white/10"
+      >
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white shadow-inner ring-1 ring-black/5 dark:ring-white/10 ${
+            avatarUrl
+              ? 'bg-transparent'
+              : avatarColor === 'pink'
+                ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
+                : avatarColor === 'emerald'
+                  ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
+                  : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
+          }`}
+        >
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="User" className="h-full w-full object-cover object-center" />
+          ) : (
+            <span className="leading-none">{initial}</span>
+          )}
+        </div>
+        <motion.div
+          animate={{
+            opacity: animate ? (open ? 1 : 0) : 1,
+            display: animate ? (open ? 'flex' : 'none') : 'flex',
+          }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          className="min-w-0 flex-col text-left"
+        >
+          <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {userName}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">{planLabel}</span>
+        </motion.div>
+      </button>
+    </div>
+  )
+}
 
 const FocusLabMobileGrid = ({
   focusedTask,
@@ -586,15 +590,62 @@ const FocusLabMobileGrid = ({
 const COL_WIDTH = 54
 const ROW_HEIGHT = 54
 const GAP = 22
+const GRID_WIDTH_DESKTOP = 16 * ROW_HEIGHT + (16 - 1) * GAP
 const CONTROL_BUTTON_BASE =
   'relative flex h-12 px-5 min-w-[150px] items-center justify-center rounded-full border text-sm font-semibold transition-all text-center'
 
+const normalizeLayout = (
+  preset: LayoutPreset,
+  layout: GridItem[] | null | undefined,
+  options: { fillMissing?: boolean } = {}
+) => {
+  const fillMissing = options.fillMissing ?? true
+  const defaults = GRID_PRESETS[preset].layout
+  const safeList = Array.isArray(layout) ? layout : []
+
+  const byId = new Map<string, GridItem>()
+
+  safeList.forEach((item) => {
+    if (!item || !item.id) return
+    const def = defaults.find((d) => d.id === item.id)
+    const normalized: GridItem = {
+      ...def,
+      ...item,
+      x: Number.isFinite(item.x) ? item.x : (def?.x ?? 0),
+      y: Number.isFinite(item.y) ? item.y : (def?.y ?? 0),
+      w: Number.isFinite(item.w) ? item.w : (def?.w ?? 2),
+      h: Number.isFinite(item.h) ? item.h : (def?.h ?? 2),
+      minW: item.minW ?? def?.minW ?? 1,
+      minH: item.minH ?? def?.minH ?? 1,
+    }
+    byId.set(item.id, normalized)
+  })
+
+  if (fillMissing) {
+    defaults.forEach((def) => {
+      if (!byId.has(def.id)) {
+        byId.set(def.id, { ...def })
+      }
+    })
+  }
+
+  return Array.from(byId.values())
+}
+
+const DEFAULT_LAYOUTS: Record<LayoutPreset, GridItem[]> = {
+  desktop: cloneLayout(GRID_PRESETS.desktop.layout),
+  triple: cloneLayout(GRID_PRESETS.triple.layout),
+  double: cloneLayout(GRID_PRESETS.double.layout),
+}
+const EMPTY_HIDDEN: Record<LayoutPreset, Set<string>> = {
+  desktop: new Set(),
+  triple: new Set(),
+  double: new Set(),
+}
+
 export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
-  // const [isFocusMode, setIsFocusMode] = useState(false) // Removed: Always in focus mode
-  const isFocusMode = true // Hardcoded to true for layout logic preservation if needed, or just refactor.
-  // Actually simpler to just keep the variable as true constant to minimize diff noise for now, or just replace usages.
-  // I will just replace usage or keep it constant.
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const isFocusMode = false
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isTipOpen, setIsTipOpen] = useState(true)
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [showCustomizeMenu, setShowCustomizeMenu] = useState(false)
@@ -602,14 +653,18 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const customizeButtonRef = useRef<HTMLButtonElement | null>(null)
   const customizeMenuRef = useRef<HTMLDivElement | null>(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
-  const [focusedCardIds, setFocusedCardIds] = useState<Set<string>>(new Set())
   const [focusedTask, setFocusedTask] = useState<FocusedTaskState>(null)
   const [externalCommand, setExternalCommand] = useState<string | null>(null)
   const { t, language: lang } = useTranslation()
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [containerWidth, setContainerWidth] = useState(0)
+  const [greeting, setGreeting] = useState<GreetingInfo>(() => computeGreeting(lang))
+  const [viewportWidth, setViewportWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [activePreset, setActivePreset] = useState<LayoutPreset>('desktop')
+  const [layoutsByPreset, setLayoutsByPreset] =
+    useState<Record<LayoutPreset, GridItem[]>>(DEFAULT_LAYOUTS)
+  const [hiddenByPreset, setHiddenByPreset] =
+    useState<Record<LayoutPreset, Set<string>>>(EMPTY_HIDDEN)
+  const [layoutKey, setLayoutKey] = useState(0)
 
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authTrigger, setAuthTrigger] = useState<'generic' | 'stats'>('generic')
@@ -629,6 +684,23 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const hasHydratedGoals = useRef(false)
   const prevGoalRef = useRef<{ hours?: number; tasks?: number }>({})
   const [tasksCompletedToday, setTasksCompletedToday] = useState(0)
+  const hasHydratedLayout = useRef(false)
+  const skipLayoutEvent = useRef(false)
+  const lastResetTime = useRef(0) // 追踪最后一次重置的时间戳
+  const pendingImmediateSave = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncePersistLayout = useMemo(
+    () =>
+      debounce((nextLayouts: Record<LayoutPreset, GridItem[]>) => {
+        updateSettings('focus_lab.layout', {
+          desktop: nextLayouts.desktop,
+          triple: nextLayouts.triple,
+          double: nextLayouts.double,
+        })
+        updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
+        updateSettings('focus_lab.layout_saved_at', Date.now())
+      }, 300),
+    [updateSettings]
+  )
 
   // Real progress tracking
   const [todayMinutes, setTodayMinutes] = useState(0)
@@ -651,6 +723,12 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     const interval = setInterval(refreshTodayProgress, 60000)
     return () => clearInterval(interval)
   }, [refreshTodayProgress])
+
+  useEffect(() => {
+    setGreeting(computeGreeting(lang))
+    const interval = setInterval(() => setGreeting(computeGreeting(lang)), 60000)
+    return () => clearInterval(interval)
+  }, [lang])
 
   // Hydrate goals from settings
   useEffect(() => {
@@ -734,6 +812,25 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const isGoalReached = dailyGoalHours > 0 && currentProgressHours >= dailyGoalHours
   const isTaskGoalReached = dailyTaskGoal > 0 && tasksCompletedToday >= dailyTaskGoal
   const rewardUnlocked = isGoalReached || isTaskGoalReached
+  const { burst: triggerCelebration, preload: preloadCelebration } = useCelebration()
+  const renderGreetingText = (size: 'mobile' | 'desktop' = 'desktop') => (
+    <div className={`flex items-center gap-2 ${size === 'desktop' ? 'px-1 pb-3' : 'px-1 pb-2'}`}>
+      <h1
+        className={`${size === 'desktop' ? 'text-2xl' : 'text-xl'} font-extrabold text-gray-900 dark:text-white`}
+      >
+        {greeting.title}!
+      </h1>
+      <span className={`${size === 'desktop' ? 'text-2xl' : 'text-xl'}`} aria-hidden="true">
+        {greeting.emoji}
+      </span>
+    </div>
+  )
+
+  useEffect(() => {
+    if (rewardUnlocked) {
+      triggerCelebration({ variant: 'fireworks', spread: 110, particleCount: 140 })
+    }
+  }, [rewardUnlocked, triggerCelebration])
 
   // --- Fireworks Effect ---
 
@@ -764,8 +861,9 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       }
       setTempGoalHours(dailyGoalHours.toString())
       setTempTaskGoal(dailyTaskGoal.toString())
+      preloadCelebration()
     }
-  }, [showGoalModal, dailyGoalHours, dailyTaskGoal, user])
+  }, [showGoalModal, dailyGoalHours, dailyTaskGoal, user, preloadCelebration])
 
   const handleGoalModalSave = () => {
     const hoursVal = Math.max(0.5, parseFloat(tempGoalHours) || dailyGoalHours)
@@ -773,6 +871,16 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     setDailyGoalHours(hoursVal)
     setDailyTaskGoal(tasksVal)
     setShowGoalModal(false)
+    if (
+      (hoursVal > 0 && currentProgressHours >= hoursVal) ||
+      (tasksVal > 0 && tasksCompletedToday >= tasksVal)
+    ) {
+      triggerCelebration({ variant: 'fireworks', spread: 110, particleCount: 140 })
+    }
+  }
+
+  const handlePreviewCelebration = () => {
+    triggerCelebration({ variant: 'fireworks', spread: 120, particleCount: 160, startVelocity: 42 })
   }
 
   const handleToggleNotifications = () => {
@@ -812,30 +920,22 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
   useEffect(() => {
     const updateDimensions = () => {
-      if (containerRef.current) {
-        const measuredWidth = containerRef.current.clientWidth
-        setContainerWidth(measuredWidth)
-      }
       const width = window.innerWidth
-      setIsMobile(width < 540)
-      setActivePreset(getPresetForWidth(width))
+      setViewportWidth(width)
+      const nextIsMobile = width < 540
+      setIsMobile(nextIsMobile)
+      setActivePreset('desktop')
+      if (width < 900) {
+        setIsSidebarOpen(false)
+      }
     }
 
     updateDimensions()
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateDimensions()
-    })
-
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current)
-    }
 
     window.addEventListener('resize', updateDimensions)
 
     return () => {
       window.removeEventListener('resize', updateDimensions)
-      resizeObserver.disconnect()
     }
   }, [])
 
@@ -988,6 +1088,12 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showCustomizeMenu])
 
+  useEffect(() => {
+    if (!showSettingsModal) {
+      setShowCustomizeMenu(false)
+    }
+  }, [showSettingsModal])
+
   // Register Service Worker for external commands
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -1032,26 +1138,186 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     }
   }, [isFocusMode])
 
-  const activePresetConfig = GRID_PRESETS[activePreset]
-  const backgroundColumnWidth =
-    containerWidth > 0
-      ? Math.max(
-          40,
-          (containerWidth - (activePresetConfig.columns - 1) * GAP) / activePresetConfig.columns
-        )
-      : COL_WIDTH
+  useEffect(() => {
+    // 布局设置同步：从 settings 加载各断点布局，未保存或损坏/版本不匹配时回退默认并写回
+    if (!settings || !settings.focus_lab || hasHydratedLayout.current === true) return
 
-  const toggleCardFocus = (id: string) => {
-    setFocusedCardIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
+    const defaults: Record<LayoutPreset, GridItem[]> = {
+      desktop: cloneLayout(GRID_PRESETS.desktop.layout),
+      triple: cloneLayout(GRID_PRESETS.triple.layout),
+      double: cloneLayout(GRID_PRESETS.double.layout),
+    }
+
+    const emptyHidden: Record<LayoutPreset, Set<string>> = {
+      desktop: new Set(),
+      triple: new Set(),
+      double: new Set(),
+    }
+
+    const storedVersion = settings.focus_lab.layout_version
+    const forceDefaults = storedVersion !== LAYOUT_VERSION
+
+    const nextLayouts: Record<LayoutPreset, GridItem[]> = { ...defaults }
+    let shouldPersistLayout = false
+
+    ;(['desktop', 'triple', 'double'] as LayoutPreset[]).forEach((preset) => {
+      const saved = settings.focus_lab?.layout?.[preset]
+      const collapsed = isCollapsedLayout(saved)
+      const invalid = !isLayoutValid(preset, saved)
+      if (forceDefaults || collapsed || invalid) {
+        nextLayouts[preset] = defaults[preset]
+        shouldPersistLayout = true
       } else {
-        next.add(id)
+        nextLayouts[preset] = mergeLayoutWithDefaults(preset, saved)
       }
+    })
+
+    setLayoutsByPreset(nextLayouts)
+
+    const nextHidden: Record<LayoutPreset, Set<string>> = { ...emptyHidden }
+    ;(['desktop', 'triple', 'double'] as LayoutPreset[]).forEach((preset) => {
+      const hiddenArr = settings.focus_lab?.hidden_cards?.[preset]
+      if (Array.isArray(hiddenArr)) {
+        nextHidden[preset] = new Set(hiddenArr.filter(Boolean))
+      }
+    })
+    setHiddenByPreset(nextHidden)
+
+    if (shouldPersistLayout || forceDefaults) {
+      updateSettings('focus_lab.layout', {
+        desktop: nextLayouts.desktop,
+        triple: nextLayouts.triple,
+        double: nextLayouts.double,
+      })
+      updateSettings('focus_lab.hidden_cards', {
+        desktop: [],
+        triple: [],
+        double: [],
+      })
+      updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
+      updateSettings('focus_lab.layout_saved_at', Date.now())
+    }
+
+    hasHydratedLayout.current = true
+  }, [settings, updateSettings])
+
+  useEffect(() => {
+    if (!hasHydratedLayout.current) return
+    debouncePersistLayout(layoutsByPreset)
+    return () => {
+      debouncePersistLayout.cancel()
+    }
+  }, [layoutsByPreset, debouncePersistLayout])
+
+  // 持久化隐藏卡片状态（避免在 render 阶段直接调用 updateSettings）
+  useEffect(() => {
+    if (!hasHydratedLayout.current) return
+    const toArray = (set: Set<string>) => Array.from(set || [])
+    updateSettings('focus_lab.hidden_cards', {
+      desktop: toArray(hiddenByPreset.desktop),
+      triple: toArray(hiddenByPreset.triple),
+      double: toArray(hiddenByPreset.double),
+    })
+    updateSettings('focus_lab.layout_saved_at', Date.now())
+  }, [hiddenByPreset, updateSettings])
+
+  const handleLayoutChange = useCallback(
+    (preset: LayoutPreset, newLayout: GridItem[]) => {
+      // 在重置后 500ms 内忽略所有布局变化回调，防止 RGL 的初始化回调覆盖默认布局
+      const timeSinceReset = Date.now() - lastResetTime.current
+      if (timeSinceReset < 500) {
+        return
+      }
+      if (skipLayoutEvent.current) {
+        skipLayoutEvent.current = false
+        return
+      }
+      // 取消之前的持久化，避免旧布局在重置后覆盖新值
+      debouncePersistLayout.cancel()
+      setLayoutsByPreset((prev) => {
+        const merged = mergeLayoutWithDefaults(preset, newLayout)
+        const next = { ...prev, [preset]: merged }
+        if (hasHydratedLayout.current) {
+          // 统一通过节流函数持久化，避免在 render 阶段触发 setState 警告
+          debouncePersistLayout(next)
+          // 同步写一份立即保存，避免用户快速刷新导致丢失（异步执行规避 render 警告）
+          if (pendingImmediateSave.current) clearTimeout(pendingImmediateSave.current)
+          pendingImmediateSave.current = setTimeout(() => {
+            updateSettings('focus_lab.layout', next)
+            updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
+            updateSettings('focus_lab.layout_saved_at', Date.now())
+            pendingImmediateSave.current = null
+          }, 0)
+        }
+        return next
+      })
+    },
+    [debouncePersistLayout, updateSettings]
+  )
+
+  const handleRemoveItem = useCallback((preset: LayoutPreset, id: string) => {
+    setLayoutsByPreset((prev) => {
+      const nextLayout = prev[preset]?.filter((item) => item.id !== id) || []
+      const next = { ...prev, [preset]: nextLayout }
+      return next
+    })
+  }, [])
+
+  const handleResetLayout = useCallback(() => {
+    // 先取消未决的保存，避免旧布局反写
+    debouncePersistLayout.cancel()
+    if (pendingImmediateSave.current) {
+      clearTimeout(pendingImmediateSave.current)
+      pendingImmediateSave.current = null
+    }
+    skipLayoutEvent.current = true
+    const nextLayouts: Record<LayoutPreset, GridItem[]> = {
+      desktop: cloneLayout(GRID_PRESETS.desktop.layout),
+      triple: cloneLayout(GRID_PRESETS.triple.layout),
+      double: cloneLayout(GRID_PRESETS.double.layout),
+    }
+    setLayoutsByPreset(nextLayouts)
+    const nextHidden: Record<LayoutPreset, Set<string>> = {
+      desktop: new Set(),
+      triple: new Set(),
+      double: new Set(),
+    }
+    setHiddenByPreset(nextHidden)
+    // 记录重置时间，防止 RGL 的回调覆盖默认布局
+    lastResetTime.current = Date.now()
+    // 增加 layoutKey 强制 ResponsiveGridLayout 重新挂载，使其采用新布局
+    setLayoutKey((k) => k + 1)
+    // 立即持久化新的默认布局，确保刷新后也是最新
+    updateSettings('focus_lab.layout', nextLayouts)
+    updateSettings('focus_lab.hidden_cards', {
+      desktop: [],
+      triple: [],
+      double: [],
+    })
+    updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
+    updateSettings('focus_lab.layout_saved_at', Date.now())
+  }, [debouncePersistLayout, updateSettings])
+
+  const handleToggleHidden = (preset: LayoutPreset, id: string) => {
+    setHiddenByPreset((prev) => {
+      const current = new Set(prev[preset] || [])
+      if (current.has(id)) {
+        current.delete(id)
+      } else {
+        current.add(id)
+      }
+      const next = { ...prev, [preset]: current }
       return next
     })
   }
+
+  const activePresetConfig = GRID_PRESETS[activePreset]
+  const backgroundColumnWidth = Math.max(
+    40,
+    viewportWidth > 0
+      ? (viewportWidth - (activePresetConfig.columns - 1) * GAP) / activePresetConfig.columns
+      : COL_WIDTH
+  )
 
   return (
     <>
@@ -1206,7 +1472,13 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                  onClick={handlePreviewCelebration}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:text-amber-300 dark:hover:bg-amber-500/10"
+                >
+                  预览烟花
+                </button>
                 <button
                   onClick={() => setShowGoalModal(false)}
                   className="rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
@@ -1255,7 +1527,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+              className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Settings Header */}
@@ -1264,47 +1536,6 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               </h2>
 
               <div className="space-y-4">
-                {/* Language (Sync with Main Nav) */}
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                  <span className="font-medium dark:text-gray-200">
-                    {t.focusLab.settings?.language || (lang === 'en' ? 'Language' : '语言')}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const toggleLocale = lang === 'en' ? 'zh' : 'en'
-                      // Uses same logic as LanguageSwitch
-                      const basePath = replaceLocaleInPathname(
-                        window.location.pathname,
-                        toggleLocale
-                      ) // simplified if we don't have hooks yet, but better use hooks
-                      // Since I am inside a client component, window.location might work but hooks are safer for Next.js transition.
-                      // Let's use window.location specific logic or hooks if I add them.
-                      // Actually, let's use the hooks. I will add them in next step.
-                      // First simple logic with window.location just to handle the toggle if hooks missing?
-                      // No, clean way: use hooks.
-                      // But I can't easily add hooks inside the function in a single Replace block if I am editing the JSX down here.
-                      // So I will edit the Component Body first to add hooks, THEN add the JSX.
-
-                      // Wait, I am in the JSX block now.
-                      // I will skip adding JSX in this tool call and add hooks first.
-                    }}
-                    className="rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700"
-                  >
-                    {lang === 'en' ? 'English' : '简体中文'}
-                    {/* Wait, usually toggle shows the OTHER language or CURRENT? 
-                        LanguageSwitch shows: language === 'en' ? '中' : 'EN'.
-                        If I am English, I want to switch to Chinese.
-                        So button could say "中文".
-                        Or it shows current value "English" and clicking toggles.
-                        Settings usually show current value and clicking opens menu or toggles.
-                        Let's make it a toggle button that says the target language?
-                        Or "English / 中文" toggle.
-                        Let's match the style: "English" or "中文" (Current) -> Click to swap.
-                     */}
-                    {lang === 'en' ? 'Switch to 中文' : 'Switch to English'}
-                  </button>
-                </div>
-
                 {/* Dark Mode */}
                 <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                   <span className="font-medium dark:text-gray-200">
@@ -1373,6 +1604,112 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   </button>
                 </div>
 
+                {/* Layout Customization */}
+                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium dark:text-gray-200">
+                        {t.focusLab.controls.customizeLayout || 'Customize Layout'}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {t.focusLab.controls.widgetVisibility || 'Show/Hide Cards'}
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setShowCustomizeMenu(!showCustomizeMenu)
+                        }}
+                        ref={customizeButtonRef}
+                        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm transition-all active:scale-95 ${
+                          showCustomizeMenu
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                            : 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="icon-[solar--widget-4-line-duotone] text-lg" />
+                        {t.focusLab.controls.customizeLayout || 'Customize'}
+                      </button>
+
+                      <AnimatePresence>
+                        {showCustomizeMenu && (
+                          <motion.div
+                            ref={customizeMenuRef}
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="absolute top-full right-0 z-50 mt-2 w-64 rounded-xl border border-gray-100 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+                          >
+                            <div className="flex flex-col gap-1">
+                              <h4 className="mb-1 border-b border-gray-100 px-3 py-2 text-xs font-bold tracking-wider text-gray-500 uppercase dark:border-gray-800">
+                                {t.focusLab.controls.widgetVisibility || 'Show/Hide Cards'}
+                              </h4>
+                              {GRID_PRESETS[activePreset].layout.map((defaultItem) => {
+                                const hiddenSet = hiddenByPreset[activePreset] || new Set()
+                                const isActive = !hiddenSet.has(defaultItem.id)
+
+                                const idMap: Record<string, string> = {
+                                  sonic: 'sonicShield',
+                                  timer: 'timer',
+                                  brain: 'brainDump',
+                                  todo: 'todo',
+                                  breaker: 'taskBreaker',
+                                  dopamine: 'dopamineMenu',
+                                }
+                                const translationKey = idMap[defaultItem.id] || defaultItem.id
+                                // @ts-ignore
+                                const widgetTitle =
+                                  t.focusLab.widgets[translationKey]?.title || defaultItem.id
+
+                                return (
+                                  <button
+                                    key={defaultItem.id}
+                                    onClick={() => {
+                                      handleToggleHidden(activePreset, defaultItem.id)
+                                    }}
+                                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                                      isActive
+                                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
+                                        : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
+                                    }`}
+                                  >
+                                    <span>{widgetTitle}</span>
+                                    {isActive && (
+                                      <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                        className="text-primary-600 dark:text-primary-400 h-4 w-4"
+                                      >
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                )
+                              })}
+
+                              <div className="my-1 h-px bg-gray-100 dark:bg-gray-800" />
+
+                              <button
+                                onClick={() => {
+                                  setShowCustomizeMenu(false)
+                                  setShowResetConfirm(true)
+                                }}
+                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                              >
+                                <span className="icon-[solar--restart-bold] text-sm" />
+                                {t.focusLab.controls.resetLayout}
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Theme Color */}
                 <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                   <span className="mb-3 block font-medium dark:text-gray-200">
@@ -1425,203 +1762,54 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
         <PlanComparisonModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
       </AnimatePresence>
 
-      <div className="no-scrollbar fixed inset-0 z-[100] flex h-full w-full bg-gray-50 transition-all duration-500 dark:bg-gray-950 [&::-webkit-scrollbar]:hidden">
+      <div className="fixed inset-0 z-[100] flex h-full w-full overflow-hidden bg-gray-50 transition-all duration-500 dark:bg-gray-950">
         {/* Sidebar - Visible only in Desktop */}
-        {!isMobile && (
-          <motion.aside
-            initial={{ width: 256, opacity: 1 }}
-            animate={{
-              width: isSidebarOpen ? 256 : 0,
-              opacity: isSidebarOpen ? 1 : 0,
-              transition: { duration: 0.3, ease: 'easeInOut' },
-            }}
-            className="relative z-30 flex flex-none flex-col overflow-hidden border-r border-gray-200 bg-gray-50/50 pb-6 text-gray-900 backdrop-blur-xl dark:border-gray-800 dark:bg-gray-900/50 dark:text-white"
-          >
-            <div className="flex h-full w-[256px] flex-col">
-              {/* Sidebar Header: User Profile */}
-              <div className="flex h-16 items-center justify-between border-b border-gray-200/50 px-4 dark:border-gray-800/50">
-                <button
-                  className="ml-2 flex cursor-pointer items-center gap-3 text-left transition-opacity hover:opacity-80"
-                  onClick={() => setShowAuthModal(true)}
-                >
-                  <div
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white shadow-inner ${
-                      user?.user_metadata?.avatar_url
-                        ? 'bg-transparent'
-                        : user?.user_metadata?.avatar_color === 'pink'
-                          ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
-                          : user?.user_metadata?.avatar_color === 'emerald'
-                            ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
-                            : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
-                    }`}
-                  >
-                    {user?.user_metadata?.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={user.user_metadata.avatar_url}
-                        alt="User"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : user ? (
-                      user.user_metadata?.full_name?.charAt(0) || 'U'
-                    ) : (
-                      'G'
-                    )}
-                  </div>
-                  <div className="flex flex-col truncate">
-                    <span className="truncate text-sm leading-tight font-semibold text-gray-900 dark:text-gray-100">
-                      {user ? user.user_metadata?.full_name || 'My Workspace' : 'Guest Space'}
-                    </span>
-                    <span className="animate-shine inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-[length:200%_auto] px-2 py-0.5 text-[10px] font-bold text-amber-950 shadow-sm">
-                      {isPro ? t.focusLab.sidebar.proMember : t.focusLab.sidebar.freePlan}
-                    </span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
-                >
-                  <ArrowLeftIcon className="h-4 w-4" />
-                </button>
+        {!isMobile && viewportWidth >= 540 && (
+          <Sidebar open={isSidebarOpen} setOpen={setIsSidebarOpen} animate>
+            <SidebarBody
+              showMobile={false}
+              className="h-full flex-col justify-between gap-10 px-2 py-4"
+            >
+              <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+                <FocusSidebarBrand />
+
+                <div className="mt-8 flex flex-col gap-2 px-1">
+                  <FocusSidebarAction
+                    icon={<StatsIcon className="h-6 w-6" />}
+                    label={lang === 'zh' ? '统计数据' : 'Stats'}
+                    onClick={() => setShowAnalytics(true)}
+                  />
+                  <FocusSidebarAction
+                    icon={<ProfileIcon className="h-6 w-6" />}
+                    label={lang === 'zh' ? '会员档案' : 'Profile'}
+                    onClick={() => setShowAuthModal(true)}
+                  />
+                  <FocusSidebarAction
+                    icon={<SettingsIcon className="h-6 w-6" />}
+                    label={lang === 'zh' ? '设置' : 'Settings'}
+                    onClick={() => setShowSettingsModal(true)}
+                  />
+                  <FocusSidebarAction
+                    icon={<LogoutIcon className="h-6 w-6" />}
+                    label={t.focusLab.controls.exitFocus || 'Exit Focus'}
+                    onClick={onExit}
+                  />
+                </div>
               </div>
 
-              {/* Sidebar Nav */}
-              <nav className="flex-1 space-y-2 px-4 py-8">
-                {/* Focus Lab Section */}
-                <div className="mb-2 px-2">
-                  <span className="text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
-                    {t.focusLab.sidebar.focusTools}
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => setShowAnalytics(true)}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <StatsIcon className="group-hover:text-primary-50 h-5 w-5 text-gray-400 transition-colors" />
-                  {lang === 'zh' ? '统计数据' : 'Stats'}
-                </button>
-
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <ProfileIcon className="group-hover:text-primary-50 h-5 w-5 text-gray-400 transition-colors" />
-                  {lang === 'zh' ? '会员档案' : 'Profile'}
-                </button>
-
-                <button
-                  onClick={() => setShowSettingsModal(true)}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <SettingsIcon className="group-hover:text-primary-50 h-5 w-5 text-gray-400 transition-colors" />
-                  {lang === 'zh' ? '设置' : 'Settings'}
-                </button>
-              </nav>
-
-              {/* Upgrade Logic in Sidebar */}
-              {/* Upgrade Logic in Sidebar: Show for Guests OR Free Plan users */}
-              {!isPro && (
-                <div className="mb-4 px-4">
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && setShowPricingModal(true)}
-                    className="group relative w-full cursor-pointer rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-700 p-4 text-left text-white shadow-lg ring-1 ring-white/20 transition-all hover:shadow-indigo-500/20 active:scale-[0.98]"
-                    onClick={() => setShowPricingModal(true)}
-                  >
-                    <div className="absolute top-0 right-0 p-2 opacity-10">
-                      <StarIcon className="h-16 w-16" />
-                    </div>
-                    <h3 className="relative z-10 text-sm font-bold">
-                      {t.focusLab.upgradeCard?.title || 'Upgrade Plan'}
-                    </h3>
-                    <p className="relative z-10 mt-1 mb-3 text-xs text-indigo-100">
-                      {t.focusLab.upgradeCard?.subtitle || 'Compare Free vs Pro.'}
-                    </p>
-                    <button className="w-full rounded bg-white py-1.5 text-xs font-bold text-indigo-600 shadow-sm transition hover:bg-gray-50">
-                      {t.focusLab.upgradeCard?.button || 'View Options'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Sidebar Footer */}
-              <div className="mt-auto space-y-6 px-6">
-                {/* Daily Goal Widget */}
-                <div
-                  className={`group relative cursor-pointer rounded-xl border p-4 transition-all duration-300 ${
-                    isGoalReached
-                      ? 'border-amber-200 bg-gradient-to-br from-yellow-100 to-amber-50 dark:border-amber-700/50 dark:from-yellow-900/30 dark:to-amber-900/20'
-                      : 'transaction-colors border-gray-100 bg-white hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800'
-                  }`}
-                  onClick={() => setShowGoalModal(true)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      setShowGoalModal(true)
-                    }
-                  }}
-                >
-                  <div className="relative z-10 mb-2 flex items-end justify-between">
-                    <div className="flex flex-col">
-                      <span
-                        className={`text-xs font-medium ${isGoalReached ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}
-                      >
-                        {isGoalReached
-                          ? 'Goal Reached! 🎉'
-                          : t.focusLab?.stats?.dailyGoal || 'Daily Goal'}
-                      </span>
-                      <div className="flex items-baseline gap-1">
-                        <span
-                          className={`text-sm font-bold ${isGoalReached ? 'text-amber-900 dark:text-amber-100' : 'text-gray-900 dark:text-white'}`}
-                        >
-                          {formatDurationLabel(todayMinutes)}
-                        </span>
-                        <span className="text-xs text-gray-400">/ {dailyGoalHours}h</span>
-                      </div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500">
-                        {`任务 ${tasksCompletedToday}/${dailyTaskGoal || '—'}`}
-                      </div>
-                    </div>
-
-                    <div className="group-hover:bg-primary-50 group-hover:text-primary-600 dark:group-hover:bg-primary-900/30 dark:group-hover:text-primary-400 rounded-md bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-500 transition-colors dark:bg-gray-700 dark:text-gray-300">
-                      设置目标
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="relative z-10 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPercentage}%` }}
-                      transition={{ duration: 1, ease: 'easeOut' }}
-                      className={`h-full rounded-full ${isGoalReached ? 'bg-amber-500' : 'from-primary-400 to-primary-600 bg-gradient-to-r'}`}
-                    />
-                  </div>
-
-                  {/* Background Glow for Success */}
-                  {isGoalReached && (
-                    <div className="absolute inset-0 z-0 bg-yellow-400/10 blur-xl" />
-                  )}
-                </div>
-
-                {/* Exit Focus Button */}
-                <button
-                  onClick={onExit}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-transparent bg-gray-100 py-3 text-sm font-semibold text-gray-600 transition-all hover:bg-gray-200 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                >
-                  <LogoutIcon className="h-4 w-4" />
-                  {t.focusLab.controls.exitFocus || 'Exit Focus'}
-                </button>
-              </div>
-            </div>
-          </motion.aside>
+              <FocusSidebarProfile
+                userName={user ? user.user_metadata?.full_name || 'Guest Space' : 'Guest Space'}
+                planLabel={isPro ? t.focusLab.sidebar.proMember : t.focusLab.sidebar.freePlan}
+                avatarUrl={user?.user_metadata?.avatar_url}
+                avatarColor={user?.user_metadata?.avatar_color}
+                onClick={() => setShowAuthModal(true)}
+              />
+            </SidebarBody>
+          </Sidebar>
         )}
 
         {/* Main Content Area */}
-        <main className="relative flex h-full flex-1 flex-col">
+        <main className="relative flex h-full flex-1 flex-col overflow-x-auto overflow-y-hidden">
           {/* Background Pattern - Subtle for App Mode */}
           <div className="pointer-events-none absolute inset-0 z-0 opacity-30">
             <div
@@ -1642,182 +1830,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
           {/* Inner Wide Container */}
           <div className="relative z-10 mx-auto flex h-full w-full flex-col">
-            <div className="flex h-full w-full flex-col" ref={containerRef}>
-              {/* Internal Header (Desktop) */}
-              {!isMobile && (
-                <header className="z-20 flex h-16 flex-none items-center justify-between border-b border-gray-200/50 bg-white/50 px-6 backdrop-blur dark:border-gray-800/50 dark:bg-gray-950/50">
-                  <div className="flex items-center gap-4">
-                    <AnimatePresence>
-                      {!isSidebarOpen && (
-                        <motion.button
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          onClick={() => setIsSidebarOpen(true)}
-                          className="-ml-2 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                        >
-                          <span className="icon-[solar--hamburger-menu-linear] text-xl" />
-                        </motion.button>
-                      )}
-                    </AnimatePresence>
-
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-900 text-white dark:bg-white dark:text-gray-900">
-                        <span className="icon-[solar--layers-minimalistic-bold] text-sm" />
-                      </div>
-                      <h1 className="font-limelight text-xl font-bold tracking-tight text-gray-900 dark:text-white">
-                        Focus Lab
-                      </h1>
-                      <span className="flex h-5 items-center justify-center rounded border border-green-200 bg-green-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-green-700 uppercase dark:border-green-800 dark:bg-green-900/30 dark:text-green-400">
-                        Deep Work
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        updateSettings(
-                          'focus_lab.sound.enabled',
-                          !(settings.focus_lab?.sound?.enabled ?? true)
-                        )
-                      }
-                      className="flex items-center justify-center rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
-                      title={t.focusLab.settings?.soundEffects || 'Sound Effects'}
-                    >
-                      {(settings.focus_lab?.sound?.enabled ?? true) ? (
-                        <span className="icon-[solar--volume-loud-outline] text-xl" />
-                      ) : (
-                        <span className="icon-[solar--volume-cross-outline] text-xl text-gray-400" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={handleToggleNotifications}
-                      className="relative flex items-center justify-center rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
-                      title={
-                        notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications'
-                      }
-                    >
-                      {notificationsEnabled ? (
-                        <span className="icon-[solar--bell-bold] text-xl" />
-                      ) : (
-                        <span className="icon-[solar--bell-off-outline] text-xl text-gray-400" />
-                      )}
-                    </button>
-
-                    {/* Customize Layout Button & Menu */}
-                    <div className="relative z-50 ml-2">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          setShowCustomizeMenu(!showCustomizeMenu)
-                        }}
-                        ref={customizeButtonRef}
-                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-lg shadow-gray-200 transition-all active:scale-95 dark:shadow-none ${
-                          showCustomizeMenu
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                            : 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <span className="icon-[solar--widget-4-line-duotone] text-lg" />
-                        {t.focusLab.controls.customizeLayout || 'Customize'}
-                      </button>
-
-                      <AnimatePresence>
-                        {showCustomizeMenu && (
-                          <motion.div
-                            ref={customizeMenuRef}
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="absolute top-full right-0 z-50 mt-2 w-64 rounded-xl border border-gray-100 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900"
-                          >
-                            <div className="flex flex-col gap-1">
-                              <h4 className="mb-1 border-b border-gray-100 px-3 py-2 text-xs font-bold tracking-wider text-gray-500 uppercase dark:border-gray-800">
-                                {t.focusLab.controls.widgetVisibility || 'Show/Hide Cards'}
-                              </h4>
-                              {GRID_PRESETS[activePreset].layout.map((defaultItem) => {
-                                const currentLayout =
-                                  settings.focus_lab?.layout?.[activePreset] ||
-                                  GRID_PRESETS[activePreset].layout
-                                const isActive = currentLayout.some((i) => i.id === defaultItem.id)
-
-                                const idMap: Record<string, string> = {
-                                  sonic: 'sonicShield',
-                                  timer: 'timer',
-                                  brain: 'brainDump',
-                                  todo: 'todo',
-                                  breaker: 'taskBreaker',
-                                  dopamine: 'dopamineMenu',
-                                }
-                                const translationKey = idMap[defaultItem.id] || defaultItem.id
-                                // @ts-ignore
-                                const widgetTitle =
-                                  t.focusLab.widgets[translationKey]?.title || defaultItem.id
-
-                                return (
-                                  <button
-                                    key={defaultItem.id}
-                                    onClick={() => {
-                                      const newLayout = isActive
-                                        ? currentLayout.filter((i) => i.id !== defaultItem.id)
-                                        : [...currentLayout, { ...defaultItem }]
-                                      updateSettings(`focus_lab.layout.${activePreset}`, newLayout)
-                                    }}
-                                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                                      isActive
-                                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
-                                        : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
-                                    }`}
-                                  >
-                                    <span>{widgetTitle}</span>
-                                    {isActive && (
-                                      <svg
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                        className="text-primary-600 dark:text-primary-400 h-4 w-4"
-                                      >
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                    )}
-                                  </button>
-                                )
-                              })}
-
-                              <div className="my-1 h-px bg-gray-100 dark:bg-gray-800" />
-
-                              <button
-                                onClick={() => {
-                                  setShowCustomizeMenu(false)
-                                  setShowResetConfirm(true)
-                                }}
-                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                              >
-                                <span className="icon-[solar--restart-bold] text-sm" />
-                                {t.focusLab.controls.resetLayout}
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Click Outside Handler (Overlay) */}
-                      {showCustomizeMenu && (
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setShowCustomizeMenu(false)}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => e.key === 'Escape' && setShowCustomizeMenu(false)}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </header>
-              )}
-
+            <div className="flex h-full w-full flex-col">
               {/* Mobile Header (Simplified) */}
               {isMobile && (
                 <div className="z-20 flex flex-none items-center justify-between border-b border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
@@ -1832,51 +1845,111 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               )}
 
               {/* Grid Section */}
-              <motion.div
-                layout
-                transition={{ duration: 0.5, ease: 'easeInOut' }}
-                className={`no-scrollbar flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden ${!isMobile ? 'p-8' : 'px-2 pb-20'}`}
+              <div
+                className={`show-scrollbar flex-1 overflow-y-auto ${!isMobile ? 'px-4 py-4' : 'px-2 pb-20'}`}
               >
                 {isMobile ? (
-                  <FocusLabMobileGrid
-                    focusedTask={focusedTask}
-                    onStartFocus={(task, id) => {
-                      if (focusedTask?.id === id) {
-                        setFocusedTask(null)
-                      } else {
-                        setFocusedTask({ text: task, id, timestamp: Date.now() })
-                      }
-                      // setExternalCommand('start-focus') // Removed auto-start
-                    }}
-                    externalCommand={externalCommand}
-                    onCommandHandled={() => setExternalCommand(null)}
-                    onSessionLogged={handleSessionLogged}
-                    onTimerComplete={refreshTodayProgress}
-                  />
+                  <div className="flex flex-col gap-3">
+                    {renderGreetingText('mobile')}
+                    <FocusLabMobileGrid
+                      focusedTask={focusedTask}
+                      onStartFocus={(task, id) => {
+                        if (focusedTask?.id === id) {
+                          setFocusedTask(null)
+                        } else {
+                          setFocusedTask({ text: task, id, timestamp: Date.now() })
+                        }
+                        // setExternalCommand('start-focus') // Removed auto-start
+                      }}
+                      externalCommand={externalCommand}
+                      onCommandHandled={() => setExternalCommand(null)}
+                      onSessionLogged={handleSessionLogged}
+                      onTimerComplete={refreshTodayProgress}
+                    />
+                  </div>
                 ) : (
-                  <FocusLabGrid
-                    preset={activePreset}
-                    isFocusMode={true}
-                    focusedCardIds={focusedCardIds}
-                    onToggleFocus={toggleCardFocus}
-                    // Subtract padding (p-8 = 64px) to get actual content width
-                    containerWidth={Math.max(0, containerWidth - 64)}
-                    focusedTask={focusedTask}
-                    onStartFocus={(task, id) => {
-                      if (focusedTask?.id === id) {
-                        setFocusedTask(null)
-                      } else {
-                        setFocusedTask({ text: task, id, timestamp: Date.now() })
-                      }
-                      // setExternalCommand('start-focus') // Removed auto-start
-                    }}
-                    externalCommand={externalCommand}
-                    onCommandHandled={() => setExternalCommand(null)}
-                    onSessionLogged={handleSessionLogged}
-                    onTimerComplete={refreshTodayProgress}
-                  />
+                  <div className="flex flex-col items-center gap-4">
+                    <div
+                      className="mx-auto"
+                      style={{ width: GRID_WIDTH_DESKTOP, minWidth: GRID_WIDTH_DESKTOP }}
+                    >
+                      {renderGreetingText('desktop')}
+                    </div>
+                    <FocusGridLayout
+                      activePreset={activePreset}
+                      forcePreset="desktop"
+                      containerPadding={[0, 0]}
+                      layouts={{
+                        desktop: layoutsByPreset.desktop.filter(
+                          (i) => !(hiddenByPreset.desktop || new Set()).has(i.id)
+                        ),
+                        triple: layoutsByPreset.triple.filter(
+                          (i) => !(hiddenByPreset.triple || new Set()).has(i.id)
+                        ),
+                        double: layoutsByPreset.double.filter(
+                          (i) => !(hiddenByPreset.double || new Set()).has(i.id)
+                        ),
+                      }}
+                      onLayoutChange={handleLayoutChange}
+                      onRemoveItem={handleRemoveItem}
+                      isFocusMode={false}
+                      focusedCardIds={new Set()}
+                      layoutKey={layoutKey}
+                      renderItem={({ item, isFocused }) => {
+                        if (item.id === 'sonic') {
+                          return <SonicShieldCard className="h-full w-full" isFocused={isFocused} />
+                        }
+                        if (item.id === 'timer') {
+                          return (
+                            <TimerCard
+                              className="h-full w-full"
+                              isFocused={isFocused}
+                              focusedTask={focusedTask}
+                              externalCommand={externalCommand}
+                              onCommandHandled={() => setExternalCommand(null)}
+                              onSessionLogged={handleSessionLogged}
+                              onTimerComplete={refreshTodayProgress}
+                            />
+                          )
+                        }
+                        if (item.id === 'brain') {
+                          return <BrainDumpCard className="h-full w-full" isFocused={isFocused} />
+                        }
+                        if (item.id === 'todo') {
+                          return (
+                            <ToDoCard
+                              className="h-full w-full"
+                              cols={item.w}
+                              isFocused={isFocused}
+                              onStartFocus={(task, id) => {
+                                if (focusedTask?.id === id) {
+                                  setFocusedTask(null)
+                                } else {
+                                  setFocusedTask({ text: task, id, timestamp: Date.now() })
+                                }
+                              }}
+                              focusedTaskId={focusedTask?.id}
+                            />
+                          )
+                        }
+                        if (item.id === 'breaker') {
+                          return <TaskBreakerCard className="h-full w-full" isFocused={isFocused} />
+                        }
+                        if (item.id === 'dopamine') {
+                          return (
+                            <DopamineMenuCard
+                              className="h-full w-full"
+                              cols={item.w}
+                              isFocused={isFocused}
+                            />
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                  </div>
                 )}
-              </motion.div>
+              </div>
             </div>
           </div>
           {/* End of Container */}
@@ -1919,14 +1992,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 </button>
                 <button
                   onClick={() => {
-                    updateSettings(
-                      `focus_lab.layout.${activePreset}`,
-                      GRID_PRESETS[activePreset].layout
-                    )
-                    // 同步重置到当前界面
-                    window.dispatchEvent(
-                      new CustomEvent('focuslab-layout-reset', { detail: activePreset })
-                    )
+                    handleResetLayout()
                     setShowResetConfirm(false)
                   }}
                   className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
@@ -1942,358 +2008,24 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   )
 }
 
-const FocusLabGrid = ({
-  isFocusMode = false,
-  focusedCardIds = new Set(),
-  onToggleFocus = () => {},
-  containerWidth,
-  preset: presetProp,
-  focusedTask,
-  onStartFocus,
-  externalCommand,
-  onCommandHandled,
-  onSessionLogged,
-  onTimerComplete,
-}: {
-  isFocusMode?: boolean
-  focusedCardIds?: Set<string>
-  onToggleFocus?: (id: string) => void
-  containerWidth: number
-  preset: LayoutPreset
-  focusedTask?: FocusedTaskState
-  onStartFocus?: (task: string, id: string) => void
-  externalCommand?: string | null
-  onCommandHandled?: () => void
-  onSessionLogged?: (minutes: number) => void
-  onTimerComplete?: (minutes: number) => void
-}) => {
-  const { settings, updateSettings, isLoaded } = useFocusSettingsContext()
-  const presetConfig = GRID_PRESETS[presetProp]
-  const [layout, setLayout] = useState<GridItem[]>(() => cloneLayout(presetConfig.layout))
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // 监听全局重置事件，立即回到默认布局
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const preset = (event as CustomEvent<LayoutPreset>).detail
-      if (!preset || preset === presetProp) {
-        setLayout(cloneLayout(presetConfig.layout))
-      }
-    }
-    window.addEventListener('focuslab-layout-reset', handler as EventListener)
-    return () => window.removeEventListener('focuslab-layout-reset', handler as EventListener)
-  }, [presetConfig.layout, presetProp])
-
-  // Sync from Settings (Cloud -> Local)
-  useEffect(() => {
-    if (isLoaded) {
-      const savedLayout = settings.focus_lab?.layout?.[presetProp]
-      if (Array.isArray(savedLayout) && savedLayout.length > 0) {
-        // Force update minW/minH from current preset config to ensure new limits take effect for existing users
-        const updatedLayout = savedLayout.map((item) => {
-          const defaultConfig = presetConfig.layout.find((d) => d.id === item.id)
-          return {
-            ...item,
-            minW: defaultConfig?.minW ?? 2,
-            minH: defaultConfig?.minH ?? 2,
-          }
-        })
-        setLayout(updatedLayout)
-      } else {
-        // Only reset to default if we have literally nothing in settings (first load)
-        // or if we switched presets and that preset is empty
-        // But we want to preserve local changes if cloud is empty?
-        // No, if cloud is empty, we use default.
-        setLayout(cloneLayout(presetConfig.layout))
-      }
-    }
-  }, [isLoaded, presetProp, settings.focus_lab?.layout, presetConfig.layout])
-
-  // Debounced Save
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const saveLayout = useCallback(
-    debounce((newLayout: GridItem[], currentPreset: string) => {
-      updateSettings(`focus_lab.layout.${currentPreset}`, newLayout)
-    }, 1000),
-    [updateSettings]
-  )
-
-  const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false)
-
-  // Width calculation moved to parent
-
-  // Auto-centering logic removed to ensure strict left alignment
-
-  const columns = presetConfig.columns
-  const totalGapsWidth = Math.max(0, (columns - 1) * GAP)
-  const baseWidth = columns * COL_WIDTH + totalGapsWidth
-  const safeContainerWidth = containerWidth > 0 ? containerWidth : baseWidth
-  const availableWidth = Math.max(0, safeContainerWidth - totalGapsWidth)
-  const colWidth = columns > 0 ? availableWidth / columns : COL_WIDTH
-  const contentWidth = safeContainerWidth
-  const gridOffset = 0
-
-  // Helper to snap to grid
-  const snapToGrid = (value: number, unitSize: number) => {
-    return Math.round(value / unitSize) * unitSize
-  }
-
-  const updateLayout = (id: string, newProps: Partial<GridItem>) => {
-    setLayout((prev) => {
-      const next = prev.map((item) => (item.id === id ? { ...item, ...newProps } : item))
-      saveLayout(next, presetProp)
-      return next
-    })
-  }
-
-  const handleRemoveWidget = (id: string) => {
-    setLayout((prev) => {
-      const next = prev.filter((item) => item.id !== id)
-      saveLayout(next, presetProp)
-      return next
-    })
-  }
-
-  const visibleItems =
-    isFocusMode && focusedCardIds.size > 0 ? layout.filter((i) => focusedCardIds.has(i.id)) : layout
-
-  const containerHeight =
-    (layout.length > 0 ? Math.max(...layout.map((i) => i.y + i.h)) : 0) * (ROW_HEIGHT + GAP) +
-    (isFocusMode ? 20 : 100)
-
-  return (
-    <div
-      className={`no-scrollbar relative w-full transition-opacity duration-500 [&::-webkit-scrollbar]:hidden ${containerWidth > 0 ? 'opacity-100' : 'opacity-0'}`}
-      style={{ height: containerHeight, maxWidth: '100%' }}
-    >
-      <div
-        className="absolute top-0 h-full transition-all duration-500 ease-out"
-        style={{
-          left: gridOffset,
-          width: contentWidth,
-        }}
-      >
-        {containerWidth > 0 &&
-          layout.map((item) => (
-            <DraggableResizableItem
-              key={item.id}
-              item={item}
-              colWidth={colWidth}
-              onUpdate={(newProps) => updateLayout(item.id, newProps)}
-              isActive={activeId === item.id}
-              onActivate={() => setActiveId(item.id)}
-              onInteractionStart={() => setIsDraggingOrResizing(true)}
-              onInteractionEnd={() => setIsDraggingOrResizing(false)}
-              isFocusMode={isFocusMode}
-              isFocused={focusedCardIds.has(item.id)}
-              hasFocusedCards={focusedCardIds.size > 0}
-            >
-              {item.id === 'sonic' && (
-                <SonicShieldCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                />
-              )}
-              {item.id === 'timer' && (
-                <TimerCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  focusedTask={focusedTask}
-                  externalCommand={externalCommand}
-                  onCommandHandled={onCommandHandled}
-                  onSessionLogged={onSessionLogged}
-                  onTimerComplete={onTimerComplete}
-                />
-              )}
-              {item.id === 'brain' && (
-                <BrainDumpCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                />
-              )}
-              {item.id === 'todo' && (
-                <ToDoCard
-                  className="h-full w-full"
-                  cols={item.w}
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                  onStartFocus={onStartFocus}
-                  focusedTaskId={focusedTask?.id}
-                />
-              )}
-              {item.id === 'breaker' && (
-                <TaskBreakerCard
-                  className="h-full w-full"
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                />
-              )}
-              {item.id === 'dopamine' && (
-                <DopamineMenuCard
-                  className="h-full w-full"
-                  cols={item.w}
-                  onToggleFocus={() => onToggleFocus(item.id)}
-                />
-              )}
-            </DraggableResizableItem>
-          ))}
-      </div>
-    </div>
-  )
-}
-
-const DraggableResizableItem = ({
-  item,
-  colWidth,
-  onUpdate,
-  children,
-  isActive,
-  onActivate,
-  onInteractionStart,
-  onInteractionEnd,
-  isFocusMode,
-  isFocused,
-  hasFocusedCards,
-}: {
-  item: GridItem
-  colWidth: number
-  onUpdate: (props: Partial<GridItem>) => void
-  children: ReactNode
-  isActive: boolean
-  onActivate: () => void
-  onInteractionStart: () => void
-  onInteractionEnd: () => void
-  isFocusMode?: boolean
-  isFocused?: boolean
-  hasFocusedCards?: boolean
-}) => {
-  const [isResizing, setIsResizing] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const isResizingRef = useRef(false)
-
-  // Calculate pixel positions
-  const x = item.x * (colWidth + GAP)
-  const y = item.y * (ROW_HEIGHT + GAP)
-  const width = item.w * colWidth + (item.w - 1) * GAP
-  const height = item.h * ROW_HEIGHT + (item.h - 1) * GAP
-
-  // Manual Resize Logic
-  useEffect(() => {
-    if (!isResizing) return
-
-    const handlePointerMove = (e: PointerEvent) => {
-      const deltaX = e.clientX - startPosRef.current.x
-      const deltaY = e.clientY - startPosRef.current.y
-
-      const newWidth = startSizeRef.current.w + deltaX
-      const newHeight = startSizeRef.current.h + deltaY
-
-      const gridW = Math.max(item.minW || 2, Math.round(newWidth / (colWidth + GAP)))
-      const gridH = Math.max(item.minH || 2, Math.round(newHeight / (ROW_HEIGHT + GAP)))
-
-      onUpdate({ w: gridW, h: gridH })
-    }
-
-    const handlePointerUp = () => {
-      setIsResizing(false)
-      isResizingRef.current = false
-      onInteractionEnd()
-    }
-
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
-
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-    }
-  }, [isResizing, colWidth, onUpdate, onInteractionEnd, item.minW, item.minH])
-
-  const startPosRef = useRef({ x: 0, y: 0 })
-  const startSizeRef = useRef({ w: 0, h: 0 })
-
-  const dragControls = useDragControls()
-
-  return (
-    <motion.div
-      drag={!isResizing}
-      dragControls={dragControls}
-      dragListener={false}
-      dragMomentum={false}
-      dragElastic={0}
-      onDragStart={() => {
-        onInteractionStart()
-        setIsDragging(true)
-      }}
-      onDragEnd={(e, info) => {
-        setIsDragging(false)
-        onInteractionEnd()
-        const endX = x + info.offset.x
-        const endY = y + info.offset.y
-        const gridX = Math.round(endX / (colWidth + GAP)) // Allow negative X for centered grid
-        const gridY = Math.max(0, Math.round(endY / (ROW_HEIGHT + GAP)))
-        onUpdate({ x: gridX, y: gridY })
-      }}
-      initial={false}
-      animate={{
-        x,
-        y,
-        width,
-        height,
-        zIndex: isActive ? 50 : 10,
-        filter:
-          isFocusMode && hasFocusedCards && !isFocused
-            ? 'blur(4px) grayscale(0.5)'
-            : 'blur(0px) grayscale(0)',
-        opacity: isFocusMode && hasFocusedCards && !isFocused ? 0.4 : 1,
-      }}
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-      onPointerDown={onActivate}
-      className="absolute rounded-[32px] shadow-sm"
-    >
-      <div className="relative h-full w-full">
-        <DragHandleContext.Provider value={dragControls}>{children}</DragHandleContext.Provider>
-
-        {/* Resize Handle (Diagonal Arrow) */}
-        {/* Resize Handle (Diagonal Arrow) */}
-        <div
-          className="group/resize absolute right-0 bottom-0 z-50 flex h-8 w-8 cursor-grab items-end justify-end p-1.5"
-          onPointerDown={(e) => {
-            e.stopPropagation() // Prevent drag start on the item
-            e.preventDefault()
-            setIsResizing(true)
-            isResizingRef.current = true
-            onInteractionStart()
-            startPosRef.current = { x: e.clientX, y: e.clientY }
-            startSizeRef.current = { w: width, h: height }
-          }}
-        >
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/90 opacity-0 shadow-sm ring-1 ring-black/5 backdrop-blur-md transition-all group-hover/resize:opacity-100 dark:bg-gray-800/90 dark:ring-white/10">
-            <HandPalmIcon className="h-3 w-3 text-gray-500" />
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-function SonicShieldCard({
-  onToggleFocus,
+const SonicShieldCard = ({
   onDelete,
   className,
+  isFocused,
 }: {
-  onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
-}) {
+  isFocused?: boolean
+}) => {
   const { t } = useTranslation()
   const [isFlipped, setIsFlipped] = useState(false)
 
   return (
-    <WidgetCard
+    <CardShell
       title={t.focusLab.widgets.sonicShield.title}
-      subtitle={t.focusLab.widgets.sonicShield.subtitle}
-      onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      isFocused={isFocused}
       customActionPosition="right"
       customAction={
         <button
@@ -2313,12 +2045,11 @@ function SonicShieldCard({
       }
     >
       <SonicShieldWidget isFlipped={isFlipped} onFlip={setIsFlipped} />
-    </WidgetCard>
+    </CardShell>
   )
 }
 
-function TimerCard({
-  onToggleFocus,
+const TimerCard = ({
   onDelete,
   className,
   focusedTask,
@@ -2326,8 +2057,8 @@ function TimerCard({
   onCommandHandled,
   onSessionLogged,
   onTimerComplete,
+  isFocused,
 }: {
-  onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
   focusedTask?: FocusedTaskState
@@ -2335,7 +2066,8 @@ function TimerCard({
   onCommandHandled?: () => void
   onSessionLogged?: (minutes: number) => void
   onTimerComplete?: (minutes: number) => void
-}) {
+  isFocused?: boolean
+}) => {
   const { t } = useTranslation()
   const [isFlipped, setIsFlipped] = useState(false)
   const [showTaskTitle, setShowTaskTitle] = useState(true)
@@ -2347,7 +2079,7 @@ function TimerCard({
   }, [focusedTask])
 
   return (
-    <WidgetCard
+    <CardShell
       title={
         focusedTask ? (
           <button
@@ -2368,9 +2100,8 @@ function TimerCard({
           t.focusLab.widgets.timer.title
         )
       }
-      subtitle={t.focusLab.widgets.timer.subtitle}
-      onHeaderClick={onToggleFocus}
       onDelete={onDelete}
+      isFocused={isFocused}
       customActionPosition="right"
       customAction={
         <button
@@ -2399,106 +2130,102 @@ function TimerCard({
         onTimerComplete={onTimerComplete}
         onSessionLogged={onSessionLogged}
       />
-    </WidgetCard>
+    </CardShell>
   )
 }
 
-function TaskBreakerCard({
-  onToggleFocus,
+const TaskBreakerCard = ({
   onDelete,
   className,
+  isFocused,
 }: {
-  onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
-}) {
+  isFocused?: boolean
+}) => {
   const { t } = useTranslation()
   return (
-    <WidgetCard
+    <CardShell
       title={t.focusLab.widgets.taskBreaker.title}
-      subtitle={t.focusLab.widgets.taskBreaker.subtitle}
-      onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      isFocused={isFocused}
     >
       <TaskBreakerWidget />
-    </WidgetCard>
+    </CardShell>
   )
 }
 
-function BrainDumpCard({
-  onToggleFocus,
+const BrainDumpCard = ({
   onDelete,
   className,
+  isFocused,
 }: {
-  onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
-}) {
+  isFocused?: boolean
+}) => {
   const { t } = useTranslation()
   return (
-    <WidgetCard
+    <CardShell
       title={t.focusLab.widgets.brainDump.title}
-      subtitle={t.focusLab.widgets.brainDump.subtitle}
-      onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      isFocused={isFocused}
     >
       <BrainDumpWidget />
-    </WidgetCard>
+    </CardShell>
   )
 }
 
-function ToDoCard({
+const ToDoCard = ({
   cols,
-  onToggleFocus,
   onDelete,
   className,
   onStartFocus,
   focusedTaskId,
+  isFocused,
 }: {
   cols?: number
-  onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
   onStartFocus?: (task: string, id: string) => void
   focusedTaskId?: string | null
-}) {
+  isFocused?: boolean
+}) => {
   const { t } = useTranslation()
   return (
-    <WidgetCard
+    <CardShell
       title={t.focusLab.widgets.todo.title}
-      subtitle={t.focusLab.widgets.todo.subtitle}
-      onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      isFocused={isFocused}
     >
       <FocusStation cols={cols} onStartFocus={onStartFocus} focusedTaskId={focusedTaskId} />
-    </WidgetCard>
+    </CardShell>
   )
 }
 
-function DopamineMenuCard({
+const DopamineMenuCard = ({
   cols,
-  onToggleFocus,
   onDelete,
   className,
+  isFocused,
 }: {
   cols?: number
-  onToggleFocus?: () => void
   onDelete?: () => void
   className?: string
-}) {
+  isFocused?: boolean
+}) => {
   const { t } = useTranslation()
   const [isFlipped, setIsFlipped] = useState(false)
 
   return (
-    <WidgetCard
+    <CardShell
       title={t.focusLab.widgets.dopamineMenu.title}
-      subtitle={t.focusLab.widgets.dopamineMenu.subtitle}
-      onHeaderClick={onToggleFocus}
       onDelete={onDelete}
       className={className}
+      isFocused={isFocused}
       customActionPosition="right"
       showHeader={false}
       customAction={
@@ -2519,7 +2246,7 @@ function DopamineMenuCard({
       }
     >
       <DopamineMenuWidget cols={cols} isFlipped={isFlipped} onFlip={setIsFlipped} />
-    </WidgetCard>
+    </CardShell>
   )
 }
 
@@ -4187,7 +3914,7 @@ const DopamineMenuWidget = ({
   }
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="relative flex h-full min-w-0 flex-col" style={{ containerType: 'inline-size' }}>
       <AnimatePresence mode="wait">
         {isFlipped ? (
           // BACK: Settings / Options List
@@ -4197,35 +3924,41 @@ const DopamineMenuWidget = ({
             animate={{ opacity: 1, rotateY: 0 }}
             exit={{ opacity: 0, rotateY: -180 }}
             transition={{ duration: 0.3 }}
-            className="flex h-full flex-col gap-2.5"
+            className="flex h-full min-w-0 flex-col gap-2.5"
           >
             {/* Inner Header Removed as per request */}
 
             {/* Input */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newOption}
-                onChange={(e) => setNewOption(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addOption()}
-                placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
-                className="focus:border-primary-500 focus:ring-primary-500 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-              />
+            <div className="flex flex-wrap items-stretch gap-2 @[420px]:flex-nowrap">
+              <div className="relative min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={newOption}
+                  onChange={(e) => setNewOption(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addOption()}
+                  placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
+                  className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                />
+              </div>
               <button
                 onClick={addOption}
-                className="bg-primary-500 hover:bg-primary-600 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-sm transition-all active:scale-95"
+                aria-label={t.focusLab.widgets.dopamineMenu.add}
+                className="text-primary-600 hover:border-primary-400 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/20 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm transition-all active:scale-95 dark:border-gray-700 dark:bg-gray-900"
               >
-                {t.focusLab.widgets.dopamineMenu.add}
+                <PlusIcon className="h-4 w-4" />
+                <span className="sr-only">{t.focusLab.widgets.dopamineMenu.add}</span>
               </button>
             </div>
 
             {/* List */}
             <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto rounded-xl border border-dashed border-gray-200 p-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
-              <div className={`gap - 2 grid ${cols >= 3 ? 'grid-cols-2' : 'grid-cols-1'} `}>
+              <div
+                className={`grid gap-2 ${cols >= 3 ? 'grid-cols-1 @[420px]:grid-cols-2' : 'grid-cols-1'}`}
+              >
                 {options.map((opt, idx) => (
                   <div
                     key={idx}
-                    className="group hover:bg-primary-50 dark:hover:bg-primary-900/20 flex items-center justify-between rounded-lg bg-white p-2 text-sm shadow-sm transition-all dark:bg-gray-800 dark:text-gray-200"
+                    className="group hover:bg-primary-50 dark:hover:bg-primary-900/20 flex min-w-0 items-center justify-between rounded-lg bg-white p-2 text-sm shadow-sm transition-all dark:bg-gray-800 dark:text-gray-200"
                   >
                     <span className="truncate pr-2">{opt}</span>
                     <button

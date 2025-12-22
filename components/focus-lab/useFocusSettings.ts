@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { debounce, merge, cloneDeep } from 'lodash'
+import { type CardAnimationPreset } from '@/components/focus-lab/types'
 
 type GridItem = {
   id: string
@@ -29,6 +30,13 @@ export type Settings = {
   focus_lab?: {
     layout?: Record<string, GridItem[]> // desktop, mobile, etc.
     hide_headers?: boolean
+    hidden_cards?: {
+      desktop?: string[]
+      triple?: string[]
+      double?: string[]
+    }
+    layout_version?: string
+    layout_saved_at?: number
     sound?: {
       enabled?: boolean
       master_volume?: number
@@ -41,6 +49,10 @@ export type Settings = {
     timer?: {
       custom_duration?: number
     }
+    motion?: {
+      enabled?: boolean
+      preset?: CardAnimationPreset
+    }
     // Reserved for future
   }
 }
@@ -52,9 +64,13 @@ const defaultSettings: Settings = {
   focus_lab: {
     layout: {},
     hide_headers: false,
+    hidden_cards: { desktop: [], triple: [], double: [] },
+    layout_version: undefined,
+    layout_saved_at: 0,
     sound: { master_volume: 0.8, active_tracks: {} },
     stats: {},
     timer: { custom_duration: 1500 },
+    motion: { enabled: true, preset: 'float' },
   },
 }
 
@@ -67,7 +83,13 @@ export function useFocusSettings() {
   // 1. Load Settings (Local or Cloud)
   useEffect(() => {
     const loadSettings = async () => {
-      const loadedSettings = cloneDeep(defaultSettings)
+      const hiddenFallback = {
+        desktop: [] as string[],
+        triple: [] as string[],
+        double: [] as string[],
+      }
+      const localSettings = cloneDeep(defaultSettings)
+      let cloudSettings: Settings | null = null
 
       // Try LocalStorage first (cache/fast load)
       try {
@@ -76,7 +98,7 @@ export function useFocusSettings() {
           const localKey = user ? `${STORAGE_KEY}-${user.id}` : STORAGE_KEY
           const local = window.localStorage.getItem(localKey)
           if (local) {
-            merge(loadedSettings, JSON.parse(local))
+            merge(localSettings, JSON.parse(local))
           }
         }
       } catch (e) {
@@ -94,17 +116,46 @@ export function useFocusSettings() {
             .single()
 
           if (data && data.settings) {
-            // Deep merge cloud over local
-            // Note: In a real conflict resolution we might check timestamps,
-            // but here we assume Cloud is Truth if logged in.
-            merge(loadedSettings, data.settings)
+            cloudSettings = cloneDeep(data.settings) as Settings
           }
         } catch (e) {
           console.error('Failed to load cloud settings', e)
         }
       }
 
-      setSettings(loadedSettings)
+      // Base merge：默认 -> 本地 -> 云端（其它设置字段按云端优先）
+      const merged = cloneDeep(defaultSettings)
+      merge(merged, localSettings)
+      if (cloudSettings) merge(merged, cloudSettings)
+
+      // 针对布局/隐藏采用“最新时间戳优先”，避免云端写入失败时覆盖本地修改
+      const localTs = localSettings.focus_lab?.layout_saved_at ?? 0
+      const cloudTs = cloudSettings?.focus_lab?.layout_saved_at ?? 0
+      const pickCloud = cloudTs > localTs
+      const pickLocal = localTs > cloudTs
+
+      merged.focus_lab = merged.focus_lab || { layout: {}, hide_headers: false }
+      if (pickCloud && cloudSettings?.focus_lab) {
+        merged.focus_lab.layout = cloudSettings.focus_lab.layout ?? merged.focus_lab.layout ?? {}
+        merged.focus_lab.hidden_cards =
+          cloudSettings.focus_lab.hidden_cards ?? merged.focus_lab.hidden_cards ?? hiddenFallback
+        merged.focus_lab.layout_version =
+          cloudSettings.focus_lab.layout_version ?? merged.focus_lab.layout_version
+        merged.focus_lab.layout_saved_at = cloudTs
+      } else if (pickLocal && localSettings.focus_lab) {
+        merged.focus_lab.layout = localSettings.focus_lab.layout ?? merged.focus_lab.layout ?? {}
+        merged.focus_lab.hidden_cards =
+          localSettings.focus_lab.hidden_cards ?? merged.focus_lab.hidden_cards ?? hiddenFallback
+        merged.focus_lab.layout_version =
+          localSettings.focus_lab.layout_version ?? merged.focus_lab.layout_version
+        merged.focus_lab.layout_saved_at = localTs
+      } else {
+        merged.focus_lab.hidden_cards = merged.focus_lab.hidden_cards ?? hiddenFallback
+        merged.focus_lab.layout_saved_at =
+          merged.focus_lab.layout_saved_at ?? Math.max(localTs, cloudTs)
+      }
+
+      setSettings(merged)
       setIsLoaded(true)
     }
 

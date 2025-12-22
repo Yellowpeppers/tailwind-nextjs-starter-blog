@@ -266,7 +266,7 @@ export const dictionary = {
           back: 'Back',
         },
         todo: {
-          title: "Today's Tasks",
+          title: 'To-Do List',
           subtitle:
             'Your daily "must-do" list. Click the target icon on a task to load it into the Focus Timer.',
           placeholder: 'Add a new task...',
@@ -1231,7 +1231,7 @@ export const dictionary = {
           back: '返回',
         },
         todo: {
-          title: '今日待办',
+          title: '待办清单',
           subtitle: '每日核心任务清单。点击任务右侧的瞄准图标，即可将其载入专注时钟。',
           placeholder: '添加新任务...',
           emptyTitle: '暂无任务',

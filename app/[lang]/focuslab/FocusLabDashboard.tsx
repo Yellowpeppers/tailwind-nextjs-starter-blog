@@ -1,9 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import dynamic from 'next/dynamic'
-import { FocusLabLanding } from '@/components/focus-lab/FocusLabLanding'
+import { useRouter } from 'next/navigation'
 import { FocusSettingsProvider } from '@/components/focus-lab/FocusSettingsContext'
 
 // Lazy load the heavy dashboard application
@@ -15,35 +13,15 @@ const FocusLabAppLazy = dynamic(
   }
 )
 
-export const FocusLabDashboard = () => {
-  const [isFocusMode, setIsFocusMode] = useState(false)
+export const FocusLabDashboard = ({ onExitHref }: { onExitHref?: string }) => {
+  const router = useRouter()
+  const handleExit = onExitHref ? () => router.push(onExitHref) : undefined
 
   return (
     <div className="focuslab-typography relative min-h-screen font-sans">
-      <AnimatePresence mode="wait">
-        {!isFocusMode ? (
-          <motion.div
-            key="landing"
-            exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
-            transition={{ duration: 0.5 }}
-            className="relative z-0"
-          >
-            <FocusLabLanding onEnter={() => setIsFocusMode(true)} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="app"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-            className="absolute inset-0 z-10"
-          >
-            <FocusSettingsProvider>
-              <FocusLabAppLazy onExit={() => setIsFocusMode(false)} />
-            </FocusSettingsProvider>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <FocusSettingsProvider>
+        <FocusLabAppLazy onExit={handleExit} />
+      </FocusSettingsProvider>
     </div>
   )
 }

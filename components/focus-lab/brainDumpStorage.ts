@@ -1,8 +1,11 @@
 import { createClient } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { openSharedIdb } from '@/components/focus-lab/idb'
 
-const BRAIN_DUMP_STORAGE_KEY_LEFT = 'focus-lab-brain-dump-left'
-const BRAIN_DUMP_STORAGE_KEY_RIGHT = 'focus-lab-brain-dump-right'
+const BRAIN_DUMP_STORAGE_KEY = 'focus-lab-brain-dump'
+const BRAIN_DUMP_CHANNEL = 'focus-lab-brain-dump-channel'
+const IDB_NAME = 'focus-lab-cache'
+const IDB_STORE = 'brain-dump'
 
 export type BrainDumpItem = {
   id: string
@@ -31,16 +34,129 @@ export const createBrainDumpItem = (text: string, image?: string): BrainDumpItem
   image,
 })
 
+type BrainDumpBundle = { state: BrainDumpState; updatedAt: number }
+
+const getStorageKey = (userId?: string) =>
+  userId ? `${BRAIN_DUMP_STORAGE_KEY}-${userId}` : BRAIN_DUMP_STORAGE_KEY
+const getMetaKey = (key: string) => `${key}::meta`
+
+const readLocalMeta = (key: string) => {
+  try {
+    const raw = window.localStorage.getItem(getMetaKey(key))
+    if (!raw) return 0
+    const parsed = JSON.parse(raw)
+    return typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0
+  } catch {
+    return 0
+  }
+}
+
+const persistToIdb = async (key: string, bundle: BrainDumpBundle) => {
+  const db = await openSharedIdb()
+  if (!db) return
+  try {
+    const tx = db.transaction(IDB_STORE, 'readwrite')
+    tx.objectStore(IDB_STORE).put(bundle, key)
+  } catch (error) {
+    console.error('IndexedDB write failed for Brain Dump cache', error)
+  }
+}
+
+const readFromIdb = async (key: string): Promise<BrainDumpBundle | null> => {
+  const db = await openSharedIdb()
+  if (!db) return null
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readonly')
+      const req = tx.objectStore(IDB_STORE).get(key)
+      req.onsuccess = () => resolve(req.result || null)
+      req.onerror = () => {
+        console.error('IndexedDB read failed for Brain Dump cache', req.error)
+        resolve(null)
+      }
+    } catch (error) {
+      console.error('IndexedDB transaction failed for Brain Dump cache', error)
+      resolve(null)
+    }
+  })
+}
+
+const brainDumpChannel: BroadcastChannel | null =
+  typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(BRAIN_DUMP_CHANNEL) : null
+let channelInitialized = false
+
+const writeLocalBundle = (
+  key: string,
+  state: BrainDumpState,
+  updatedAt: number,
+  options: { skipBroadcast?: boolean; skipIdb?: boolean } = {}
+) => {
+  window.localStorage.setItem(key, JSON.stringify(state))
+  window.localStorage.setItem(getMetaKey(key), JSON.stringify({ updatedAt }))
+  if (!options.skipIdb) void persistToIdb(key, { state, updatedAt })
+  if (!options.skipBroadcast) brainDumpChannel?.postMessage({ key, state, updatedAt })
+
+  // 兼容旧版 left/right 独立 key，便于降级读取
+  window.localStorage.setItem(
+    `${BRAIN_DUMP_STORAGE_KEY}-left${key.replace(BRAIN_DUMP_STORAGE_KEY, '')}`,
+    JSON.stringify(state.left)
+  )
+  window.localStorage.setItem(
+    `${BRAIN_DUMP_STORAGE_KEY}-right${key.replace(BRAIN_DUMP_STORAGE_KEY, '')}`,
+    JSON.stringify(state.right)
+  )
+}
+
+const hydrateFromIdbIfStale = async (key: string, localUpdatedAt: number) => {
+  const cached = await readFromIdb(key)
+  if (cached && cached.updatedAt > localUpdatedAt) {
+    writeLocalBundle(key, cached.state || { left: [], right: [] }, cached.updatedAt, {
+      skipBroadcast: true,
+    })
+  }
+}
+
+const initChannel = () => {
+  if (channelInitialized || !brainDumpChannel || typeof window === 'undefined') return
+  brainDumpChannel.onmessage = (message: MessageEvent<BrainDumpBundle & { key: string }>) => {
+    const payload = message.data
+    if (!payload || !payload.key) return
+    const localUpdatedAt = readLocalMeta(payload.key)
+    if (payload.updatedAt && payload.updatedAt > localUpdatedAt) {
+      writeLocalBundle(payload.key, payload.state || { left: [], right: [] }, payload.updatedAt, {
+        skipBroadcast: true,
+      })
+    }
+  }
+  channelInitialized = true
+}
+
 export const readBrainDumpStorage = (userId?: string): BrainDumpState => {
   if (typeof window === 'undefined') return { left: [], right: [] }
+  initChannel()
   try {
+    const key = getStorageKey(userId)
+    const raw = window.localStorage.getItem(key)
+    const localUpdatedAt = readLocalMeta(key)
+    void hydrateFromIdbIfStale(key, localUpdatedAt)
+
+    // 兼容旧的左右 key
     const suffix = userId ? `-${userId}` : ''
-    const left = window.localStorage.getItem(BRAIN_DUMP_STORAGE_KEY_LEFT + suffix)
-    const right = window.localStorage.getItem(BRAIN_DUMP_STORAGE_KEY_RIGHT + suffix)
+    const fallbackLeft = window.localStorage.getItem(`${BRAIN_DUMP_STORAGE_KEY}-left${suffix}`)
+    const fallbackRight = window.localStorage.getItem(`${BRAIN_DUMP_STORAGE_KEY}-right${suffix}`)
+
+    if (!raw && !fallbackLeft && !fallbackRight) return { left: [], right: [] }
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return {
+        left: Array.isArray(parsed.left) ? parsed.left : [],
+        right: Array.isArray(parsed.right) ? parsed.right : [],
+      }
+    }
 
     return {
-      left: left ? JSON.parse(left) : [],
-      right: right ? JSON.parse(right) : [],
+      left: fallbackLeft ? JSON.parse(fallbackLeft) : [],
+      right: fallbackRight ? JSON.parse(fallbackRight) : [],
     }
   } catch (error) {
     console.error('Failed to read Brain Dump storage', error)
@@ -96,11 +212,11 @@ export const fetchCloudBrainDump = async (user: User): Promise<BrainDumpState | 
 }
 
 export const saveBrainDump = async (state: BrainDumpState, user?: User | null) => {
-  // Local Save (Always save to local cache, scoped)
+  const updatedAt = Date.now()
   if (typeof window !== 'undefined') {
-    const suffix = user ? `-${user.id}` : ''
-    window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_LEFT + suffix, JSON.stringify(state.left))
-    window.localStorage.setItem(BRAIN_DUMP_STORAGE_KEY_RIGHT + suffix, JSON.stringify(state.right))
+    const key = getStorageKey(user?.id)
+    initChannel()
+    writeLocalBundle(key, state, updatedAt)
   }
 
   // Cloud Save

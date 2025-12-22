@@ -2,9 +2,12 @@
 
 import { createClient } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { openSharedIdb } from './idb'
 
 export const TODO_STORAGE_KEY = 'focus-lab-todo-list'
 export const TODO_SYNC_EVENT = 'focus-lab-todo-updated'
+const TODO_CHANNEL = 'focus-lab-todo-channel'
+const IDB_STORE = 'todo'
 
 export type ToDoStorageItem = {
   id: string
@@ -13,8 +16,95 @@ export type ToDoStorageItem = {
   updated_at?: string
 }
 
-// ... helper ...
 const fallbackId = () => `todo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+const getStorageKey = (userId?: string) =>
+  userId ? `${TODO_STORAGE_KEY}-${userId}` : TODO_STORAGE_KEY
+const getMetaKey = (key: string) => `${key}::meta`
+
+const readLocalMeta = (key: string) => {
+  try {
+    const raw = window.localStorage.getItem(getMetaKey(key))
+    if (!raw) return 0
+    const parsed = JSON.parse(raw)
+    return typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0
+  } catch {
+    return 0
+  }
+}
+
+const openIdb = () => openSharedIdb()
+
+const persistToIdb = async (key: string, tasks: ToDoStorageItem[], updatedAt: number) => {
+  const db = await openIdb()
+  if (!db || !db.objectStoreNames.contains(IDB_STORE)) return
+  try {
+    const tx = db.transaction(IDB_STORE, 'readwrite')
+    tx.objectStore(IDB_STORE).put({ tasks, updatedAt }, key)
+  } catch (error) {
+    console.error('IndexedDB write failed for ToDo cache', error)
+  }
+}
+
+const readFromIdb = async (
+  key: string
+): Promise<{ tasks: ToDoStorageItem[]; updatedAt: number } | null> => {
+  const db = await openIdb()
+  if (!db || !db.objectStoreNames.contains(IDB_STORE)) return null
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readonly')
+      const req = tx.objectStore(IDB_STORE).get(key)
+      req.onsuccess = () => resolve(req.result || null)
+      req.onerror = () => {
+        console.error('IndexedDB read failed for ToDo cache', req.error)
+        resolve(null)
+      }
+    } catch (error) {
+      console.error('IndexedDB transaction failed for ToDo cache', error)
+      resolve(null)
+    }
+  })
+}
+
+const todoChannel: BroadcastChannel | null =
+  typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(TODO_CHANNEL) : null
+let channelInitialized = false
+
+const writeLocalBundle = (
+  key: string,
+  tasks: ToDoStorageItem[],
+  updatedAt: number,
+  options: { skipBroadcast?: boolean; skipIdb?: boolean } = {}
+) => {
+  window.localStorage.setItem(key, JSON.stringify(tasks))
+  window.localStorage.setItem(getMetaKey(key), JSON.stringify({ updatedAt }))
+  window.dispatchEvent(new CustomEvent(TODO_SYNC_EVENT, { detail: tasks }))
+  if (!options.skipIdb) void persistToIdb(key, tasks, updatedAt)
+  if (!options.skipBroadcast) todoChannel?.postMessage({ key, tasks, updatedAt })
+}
+
+const hydrateFromIdbIfStale = async (key: string, localUpdatedAt: number) => {
+  const cached = await readFromIdb(key)
+  if (cached && cached.updatedAt > localUpdatedAt) {
+    writeLocalBundle(key, cached.tasks || [], cached.updatedAt, { skipBroadcast: true })
+  }
+}
+
+const initChannel = () => {
+  if (channelInitialized || !todoChannel || typeof window === 'undefined') return
+  todoChannel.onmessage = (
+    message: MessageEvent<{ key: string; tasks: ToDoStorageItem[]; updatedAt: number }>
+  ) => {
+    const payload = message.data
+    if (!payload?.key) return
+    const localUpdatedAt = readLocalMeta(payload.key)
+    if (payload.updatedAt > localUpdatedAt) {
+      writeLocalBundle(payload.key, payload.tasks || [], payload.updatedAt, { skipBroadcast: true })
+    }
+  }
+  channelInitialized = true
+}
 
 export const createToDoItem = (text: string): ToDoStorageItem => {
   const trimmedText = text.trim()
@@ -29,10 +119,12 @@ export const createToDoItem = (text: string): ToDoStorageItem => {
 
 export const readToDoStorage = (userId?: string): ToDoStorageItem[] => {
   if (typeof window === 'undefined') return []
+  initChannel()
   try {
-    const storage = window.localStorage
-    const key = userId ? `${TODO_STORAGE_KEY}-${userId}` : TODO_STORAGE_KEY
-    const value = storage.getItem(key)
+    const key = getStorageKey(userId)
+    const value = window.localStorage.getItem(key)
+    const localUpdatedAt = readLocalMeta(key)
+    void hydrateFromIdbIfStale(key, localUpdatedAt)
     if (!value) return []
     const parsed = JSON.parse(value)
     if (!Array.isArray(parsed)) return []
@@ -48,33 +140,15 @@ export const readToDoStorage = (userId?: string): ToDoStorageItem[] => {
 
 export const writeToDoStorage = async (tasks: ToDoStorageItem[], user?: User | null) => {
   try {
-    // Local Write (For both Guest keys and User keys)
+    const updatedAt = Date.now()
     if (typeof window !== 'undefined') {
-      const key = user ? `${TODO_STORAGE_KEY}-${user.id}` : TODO_STORAGE_KEY
-      window.localStorage.setItem(key, JSON.stringify(tasks))
-      window.dispatchEvent(new CustomEvent(TODO_SYNC_EVENT, { detail: tasks }))
+      const key = getStorageKey(user?.id)
+      initChannel()
+      writeLocalBundle(key, tasks, updatedAt)
     }
 
-    // Cloud Write (Sync Strategy: Overwrite cloud with current state)
-    // NOTE: Real sync is hard. This is a simple "Save State" approach.
     if (user) {
       const supabase = createClient()
-      // We can't easily sync massive lists.
-      // Strategy: We will just Upsert individual items or replace all?
-      // Replacing all is safest for maintaining order and consistency for now (MVP).
-      // But deleting and re-inserting is expensive.
-
-      // Let's rely on Upsert by ID.
-      // And we need to handle deletions.
-      // For MVP: We just insert/update all current tasks.
-      // Deletions are not propagated if we only Upsert.
-      // Ideally we should soft-delete or have a 'deleted' flag.
-
-      // Simpler implementation for this request:
-      // Just save tasks. If it's too complex, maybe we just save to local.
-      // But user asked for cloud save.
-
-      // Let's iterate and Upsert.
       const nowIso = new Date().toISOString()
       const header = tasks.map((t) => ({
         id: t.id,
@@ -85,8 +159,17 @@ export const writeToDoStorage = async (tasks: ToDoStorageItem[], user?: User | n
       }))
 
       if (header.length > 0) {
-        const { error } = await supabase.from('todo_tasks').upsert(header)
+        const { error } = await supabase.from('todo_tasks').upsert(header, { onConflict: 'id' })
         if (error) console.error('Cloud save error (todo):', error.message)
+
+        const ids = header.map((h) => h.id)
+        await supabase
+          .from('todo_tasks')
+          .delete()
+          .eq('user_id', user.id)
+          .not('id', 'in', `(${ids.join(',')})`)
+      } else {
+        await supabase.from('todo_tasks').delete().eq('user_id', user.id)
       }
     }
   } catch (error) {
@@ -115,22 +198,20 @@ export const fetchCloudTasks = async (user: User) => {
 
 export const syncToDo = async (user: User) => {
   if (typeof window === 'undefined') return
-  const tasks = readToDoStorage()
+  const tasks = readToDoStorage(user.id)
   if (tasks.length === 0) return
 
   const supabase = createClient()
   let hasUpdates = false
 
-  // Validate IDs: UUID check
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
   const records = tasks.map((t) => {
-    // If ID is not a valid UUID, generate a new one
     if (!uuidRegex.test(t.id)) {
       const newId =
         typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
-          : `10000000-1000-4000-8000-${Date.now().toString(16).padEnd(12, '0')}` // Simple fallback
+          : `10000000-1000-4000-8000-${Date.now().toString(16).padEnd(12, '0')}`
       t.id = newId
       hasUpdates = true
     }
@@ -144,16 +225,12 @@ export const syncToDo = async (user: User) => {
     }
   })
 
-  // If we fixed any IDs, save back to local storage so we don't have issues next time
   if (hasUpdates) {
-    console.log('Migrated legacy IDs to UUIDs')
-    writeToDoStorage(tasks) // This updates local storage with new IDs
+    await writeToDoStorage(tasks, user)
   }
 
   const { error } = await supabase.from('todo_tasks').upsert(records, { onConflict: 'id' })
   if (error) {
     console.error('ToDo sync error:', error.message || error)
-  } else {
-    console.log(`Synced ${records.length} tasks to cloud`)
   }
 }

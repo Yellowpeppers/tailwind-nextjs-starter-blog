@@ -18,7 +18,7 @@ test.describe('Homepage', () => {
     if (isMobile) {
       // On mobile, find the hamburger menu button
       // Using a more specific locator to ensure we find the right button
-      const toggleBtn = page.locator('button[aria-label="Toggle Menu"]')
+      const toggleBtn = page.locator('button[aria-label="Toggle Menu"]').first()
       await expect(toggleBtn).toBeVisible({ timeout: 20000 })
     } else {
       // On desktop, check for "Focus Lab" which we know exists in headerNavLinks.ts

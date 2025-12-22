@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
-import { FocusLabLandingEntry } from './FocusLabLandingEntry'
 import { genPageMetadata } from 'app/seo'
+import { FocusLabDashboard } from '../FocusLabDashboard'
 
 const focusLabDescription =
   'Free ADHD workspace with Brown Noise, AI Task Breaker, and Pomodoro timer. Beat executive dysfunction and enter flow state.'
@@ -11,10 +11,10 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const params = await props.params
   return genPageMetadata({
-    title: 'ADHD Productivity Online Tools - Focus Lab',
+    title: 'Focus Lab Dashboard',
     params: { lang: params.lang },
     description: focusLabDescription,
-    appendSiteName: false,
+    appendSiteName: true,
     keywords: [
       'ADHD productivity tools',
       'AI task breaker',
@@ -25,10 +25,10 @@ export async function generateMetadata(props: {
   })
 }
 
-const focusLabSchema = {
+const focusLabAppSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'Focus Lab — Quiet ADHD Dashboard',
+  name: 'Focus Lab Dashboard',
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
   offers: {
@@ -37,21 +37,8 @@ const focusLabSchema = {
     priceCurrency: 'USD',
     category: 'Free Tier',
   },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    ratingCount: '1250',
-    bestRating: '5',
-    worstRating: '1',
-  },
   description: focusLabDescription,
-  featureList: [
-    'Brown, pink, and white noise soundboard',
-    'AI task breaker and dopamine menu',
-    'Drag-and-drop ADHD workspace widgets',
-    'Local-first data privacy',
-  ],
-  url: `${siteMetadata.siteUrl}/focuslab`,
+  url: `${siteMetadata.siteUrl}/focuslab/app`,
   creator: {
     '@type': 'Organization',
     name: siteMetadata.title,
@@ -59,17 +46,17 @@ const focusLabSchema = {
   },
 }
 
-export default async function Projects({ params }: { params: Promise<{ lang: string }> }) {
+export default async function FocusLabAppPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params
-  const appHref = `/${lang}/focuslab/app`
+  const exitHref = `/${lang}/focuslab`
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(focusLabSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(focusLabAppSchema) }}
       />
-      <FocusLabLandingEntry appHref={appHref} />
+      <FocusLabDashboard onExitHref={exitHref} />
     </>
   )
 }

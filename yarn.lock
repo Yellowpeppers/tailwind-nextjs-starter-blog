@@ -5182,6 +5182,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"canvas-confetti@npm:^1.9.4":
+  version: 1.9.4
+  resolution: "canvas-confetti@npm:1.9.4"
+  checksum: 61f069b220ee666ec56e5403a7118f1c22c4d55597da3ebfdc8227acdb432ecb9e1bae4b4c86fd15b001422240939d591e44b501dc68ddd545e14f373ab7488e
+  languageName: node
+  linkType: hard
+
 "ccount@npm:^2.0.0":
   version: 2.0.1
   resolution: "ccount@npm:2.0.1"
@@ -6943,6 +6950,13 @@ __metadata:
   version: 2.0.4
   resolution: "fast-equals@npm:2.0.4"
   checksum: 1aac8a2e16b33e5e402bb5cd46be65f1ca331903c2c44e3bd75324e8472ee04f0acdbc6889e45fc28f9707ca3964f2a86789b32305d4d8b85dc97f61e446ef4b
+  languageName: node
+  linkType: hard
+
+"fast-equals@npm:^4.0.3":
+  version: 4.0.3
+  resolution: "fast-equals@npm:4.0.3"
+  checksum: 3d5935b757f9f2993e59b5164a7a9eeda0de149760495375cde14a4ed725186a7e6c1c0d58f7d42d2f91deb97f3fce1e0aad5591916ef0984278199a85c87c87
   languageName: node
   linkType: hard
 
@@ -11019,7 +11033,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prop-types@npm:^15.8.1":
+"prop-types@npm:15.x, prop-types@npm:^15.8.1":
   version: 15.8.1
   resolution: "prop-types@npm:15.8.1"
   dependencies:
@@ -11139,10 +11153,52 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-draggable@npm:^4.0.3, react-draggable@npm:^4.4.6":
+  version: 4.5.0
+  resolution: "react-draggable@npm:4.5.0"
+  dependencies:
+    clsx: ^2.1.1
+    prop-types: ^15.8.1
+  peerDependencies:
+    react: ">= 16.3.0"
+    react-dom: ">= 16.3.0"
+  checksum: a5563ed8142ab77e9e68af9b5a57484358462bae76368691362419d7fb4d9fba73300b5c5d1346db6551d88743c68746dc18bc035276db1539d0ad0aff6580cc
+  languageName: node
+  linkType: hard
+
+"react-grid-layout@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "react-grid-layout@npm:2.1.0"
+  dependencies:
+    clsx: ^2.1.1
+    fast-equals: ^4.0.3
+    prop-types: ^15.8.1
+    react-draggable: ^4.4.6
+    react-resizable: ^3.0.5
+    resize-observer-polyfill: ^1.5.1
+  peerDependencies:
+    react: ">= 16.3.0"
+    react-dom: ">= 16.3.0"
+  checksum: 057027bffb7f2317ef4774532c175216525ee00cb277a9fddc815052a917a6e12f42520577ebea2ac085c8fa1644cfc0d0333485e77ec266fd9ad22428f231c3
+  languageName: node
+  linkType: hard
+
 "react-is@npm:^16.13.1":
   version: 16.13.1
   resolution: "react-is@npm:16.13.1"
   checksum: f7a19ac3496de32ca9ae12aa030f00f14a3d45374f1ceca0af707c831b2a6098ef0d6bdae51bd437b0a306d7f01d4677fcc8de7c0d331eb47ad0f46130e53c5f
+  languageName: node
+  linkType: hard
+
+"react-resizable@npm:^3.0.5":
+  version: 3.0.5
+  resolution: "react-resizable@npm:3.0.5"
+  dependencies:
+    prop-types: 15.x
+    react-draggable: ^4.0.3
+  peerDependencies:
+    react: ">= 16.3"
+  checksum: 616a10205acfaf8cc3aa0824b60f6d037eef87143d8f338cf826deb74a353db9b9baad67a65dc8535fe90840bfc3e1b8a901f9c247033ffeec2f30405ac7528e
   languageName: node
   linkType: hard
 
@@ -11898,6 +11954,13 @@ __metadata:
   version: 2.0.2
   resolution: "require-from-string@npm:2.0.2"
   checksum: a03ef6895445f33a4015300c426699bc66b2b044ba7b670aa238610381b56d3f07c686251740d575e22f4c87531ba662d06937508f0f3c0f1ddc04db3130560b
+  languageName: node
+  linkType: hard
+
+"resize-observer-polyfill@npm:^1.5.1":
+  version: 1.5.1
+  resolution: "resize-observer-polyfill@npm:1.5.1"
+  checksum: 57e7f79489867b00ba43c9c051524a5c8f162a61d5547e99333549afc23e15c44fd43f2f318ea0261ea98c0eb3158cca261e6f48d66e1ed1cd1f340a43977094
   languageName: node
   linkType: hard
 
@@ -12905,6 +12968,7 @@ __metadata:
     "@vercel/analytics": ^1.5.0
     algoliasearch: ^4.24.0
     body-scroll-lock: ^4.0.0-beta.0
+    canvas-confetti: ^1.9.4
     chrome-devtools-mcp: ^0.12.0
     class-variance-authority: ^0.7.1
     clsx: ^2.1.1
@@ -12934,6 +12998,7 @@ __metadata:
     prettier-plugin-tailwindcss: ^0.6.11
     react: ^19.2.1
     react-dom: ^19.2.1
+    react-grid-layout: ^2.1.0
     reading-time: 1.5.0
     rehype-autolink-headings: ^7.1.0
     rehype-citation: ^2.3.0

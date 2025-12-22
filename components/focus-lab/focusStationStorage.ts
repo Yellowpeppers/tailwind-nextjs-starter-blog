@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { openSharedIdb } from '@/components/focus-lab/idb'
 
 export const STATION_STORAGE_KEY = 'focus-lab-station-items'
 export const STATION_SYNC_EVENT = 'focus-lab-station-updated'
@@ -17,8 +18,103 @@ export type FocusItem = {
   created_at?: string
 }
 
-// ... helper ...
 const fallbackId = () => `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+const IDB_NAME = 'focus-lab-cache'
+const IDB_STORE = 'focus-station'
+const STATION_CHANNEL_NAME = 'focus-lab-station-channel'
+
+type PersistedBundle = { items: FocusItem[]; updatedAt: number }
+
+const getStorageKey = (userId?: string) =>
+  userId ? `${STATION_STORAGE_KEY}-${userId}` : STATION_STORAGE_KEY
+const getMetaKey = (key: string) => `${key}::meta`
+
+const readLocalMeta = (key: string) => {
+  try {
+    const raw = window.localStorage.getItem(getMetaKey(key))
+    if (!raw) return 0
+    const parsed = JSON.parse(raw)
+    return typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0
+  } catch {
+    return 0
+  }
+}
+
+const writeLocalBundle = (
+  key: string,
+  items: FocusItem[],
+  updatedAt: number,
+  options: { skipBroadcast?: boolean; skipIdb?: boolean } = {}
+) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(key, JSON.stringify(items))
+  window.localStorage.setItem(getMetaKey(key), JSON.stringify({ updatedAt }))
+  window.dispatchEvent(new CustomEvent(STATION_SYNC_EVENT, { detail: items }))
+
+  if (!options.skipIdb) {
+    void persistToIdb(key, { items, updatedAt })
+  }
+  if (!options.skipBroadcast) {
+    stationChannel?.postMessage({ key, items, updatedAt })
+  }
+}
+
+const persistToIdb = async (key: string, bundle: PersistedBundle) => {
+  const db = await openSharedIdb()
+  if (!db) return
+  try {
+    const tx = db.transaction(IDB_STORE, 'readwrite')
+    tx.objectStore(IDB_STORE).put(bundle, key)
+  } catch (error) {
+    console.error('IndexedDB write failed for Focus Station cache', error)
+  }
+}
+
+const readFromIdb = async (key: string): Promise<PersistedBundle | null> => {
+  const db = await openSharedIdb()
+  if (!db) return null
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readonly')
+      const req = tx.objectStore(IDB_STORE).get(key)
+      req.onsuccess = () => resolve(req.result || null)
+      req.onerror = () => {
+        console.error('IndexedDB read failed for Focus Station cache', req.error)
+        resolve(null)
+      }
+    } catch (error) {
+      console.error('IndexedDB transaction failed for Focus Station cache', error)
+      resolve(null)
+    }
+  })
+}
+
+const stationChannel: BroadcastChannel | null =
+  typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(STATION_CHANNEL_NAME) : null
+let channelInitialized = false
+
+const initStationChannel = () => {
+  if (channelInitialized || !stationChannel || typeof window === 'undefined') return
+  stationChannel.onmessage = (message: MessageEvent<PersistedBundle & { key: string }>) => {
+    const payload = message.data
+    if (!payload || !payload.key) return
+    const localUpdatedAt = readLocalMeta(payload.key)
+    if (payload.updatedAt && payload.updatedAt > localUpdatedAt) {
+      writeLocalBundle(payload.key, payload.items || [], payload.updatedAt, {
+        skipBroadcast: true,
+      })
+    }
+  }
+  channelInitialized = true
+}
+
+const hydrateFromIdbIfStale = async (key: string, localUpdatedAt: number) => {
+  const cached = await readFromIdb(key)
+  if (cached && cached.updatedAt > localUpdatedAt) {
+    writeLocalBundle(key, cached.items || [], cached.updatedAt, { skipBroadcast: true })
+  }
+}
 
 export const createFocusItem = (type: FocusItemType, content: string): FocusItem => {
   return {
@@ -27,22 +123,27 @@ export const createFocusItem = (type: FocusItemType, content: string): FocusItem
     type,
     content,
     completed: false,
-    position: Date.now(), // simple positioning
+    position: Date.now(),
   }
 }
 
 export const readStationStorage = (userId?: string): FocusItem[] => {
   if (typeof window === 'undefined') return []
+  initStationChannel()
   try {
-    const storage = window.localStorage
-    const key = userId ? `${STATION_STORAGE_KEY}-${userId}` : STATION_STORAGE_KEY
-    const value = storage.getItem(key)
+    const key = getStorageKey(userId)
+    const value = window.localStorage.getItem(key)
+    const localUpdatedAt = readLocalMeta(key)
+
+    // 异步从 IDB 回填更“新”的缓存（不阻塞同步返回）
+    void hydrateFromIdbIfStale(key, localUpdatedAt)
+
     if (!value) return []
     const parsed = JSON.parse(value)
     if (!Array.isArray(parsed)) return []
     return parsed.map((item: Record<string, unknown>) => ({
       ...item,
-      completed: (item.completed as boolean) ?? false, // Ensure completed field exists, default to false
+      completed: (item.completed as boolean) ?? false,
     })) as FocusItem[]
   } catch (error) {
     console.error('Failed to read Focus Station storage', error)
@@ -70,53 +171,35 @@ export const fetchCloudItems = async (user: User): Promise<FocusItem[] | null> =
     type: d.type as 'text' | 'image',
     content: d.content,
     position: d.position,
-    completed: d.is_completed || false, // Map from DB
+    completed: d.is_completed || false,
   }))
 }
 
 export const saveStationItems = async (items: FocusItem[], user?: User | null) => {
   try {
-    // Local Write (For both Guest keys and User keys)
+    const updatedAt = Date.now()
     if (typeof window !== 'undefined') {
-      const key = user ? `${STATION_STORAGE_KEY}-${user.id}` : STATION_STORAGE_KEY
-      window.localStorage.setItem(key, JSON.stringify(items))
-      window.dispatchEvent(new CustomEvent(STATION_SYNC_EVENT, { detail: items }))
+      const key = getStorageKey(user?.id)
+      initStationChannel()
+      writeLocalBundle(key, items, updatedAt)
     }
 
-    // Cloud Write
     if (user) {
       const supabase = createClient()
-
-      // We need to map our simple object to DB columns
       const dbPayload = items.map((item, index) => ({
         id: item.id,
         user_id: user.id,
         type: item.type,
         content: item.content,
-        is_completed: item.completed, // Map to DB column
-        position: index, // Update position based on array order
+        is_completed: item.completed,
+        position: index,
         updated_at: new Date().toISOString(),
       }))
-
-      // Upsert all.
-      // Note: This approach replaces the user's list on THIS device's state.
-      // A more robust sync would be complex (CRDTs), but for a single user simple override is okay
-      // provided we don't wipe out other data.
-      // To safely "sync", we usually fetch first, merge, then save.
-      // Here we assume "Client is Truth" for the list order/content.
 
       try {
         const { error } = await supabase.from('focus_items').upsert(dbPayload, { onConflict: 'id' })
         if (error) console.error('Cloud save error (focus_items):', error.message || error)
 
-        // Also, we might want to delete items that are NOT in this list?
-        // For now, let's just upsert. Implementation detail: Deletion logic needed if we want full sync.
-        // A simple strategy for a list: Delete all for user, then Insert all. (Heavy but safe for order)
-        // or Upsert + separate delete.
-        // Let's stick to Upsert. If user deleted an item locally, it won't be in `items`.
-        // We need to actually delete it from DB.
-
-        // Strategy: Get all IDs from `items`. Delete from DB where user_id = me AND id NOT IN (ids)
         if (items.length > 0) {
           const ids = items.map((i) => i.id)
           await supabase
@@ -125,7 +208,6 @@ export const saveStationItems = async (items: FocusItem[], user?: User | null) =
             .eq('user_id', user.id)
             .not('id', 'in', `(${ids.join(',')})`)
         } else {
-          // If items is empty, delete all
           await supabase.from('focus_items').delete().eq('user_id', user.id)
         }
       } catch (err) {
@@ -143,17 +225,13 @@ export const uploadImage = async (file: File, user: User): Promise<string | null
   const fileExt = file.name.split('.').pop()
   const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
-  // We assume bucket 'focus-assets' exists
-  const { error: uploadError, data } = await supabase.storage
-    .from('focus-assets')
-    .upload(fileName, file)
+  const { error: uploadError } = await supabase.storage.from('focus-assets').upload(fileName, file)
 
   if (uploadError) {
     console.error('Upload error', uploadError)
     return null
   }
 
-  // Get Public URL
   const {
     data: { publicUrl },
   } = supabase.storage.from('focus-assets').getPublicUrl(fileName)
@@ -161,12 +239,9 @@ export const uploadImage = async (file: File, user: User): Promise<string | null
   return publicUrl
 }
 
-// Sync function for initial login
 export const syncLocalToCloud = async (user: User) => {
   if (typeof window === 'undefined') return
-  const localItems = readStationStorage()
+  const localItems = readStationStorage(user.id)
   if (localItems.length === 0) return
-
-  // Just trigger a save
   await saveStationItems(localItems, user)
 }
