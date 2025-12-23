@@ -242,7 +242,7 @@ export const FocusStation = ({
               axis="y"
               values={items}
               onReorder={setItems}
-              className={`grid gap-2 ${isWide ? 'grid-cols-2' : 'grid-cols-1'}`}
+              className="grid grid-cols-1 gap-2"
             >
               <AnimatePresence initial={false} mode="popLayout">
                 {items.map((item) => (
@@ -252,7 +252,7 @@ export const FocusStation = ({
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                    className={`group relative flex cursor-pointer items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900/40 ${
+                    className={`focuslab-no-drag group relative flex cursor-pointer items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900/40 ${
                       focusedTaskId === item.id
                         ? isWarm
                           ? 'border border-[#C27B4A] bg-[#F5F2EC] ring-1 ring-[#C27B4A]'
@@ -268,6 +268,9 @@ export const FocusStation = ({
                           : 'ring-primary-100/50 hover:border-primary-200 dark:ring-primary-900/30 border border-transparent ring-1'
                     }`}
                     onClick={() => toggleItem(item.id)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                   >
                     {/* Checkbox (Click toggle) */}
                     <button

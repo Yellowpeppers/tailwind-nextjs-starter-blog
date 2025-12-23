@@ -476,8 +476,13 @@ const FocusSidebarBrand = () => {
   const { open, animate } = useSidebar()
   return (
     <div className="group/sidebar flex h-12 items-center justify-start gap-3 rounded-xl px-3 py-1">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900">
-        <span className="icon-[solar--layers-minimalistic-bold] text-lg" />
+      <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/static/images/focuslab-logo.svg"
+          alt="FocusLab Logo"
+          className="h-full w-full dark:invert"
+        />
       </div>
       <motion.div
         animate={{
@@ -2921,7 +2926,7 @@ const SonicShieldWidget = ({
           >
             <div className="relative flex h-full w-full flex-col justify-between">
               {/* Center: Visualizer */}
-              <div className="flex flex-1 flex-col items-center justify-center">
+              <div className="flex flex-1 flex-col items-center justify-center pt-8">
                 <SoundVisualizer
                   activeCount={isGlobalPlaying && isSoundEnabled ? activeCount : 0}
                   uiStyle={uiStyle}
@@ -4229,9 +4234,12 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
       value={item}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`group ring-primary-100/50 dark:ring-primary-900/40 relative mb-3 break-inside-avoid rounded-t-none rounded-b-xl shadow-sm ring-1 transition-all hover:rotate-1 hover:shadow-md ${
+      className={`focuslab-no-drag group ring-primary-100/50 dark:ring-primary-900/40 relative mb-3 break-inside-avoid rounded-t-none rounded-b-xl shadow-sm ring-1 transition-all hover:rotate-1 hover:shadow-md ${
         item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
       } `}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {/* Header Bar (Tape/Tag look) */}
       <div
@@ -4547,9 +4555,7 @@ const DopamineMenuWidget = ({
 
             {/* List */}
             <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto rounded-xl border border-dashed border-gray-200 p-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
-              <div
-                className={`grid gap-2 ${cols >= 3 ? 'grid-cols-1 @[420px]:grid-cols-2' : 'grid-cols-1'}`}
-              >
+              <div className="grid grid-cols-1 gap-2">
                 {options.map((opt, idx) => (
                   <div
                     key={idx}

@@ -9,7 +9,7 @@ const siteMetadata = {
   theme: 'light', // system, dark or light
   siteUrl: 'https://neurohackslab.com', // 你的域名
   siteRepo: 'https://github.com/yellowpeppers/neurohacks-lab',
-  siteLogo: '/static/images/logo.svg', // 响应深浅色的徽标
+  siteLogo: '/static/images/focuslab-logo.svg', // 响应深浅色的徽标
   socialBanner: '/static/images/twitter-card.png',
   mastodon: '',
   email: 'contact@neurohackslab.com',
