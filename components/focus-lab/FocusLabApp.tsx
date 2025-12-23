@@ -28,6 +28,7 @@ import {
   syncFocusHistory,
   getHistory,
   getTodayFocusMinutes,
+  getStreak,
 } from '@/components/focus-lab/focusStorage'
 import { useAuth } from '@/context/AuthContext'
 
@@ -805,6 +806,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [tasksCompletedToday, setTasksCompletedToday] = useState(0)
   const hasHydratedLayout = useRef(false)
   const skipLayoutEvent = useRef(false)
+  const [streak, setStreak] = useState(0)
   const lastResetTime = useRef(0) // 追踪最后一次重置的时间戳
 
   const { startTour } = useFocusTour() // Initialize tour hook
@@ -833,9 +835,10 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     (mins: number) => {
       setTodayMinutes((prev) => prev + mins)
       refreshTodayProgress()
+      setStreak(getStreak(user?.id))
     },
 
-    [refreshTodayProgress]
+    [refreshTodayProgress, user?.id]
   )
 
   const handleCheckout = async (interval: 'month' | 'year' = 'month') => {
@@ -879,10 +882,14 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   // Fetch today's progress on mount and interval
   useEffect(() => {
     refreshTodayProgress()
+    setStreak(getStreak(user?.id))
     // Poll every minute to update chart
-    const interval = setInterval(refreshTodayProgress, 60000)
+    const interval = setInterval(() => {
+      refreshTodayProgress()
+      setStreak(getStreak(user?.id))
+    }, 60000)
     return () => clearInterval(interval)
-  }, [refreshTodayProgress])
+  }, [refreshTodayProgress, user?.id])
 
   useEffect(() => {
     setGreeting(computeGreeting(lang, displayName))
@@ -1534,142 +1541,169 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               initial={{ opacity: 0, scale: 0.94, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 10 }}
-              className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+              className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white p-0 shadow-2xl dark:bg-gray-900"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="mb-4 flex items-center justify-between">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-50 p-6 px-8 dark:border-gray-800/50">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">每日目标</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    设置专注时长与任务目标，达成后有奖励动画
+                  <h2 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
+                    {t.focusLab.widgets.goal.modalTitle}
+                  </h2>
+                  <p className="mt-1 text-sm font-medium text-gray-400">
+                    {t.focusLab.widgets.goal.modalSubtitle}
                   </p>
                 </div>
-                {rewardUnlocked && (
-                  <motion.div
-                    className="flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                    animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  >
-                    <span className="icon-[solar--confetti-minimalistic-line-duotone] text-base" />
-                    奖励解锁
-                  </motion.div>
-                )}
               </div>
 
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-                  <label
-                    htmlFor="daily-goal-hours"
-                    className="text-sm font-semibold text-gray-700 dark:text-gray-200"
-                  >
-                    每日专注时长目标 (小时)
-                  </label>
-                  <div className="mt-2 flex items-center gap-3">
-                    <input
-                      id="daily-goal-hours"
-                      type="number"
-                      min="0.5"
-                      step="0.5"
-                      value={tempGoalHours}
-                      onChange={(e) => setTempGoalHours(e.target.value)}
-                      className="focus:border-primary-500 focus:ring-primary-200 w-24 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-900 focus:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>
-                          {formatHours(currentProgressHours)}h / {formatHours(dailyGoalHours)}h
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                {/* Left Column: Settings */}
+                <div className="flex flex-col justify-center gap-12 border-b border-gray-50 p-8 md:border-r md:border-b-0 dark:border-gray-800/50">
+                  <div className="space-y-12">
+                    {/* Goal 1: Hours */}
+                    <div className="group">
+                      <div className="mb-5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="icon-[solar--clock-circle-bold-duotone] text-primary-500 text-2xl" />
+                          <label className="text-sm font-black tracking-widest text-gray-400 uppercase">
+                            {t.focusLab.widgets.goal.hours}
+                          </label>
+                        </div>
+                        <span className="text-primary-500 text-2xl font-black">
+                          {tempGoalHours}h
                         </span>
-                        <span>{Math.round(progressPercentage)}%</span>
                       </div>
-                      <div className="mt-1 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                        <div
-                          className="from-primary-400 to-primary-600 h-full rounded-full bg-gradient-to-r"
-                          style={{ width: `${progressPercentage}%` }}
-                        />
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="12"
+                        step="0.5"
+                        value={tempGoalHours}
+                        onChange={(e) => setTempGoalHours(e.target.value)}
+                        className="accent-primary-500 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-100 dark:bg-gray-800"
+                      />
+                      <div className="mt-4 flex items-center justify-between text-xs font-bold text-gray-400 uppercase opacity-60">
+                        <span>
+                          {t.focusLab.widgets.goal.current}: {formatHours(currentProgressHours)}h
+                        </span>
+                        <span>
+                          {t.focusLab.widgets.goal.progress}:{' '}
+                          {Math.min(100, Math.round(progressPercentage))}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Goal 2: Tasks */}
+                    <div className="group">
+                      <div className="mb-5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="icon-[solar--checklist-minimalistic-bold-duotone] text-2xl text-emerald-500" />
+                          <label className="text-sm font-black tracking-widest text-gray-400 uppercase">
+                            {t.focusLab.widgets.goal.tasks}
+                          </label>
+                        </div>
+                        <span className="text-2xl font-black text-emerald-500">{tempTaskGoal}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="20"
+                        step="1"
+                        value={tempTaskGoal}
+                        onChange={(e) => setTempTaskGoal(e.target.value)}
+                        className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-100 accent-emerald-500 dark:bg-gray-800"
+                      />
+                      <div className="mt-4 flex items-center justify-between text-xs font-bold text-gray-400 uppercase opacity-60">
+                        <span>
+                          {t.focusLab.widgets.goal.completed}: {tasksCompletedToday}
+                        </span>
+                        <span>
+                          {t.focusLab.widgets.goal.progress}:{' '}
+                          {Math.min(100, Math.round(taskProgressPercentage))}%
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-                  <label
-                    htmlFor="daily-task-goal"
-                    className="text-sm font-semibold text-gray-700 dark:text-gray-200"
-                  >
-                    每日任务数量目标 (个)
-                  </label>
-                  <div className="mt-2 flex items-center gap-3">
-                    <input
-                      id="daily-task-goal"
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={tempTaskGoal}
-                      onChange={(e) => setTempTaskGoal(e.target.value)}
-                      className="focus:border-primary-500 focus:ring-primary-200 w-24 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-900 focus:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>
-                          {tasksCompletedToday} / {dailyTaskGoal}
-                        </span>
-                        <span>{Math.round(taskProgressPercentage)}%</span>
-                      </div>
-                      <div className="mt-1 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
-                          style={{
-                            width: `${taskProgressPercentage}%`,
-                          }}
-                        />
+                {/* Right Column: Status & Reward */}
+                <div className="bg-gray-50/50 p-6 dark:bg-gray-900/50">
+                  <div className="flex h-full flex-col gap-4">
+                    {/* Streak Bento Card */}
+                    <div className="flex flex-1 flex-col items-center justify-center rounded-3xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-900/20"
+                      >
+                        <span className="icon-[solar--fire-bold-duotone] text-4xl text-orange-500" />
+                      </motion.div>
+                      <div className="text-center">
+                        <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase">
+                          {t.focusLab.widgets.goal.streak}
+                        </div>
+                        <div className="text-4xl font-black text-gray-900 dark:text-white">
+                          {streak}{' '}
+                          <span className="text-base font-bold text-gray-400">
+                            {streak === 1
+                              ? t.focusLab.widgets.goal.streakDay
+                              : t.focusLab.widgets.goal.streakDays}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-                  <div className="flex items-center gap-3">
-                    <motion.div
-                      className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-amber-500 text-amber-900 shadow-lg"
-                      animate={
+                    {/* Reward Bento Card */}
+                    <div
+                      className={cn(
+                        'group relative flex flex-1 items-center gap-4 overflow-hidden rounded-3xl border p-5 transition-all duration-500',
                         rewardUnlocked
-                          ? { scale: [1, 1.05, 1], rotate: [0, 3, -3, 0] }
-                          : { scale: 1, rotate: 0 }
-                      }
-                      transition={{ duration: 1.4, repeat: rewardUnlocked ? Infinity : 0 }}
+                          ? 'border-amber-100 bg-amber-50/30 dark:border-amber-900/30 dark:bg-amber-900/10'
+                          : 'border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-800/50'
+                      )}
                     >
-                      <span className="icon-[solar--medal-ribbons-star-bold-duotone] text-2xl" />
-                    </motion.div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                        奖励进度
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        达成任一目标会触发动画奖励，保持连胜吧！
-                      </p>
+                      <div className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-2xl dark:bg-gray-800">
+                        <span
+                          className={cn(
+                            'transition-transform duration-500 group-hover:scale-110',
+                            rewardUnlocked
+                              ? 'icon-[solar--magic-stick-3-bold-duotone] text-amber-500'
+                              : 'icon-[solar--box-linear] text-gray-400'
+                          )}
+                        />
+                      </div>
+                      <div className="relative z-10">
+                        <div className="text-[10px] font-black tracking-[0.2em] text-gray-400 uppercase">
+                          {t.focusLab.widgets.goal.reward}
+                        </div>
+                        <div className="text-sm font-black text-gray-900 dark:text-white">
+                          {rewardUnlocked
+                            ? t.focusLab.widgets.goal.rewardUnlocked
+                            : t.focusLab.widgets.goal.rewardLocked}
+                        </div>
+                      </div>
+
+                      {/* Decal background icon */}
+                      <span className="icon-[solar--medal-ribbons-star-bold] absolute -right-2 -bottom-2 text-6xl text-gray-100 opacity-20 dark:text-gray-800" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap justify-end gap-3">
-                <button
-                  onClick={handlePreviewCelebration}
-                  className="rounded-full px-4 py-2 text-sm font-semibold text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:text-amber-300 dark:hover:bg-amber-500/10"
-                >
-                  预览烟花
-                </button>
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 bg-gray-50/50 p-6 px-8 dark:bg-gray-900/50">
                 <button
                   onClick={() => setShowGoalModal(false)}
-                  className="rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  className="rounded-full px-5 py-2 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
                 >
-                  取消
+                  {t.auth.profile.cancel}
                 </button>
+                <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
                 <button
                   onClick={handleGoalModalSave}
-                  className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full px-5 py-2 text-sm font-bold text-white shadow-lg transition-colors active:scale-95"
+                  className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full px-10 py-3 text-sm font-black text-white shadow-lg transition-all active:scale-95"
                 >
-                  保存目标
+                  {t.focusLab.widgets.goal.save}
                 </button>
               </div>
             </motion.div>
@@ -2084,12 +2118,12 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   <FocusSidebarAction
                     id="sidebar-stats"
                     icon={<StatsIcon className="h-6 w-6" />}
-                    label={lang === 'zh' ? '统计数据' : 'Stats'}
+                    label={t.focusLab.sidebar.stats}
                     onClick={handleOpenStats}
                   />
                   <FocusSidebarAction
                     icon={<SettingsIcon className="h-6 w-6" />}
-                    label={lang === 'zh' ? '设置' : 'Settings'}
+                    label={t.focusLab.sidebar.settings}
                     onClick={() => setShowSettingsModal(true)}
                   />
                   <FocusSidebarAction
@@ -4566,6 +4600,14 @@ const DopamineMenuWidget = ({
     }
   }
 
+  const handleClearOptions = () => {
+    if (options.length === 0) return
+    const confirmMsg = lang === 'en' ? 'Clear all dopamine options?' : '清空所有选项？'
+    if (confirm(confirmMsg)) {
+      setOptions([])
+    }
+  }
+
   const removeOption = (index: number) => {
     setOptions(options.filter((_, i) => i !== index))
   }
@@ -4585,25 +4627,48 @@ const DopamineMenuWidget = ({
           >
             {/* Inner Header Removed as per request */}
 
-            {/* Input */}
-            <div className="flex flex-wrap items-stretch gap-2 @[420px]:flex-nowrap">
-              <div className="relative min-w-0 flex-1">
+            {/* Input & Action Row */}
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="relative flex-1">
                 <input
                   type="text"
                   value={newOption}
                   onChange={(e) => setNewOption(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addOption()}
                   placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
-                  className={`${isWarm ? 'focus:border-[#C27B4A] focus:ring-[#C27B4A]' : isGreen ? 'focus:border-[#7A9F7A] focus:ring-[#7A9F7A]' : isBlue ? 'focus:border-[#5B84B1] focus:ring-[#5B84B1]' : isCartoon ? 'border-2 border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:border-black focus:ring-0 dark:border-white dark:bg-gray-900 dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:focus:border-white' : 'focus:border-primary-500 focus:ring-primary-500 border-gray-200 bg-gray-50'} w-full rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 ${!isCartoon ? 'border' : ''}`}
+                  className={`w-full rounded-xl border py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
+                    isWarm
+                      ? 'border-[#ECE8E0] bg-[#F5F2EC] focus:border-[#C27B4A] focus:bg-[#F5F2EC] focus:ring-[#C27B4A] dark:border-gray-700 dark:bg-gray-800'
+                      : isGreen
+                        ? 'border-[#E2E8E2] bg-[#F8F9F7] text-gray-900 placeholder:text-gray-400 focus:border-[#7A9F7A] focus:ring-[#7A9F7A]'
+                        : isBlue
+                          ? 'border-[#D1E3F3] bg-[#E0EEF8] text-gray-900 placeholder:text-gray-400 focus:border-[#5B84B1] focus:ring-[#5B84B1]'
+                          : isCartoon
+                            ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] placeholder:text-gray-500 focus:ring-0 dark:border-white dark:bg-gray-900 dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                            : 'focus:border-primary-500 focus:ring-primary-500 border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800'
+                  }`}
                 />
               </div>
+
               <button
-                onClick={addOption}
-                aria-label={t.focusLab.widgets.dopamineMenu.add}
-                className={`${isWarm ? 'text-[#C27B4A] hover:border-[#C27B4A] hover:bg-[#F5F2EC]' : isGreen ? 'text-[#7A9F7A] hover:border-[#7A9F7A] hover:bg-[#F8F9F7]' : isBlue ? 'text-[#5B84B1] hover:border-[#5B84B1] hover:bg-[#E0EEF8]' : isCartoon ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white dark:border-white dark:bg-black dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:hover:bg-white dark:hover:text-black' : 'text-primary-600 hover:border-primary-400 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/20'} flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm transition-all active:scale-95 dark:border-gray-700 dark:bg-gray-900`}
+                type="button"
+                onClick={handleClearOptions}
+                disabled={options.length === 0}
+                className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 disabled:hover:text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 ${
+                  isWarm
+                    ? 'border border-[#ECE8E0] bg-[#F5F2EC] text-gray-600'
+                    : isGreen
+                      ? 'text-[#7A9F7A] hover:bg-[#E2E8E2] hover:text-[#5e7c5e]'
+                      : isBlue
+                        ? 'text-[#5B84B1] hover:bg-[#E0EEF8] hover:hover:text-[#4A6E94]'
+                        : isCartoon
+                          ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white dark:border-white dark:bg-black dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:hover:bg-white dark:hover:text-black'
+                          : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
+                }`}
+                title={lang === 'en' ? 'Clear all options' : '清空所有选项'}
+                aria-label={t.focusLab.widgets.dopamineMenu.accessibility.removeOption}
               >
-                <PlusIcon className="h-4 w-4" />
-                <span className="sr-only">{t.focusLab.widgets.dopamineMenu.add}</span>
+                <TrashIcon className="h-5 w-5" />
               </button>
             </div>
 

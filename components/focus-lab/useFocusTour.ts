@@ -21,11 +21,11 @@ export const useFocusTour = () => {
 
     const tourSteps: DriveStep[] = [
       {
-        element: '#focus-lab-container', // We might need to add this ID to the main container
+        element: '#focus-lab-container',
         popover: {
           title: t.focusLab.tour.welcome.title,
           description: t.focusLab.tour.welcome.description,
-          side: 'center',
+          side: 'bottom',
           align: 'center',
         },
       },
@@ -98,7 +98,7 @@ export const useFocusTour = () => {
           title: t.focusLab.tour.stats.title,
           description: t.focusLab.tour.stats.description,
           side: 'right',
-          align: 'center',
+          align: 'start',
         },
       },
       {
@@ -107,7 +107,7 @@ export const useFocusTour = () => {
           title: t.focusLab.tour.goal.title,
           description: t.focusLab.tour.goal.description,
           side: 'right',
-          align: 'center',
+          align: 'start',
         },
       },
     ]
@@ -121,10 +121,8 @@ export const useFocusTour = () => {
       doneBtnText: t.focusLab.tour.done,
       allowClose: true,
       onDestroyStarted: () => {
-        if (!driverObj.current?.hasNextStep() || confirm(t.focusLab.tour.skip || 'Skip tour?')) {
-          localStorage.setItem(TOUR_STORAGE_KEY, 'true')
-          driverObj.current?.destroy()
-        }
+        localStorage.setItem(TOUR_STORAGE_KEY, 'true')
+        driverObj.current?.destroy()
       },
     })
 

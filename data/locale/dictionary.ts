@@ -145,6 +145,8 @@ export const dictionary = {
       sidebar: {
         focusTools: 'FOCUS TOOLS',
         dailyGoal: 'Daily Goal',
+        stats: 'Stats',
+        settings: 'Settings',
         planComparison: 'Compare Plans',
         proMember: 'Pro Member',
         freePlan: 'Free Plan',
@@ -286,6 +288,24 @@ export const dictionary = {
           emptySubtitle: 'Add a task to get started',
           focusTooltip: 'Focus on this task',
         },
+        goal: {
+          title: 'Daily Goal',
+          description: 'Set goals and track targets. Achieve any goal to trigger a reward!',
+          modalTitle: 'Daily Focus Goal',
+          modalSubtitle: 'Set your targets, maintain your streak, and unlock rewards',
+          hours: 'Focus Hours',
+          tasks: 'Task Completed',
+          current: 'Current',
+          progress: 'Progress',
+          completed: 'Completed',
+          streak: 'Streak',
+          streakDays: 'Days',
+          streakDay: 'Day',
+          reward: 'Reward',
+          rewardUnlocked: 'Focus Reward Unlocked!',
+          rewardLocked: 'Complete goals to unlock fireworks',
+          save: 'Save Settings',
+        },
       },
       errors: {
         migrationFailed: 'Migration failed. Please try again.',
@@ -425,7 +445,8 @@ export const dictionary = {
         },
         breaker: {
           title: 'AI Task Breaker',
-          description: 'Overwhelmed? Use AI to break big tasks into small, actionable steps.',
+          description:
+            'Overwhelmed? Use AI to break big tasks into small, actionable steps. One-click transfer to To-Do List.',
         },
         dopamine: {
           title: 'Dopamine Menu',
@@ -444,6 +465,12 @@ export const dictionary = {
         prev: 'Previous',
         done: 'Done',
         skip: 'Skip Tour',
+        skipConfirm: {
+          title: 'Skip Tour?',
+          message: 'You can restart the tour later from Settings.',
+          confirm: 'Skip',
+          cancel: 'Cancel',
+        },
       },
     },
     auth: {
@@ -1193,9 +1220,11 @@ export const dictionary = {
       },
       sidebar: {
         focusTools: '专注工具',
-        dailyGoal: '今日目标',
+        dailyGoal: '每日目标',
+        stats: '统计数据',
+        settings: '设置中心',
         planComparison: '版本对比',
-        proMember: 'Pro 会员',
+        proMember: '专业会员',
         freePlan: '免费版',
       },
       loading: {
@@ -1334,6 +1363,23 @@ export const dictionary = {
           emptySubtitle: '添加任务开始新的一天',
           focusTooltip: '专注此任务',
         },
+        goal: {
+          title: '每日目标',
+          description: '设定并追踪目标。完成任意目标即可获得相应的奖励！',
+          modalTitle: '每日专注目标',
+          modalSubtitle: '设定目标，保持连胜，解锁专属激励',
+          hours: '专注时长 (h)',
+          tasks: '任务目标 (个)',
+          current: '当前',
+          progress: '进度',
+          completed: '已完成',
+          streak: '当前连胜',
+          streakDays: '天',
+          streakDay: '天',
+          reward: '专属奖励',
+          rewardUnlocked: '专注奖励已解锁!',
+          rewardLocked: '达成目标解锁烟花',
+        },
       },
       promo: {
         proTip: '专业提示',
@@ -1470,7 +1516,8 @@ export const dictionary = {
         },
         breaker: {
           title: 'AI 任务拆解',
-          description: '感到不知所措？使用 AI 将大任务拆解为小步骤。',
+          description:
+            '感到不知所措？使用 AI 将大任务拆解为小步骤。拆分任务后可一键转移至待办清单。',
         },
         dopamine: {
           title: '多巴胺菜单',
@@ -1482,12 +1529,18 @@ export const dictionary = {
         },
         goal: {
           title: '每日目标',
-          description: '设定并追踪目标。完成任意目标即可获得相应的奖励！',
+          description: '设定并追踪目标目标。完成任意目标即可获得相应的奖励！',
         },
         next: '下一步',
         prev: '上一步',
         done: '完成',
         skip: '跳过引导',
+        skipConfirm: {
+          title: '跳过引导？',
+          message: '确定要结束当前引导吗？您稍后可以在设置中重新开启。',
+          confirm: '确定跳过',
+          cancel: '取消',
+        },
       },
     },
     test: {

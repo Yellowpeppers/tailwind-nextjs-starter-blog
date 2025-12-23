@@ -179,3 +179,64 @@ export const getTodayFocusMinutes = (userId?: string): number => {
   const sessions = getTodaySessions(userId)
   return sessions.reduce((acc, curr) => acc + curr.durationMinutes, 0)
 }
+
+export const getStreak = (userId?: string): number => {
+  const all = getHistory(userId).sort((a, b) => b.startTime - a.startTime)
+  if (all.length === 0) return 0
+
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const oneDay = 86400000
+
+  let streak = 0
+  let currentDate = today
+
+  // Check if there are sessions today (or if it's still "today")
+  const todaySessions = all.filter((s) => s.startTime >= today)
+  if (todaySessions.length === 0) {
+    // If no sessions today, check if there was one yesterday to keep streak alive
+    currentDate -= oneDay
+  }
+
+  while (true) {
+    const daySessions = all.filter(
+      (s) => s.startTime >= currentDate && s.startTime < currentDate + oneDay
+    )
+    if (daySessions.length > 0) {
+      streak++
+      currentDate -= oneDay
+    } else {
+      break
+    }
+  }
+
+  return streak
+}
+
+export type LevelInfo = {
+  level: number
+  xp: number
+  nextLevelXp: number
+  percentage: number
+  totalMinutes: number
+}
+
+export const getLevelInfo = (userId?: string): LevelInfo => {
+  const all = getHistory(userId)
+  const totalMinutes = all.reduce((acc, c) => acc + c.durationMinutes, 0)
+
+  // Experience curve: 100 mins per level for the first 5 levels, then 200, then 500 etc.
+  // Let's keep it simple: 100 mins per level.
+  const xpPerLevel = 100
+  const level = Math.floor(totalMinutes / xpPerLevel) + 1
+  const xp = totalMinutes % xpPerLevel
+  const percentage = (xp / xpPerLevel) * 100
+
+  return {
+    level,
+    xp,
+    nextLevelXp: xpPerLevel,
+    percentage,
+    totalMinutes,
+  }
+}

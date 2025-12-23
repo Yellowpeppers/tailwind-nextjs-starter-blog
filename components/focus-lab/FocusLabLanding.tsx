@@ -264,56 +264,52 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
 
         {/* 3. How it Works */}
         <section id="how-it-works" className="py-24">
-          <div className="relative overflow-hidden rounded-[40px] bg-gradient-to-br from-indigo-900 via-purple-900 to-black px-8 py-20 text-center text-white md:px-20">
-            {/* Animated Background Shapes */}
-            <div className="pointer-events-none absolute inset-0 opacity-30">
+          <div className="relative overflow-hidden rounded-[40px] border border-zinc-800 bg-zinc-950 px-8 py-20 text-center text-white shadow-2xl md:px-20">
+            {/* Premium Background Elements */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
               <motion.div
-                animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
-                transition={{ duration: 15, repeat: Infinity }}
-                className="absolute -top-20 -left-20 h-96 w-96 rounded-full bg-blue-500 blur-3xl"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.2, 0.3, 0.2],
+                }}
+                transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute -top-20 -left-20 h-96 w-96 rounded-full bg-indigo-500/20 blur-[120px]"
               />
               <motion.div
-                animate={{ scale: [1, 1.1, 1], rotate: [0, -60, 0] }}
-                transition={{ duration: 18, repeat: Infinity }}
-                className="absolute right-0 bottom-0 h-80 w-80 rounded-full bg-purple-500 blur-3xl"
+                animate={{
+                  scale: [1, 1.1, 1],
+                  opacity: [0.1, 0.2, 0.1],
+                }}
+                transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute right-0 bottom-0 h-80 w-80 rounded-full bg-purple-500/20 blur-[100px]"
               />
             </div>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
-              {t.focusLabLanding.howItWorks.title}
-            </h2>
-            <div className="mt-16 grid gap-12 md:grid-cols-3">
-              <div className="relative">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl font-bold text-white backdrop-blur dark:bg-black/10 dark:text-black">
-                  1
-                </div>
-                <h3 className="mb-2 text-xl font-bold">
-                  {t.focusLabLanding.howItWorks.steps[0].title}
-                </h3>
-                <p className="text-white/60 dark:text-black/60">
-                  {t.focusLabLanding.howItWorks.steps[0].desc}
-                </p>
-              </div>
-              <div className="relative">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl font-bold text-white backdrop-blur dark:bg-black/10 dark:text-black">
-                  2
-                </div>
-                <h3 className="mb-2 text-xl font-bold">
-                  {t.focusLabLanding.howItWorks.steps[1].title}
-                </h3>
-                <p className="text-white/60 dark:text-black/60">
-                  {t.focusLabLanding.howItWorks.steps[1].desc}
-                </p>
-              </div>
-              <div className="relative">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl font-bold text-white backdrop-blur dark:bg-black/10 dark:text-black">
-                  3
-                </div>
-                <h3 className="mb-2 text-xl font-bold">
-                  {t.focusLabLanding.howItWorks.steps[2].title}
-                </h3>
-                <p className="text-white/60 dark:text-black/60">
-                  {t.focusLabLanding.howItWorks.steps[2].desc}
-                </p>
+
+            <div className="relative z-10">
+              <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-5xl">
+                {t.focusLabLanding.howItWorks.title}
+              </h2>
+              <p className="mx-auto mb-16 max-w-2xl text-zinc-400">
+                {language === 'zh'
+                  ? '三个简单步骤，让你的大脑进入高效的工作波段'
+                  : 'Three simple steps to put your brain into a high-efficiency wave'}
+              </p>
+
+              <div className="grid gap-12 md:grid-cols-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="group relative">
+                    <div className="group-hover:border-primary-500/50 group-hover:bg-primary-500/10 mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl font-black text-white backdrop-blur-xl transition-all duration-300 group-hover:scale-110">
+                      {i + 1}
+                    </div>
+                    <h3 className="group-hover:text-primary-400 mb-3 text-xl font-bold text-white transition-colors">
+                      {t.focusLabLanding.howItWorks.steps[i].title}
+                    </h3>
+                    <p className="text-zinc-500 transition-colors group-hover:text-zinc-400">
+                      {t.focusLabLanding.howItWorks.steps[i].desc}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -321,120 +317,180 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
 
         {/* 4. Features Grid */}
         <section id="features" className="py-24">
-          <h2 className="mb-16 text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            {t.focusLabLanding.features.title}
-          </h2>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-16 text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl dark:text-white">
+              {t.focusLabLanding.features.title}
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-500 dark:text-gray-400">
+              {language === 'zh'
+                ? '我们只保留最核心的工具，确保每个组件都能为你提供最大的支持。'
+                : 'We only keep the most core tools to ensure that each component provides the maximum support for you.'}
+            </p>
+          </div>
+
+          <div className="grid gap-10 lg:grid-cols-2">
             {[
               {
                 emoji: '🍅',
                 title: t.focusLabLanding.features.items[0].title,
                 desc: t.focusLabLanding.features.items[0].desc,
+                color: 'from-orange-500/10 to-red-500/10',
               },
               {
                 emoji: '🗒',
                 title: t.focusLabLanding.features.items[1].title,
                 desc: t.focusLabLanding.features.items[1].desc,
+                color: 'from-blue-500/10 to-indigo-500/10',
               },
               {
                 emoji: '🍬',
                 title: t.focusLabLanding.features.items[2].title,
                 desc: t.focusLabLanding.features.items[2].desc,
+                color: 'from-pink-500/10 to-purple-500/10',
               },
               {
                 emoji: '📊',
                 title: t.focusLabLanding.features.items[3].title,
                 desc: t.focusLabLanding.features.items[3].desc,
+                color: 'from-emerald-500/10 to-teal-500/10',
               },
             ].map((f, i) => (
-              <div
+              <motion.div
                 key={i}
-                className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-lg dark:border-gray-800 dark:bg-gray-900"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="group hover:border-primary-200 dark:hover:border-primary-900/50 flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-xl sm:flex-row dark:border-zinc-800 dark:bg-zinc-900/50"
               >
-                <div className="mb-4 text-3xl">{f.emoji}</div>
-                <h3 className="mb-2 text-lg font-bold">{f.title}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{f.desc}</p>
-              </div>
+                <div
+                  className={`relative flex aspect-video w-full items-center justify-center bg-gradient-to-br ${f.color} sm:w-1/2`}
+                >
+                  {/* Decorative Elements */}
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] opacity-20"></div>
+
+                  {/* Image Placeholder */}
+                  <div className="relative z-10 flex h-3/4 w-3/4 flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300/50 bg-white/40 shadow-inner backdrop-blur-sm dark:border-zinc-700/50 dark:bg-zinc-800/40">
+                    <div className="mb-2 text-4xl grayscale transition-all duration-500 group-hover:scale-110 group-hover:grayscale-0">
+                      {f.emoji}
+                    </div>
+                    <span className="group-hover:text-primary-500 text-[10px] font-bold tracking-widest text-gray-400 uppercase transition-colors">
+                      {language === 'zh' ? '组件截图占位' : 'WIDGET SCREENSHOT'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-1 flex-col justify-center p-8">
+                  <h3 className="mb-3 text-2xl font-bold dark:text-white">{f.title}</h3>
+                  <p className="text-gray-600 dark:text-zinc-400">{f.desc}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
         </section>
 
         {/* 5. Testimonials (Social Proof) */}
         <section id="testimonials" className="py-24">
-          <div className="text-center">
+          <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
               {t.focusLabLanding.testimonials.title}
             </h2>
           </div>
 
-          <div className="relative mx-auto mt-16 max-w-4xl px-12">
-            <div className="overflow-hidden rounded-2xl bg-white/70 p-8 shadow-xl backdrop-blur-md dark:bg-gray-800/70">
+          <div className="relative mx-auto max-w-4xl">
+            {/* The Main Card with Fixed/Min Height to avoid jumping */}
+            <div className="relative min-h-[320px] overflow-hidden rounded-[32px] border border-gray-100 bg-white p-12 shadow-2xl transition-all dark:border-zinc-800 dark:bg-zinc-900">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTestimonial}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex flex-col items-center text-center"
+                  initial={{ opacity: 0, x: 10, scale: 0.98 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -10, scale: 0.98 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex flex-col items-center justify-center text-center"
                 >
-                  <div className="mb-6 flex gap-1 text-xl text-yellow-500">★★★★★</div>
-                  <p className="mb-8 text-xl font-medium text-gray-900 italic md:text-2xl dark:text-gray-100">
+                  <div className="mb-8 flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <svg
+                        key={s}
+                        className="h-6 w-6 text-yellow-400"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+
+                  <blockquote className="mb-10 text-2xl leading-relaxed font-semibold text-gray-900 italic md:text-3xl dark:text-white">
                     {t.focusLabLanding.testimonials.items[activeTestimonial].quote}
-                  </p>
-                  <div>
-                    <div className="text-lg font-bold text-gray-900 dark:text-white">
+                  </blockquote>
+
+                  <div className="flex flex-col items-center">
+                    <div className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
                       {t.focusLabLanding.testimonials.items[activeTestimonial].name}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-primary-500 text-sm font-bold tracking-widest uppercase">
                       {t.focusLabLanding.testimonials.items[activeTestimonial].role}
                     </div>
                   </div>
                 </motion.div>
               </AnimatePresence>
+
+              {/* Quotes Decor */}
+              <div className="pointer-events-none absolute top-10 left-10 font-serif text-8xl text-gray-100 opacity-50 dark:text-zinc-800">
+                “
+              </div>
+              <div className="pointer-events-none absolute right-10 bottom-10 font-serif text-8xl text-gray-100 opacity-50 dark:text-zinc-800">
+                ”
+              </div>
             </div>
 
-            {/* Carousel Controls */}
-            <button
-              onClick={prevTestimonial}
-              className="absolute top-1/2 left-0 -translate-y-1/2 rounded-full bg-white p-2 text-gray-800 shadow-lg transition-colors hover:bg-gray-50 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-              aria-label="Previous testimonial"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
+            {/* Navigation Controls - Absolute and Fixed relative to the outer container to avoid moving */}
+            <div className="pointer-events-none absolute top-1/2 -left-6 flex w-[calc(100%+48px)] -translate-y-1/2 items-center justify-between">
+              <button
+                onClick={prevTestimonial}
+                className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-800 shadow-xl transition-all hover:scale-110 hover:bg-gray-50 active:scale-95 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+                aria-label="Previous testimonial"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
 
-            <button
-              onClick={nextTestimonial}
-              className="absolute top-1/2 right-0 -translate-y-1/2 rounded-full bg-white p-2 text-gray-800 shadow-lg transition-colors hover:bg-gray-50 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-              aria-label="Next testimonial"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+              <button
+                onClick={nextTestimonial}
+                className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-800 shadow-xl transition-all hover:scale-110 hover:bg-gray-50 active:scale-95 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+                aria-label="Next testimonial"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
 
-            {/* Dots */}
-            <div className="mt-6 flex justify-center gap-2">
+            {/* Progress Dots */}
+            <div className="mt-12 flex justify-center gap-3">
               {t.focusLabLanding.testimonials.items.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveTestimonial(idx)}
-                  className={`h-2 rounded-full transition-all ${
+                  className={`h-3 rounded-full transition-all duration-500 ${
                     idx === activeTestimonial
-                      ? 'bg-primary-500 w-8'
-                      : 'w-2 bg-gray-300 dark:bg-gray-600'
+                      ? 'bg-primary-500 w-12'
+                      : 'w-3 bg-gray-200 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700'
                   }`}
                   aria-label={`Go to testimonial ${idx + 1}`}
                 />
