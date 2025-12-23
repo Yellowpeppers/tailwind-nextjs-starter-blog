@@ -25,7 +25,7 @@ const ThemeColorContext = createContext<ThemeColorContextType | undefined>(undef
 
 export function ThemeColorProvider({ children }: { children: React.ReactNode }) {
   const [themeColor, setThemeColor] = useState<ThemeColor>('pink')
-  const [uiStyle, setUiStyle] = useState<UIStyle>('modern')
+  const [uiStyle, setUiStyle] = useState<UIStyle>('cartoon')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

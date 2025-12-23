@@ -214,6 +214,7 @@ export function FocusGridLayout({
             return (
               <div
                 key={item.i}
+                id={`widget-${item.i}`}
                 data-grid={{
                   i: String(item.i),
                   x: gridItem.x,

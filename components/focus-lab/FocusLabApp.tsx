@@ -54,6 +54,7 @@ import { useCelebration } from '@/components/focus-lab/useCelebration'
 import { debounce, uniq } from 'lodash'
 import isEqual from 'lodash/isEqual'
 import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
+import { useFocusTour } from '@/components/focus-lab/useFocusTour'
 
 // --- Icons ---
 const SmileCircleIcon = ({ className }: { className?: string }) => (
@@ -109,35 +110,39 @@ const XIcon = ({ className }: { className?: string }) => (
 )
 
 const StatsIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--chart-2-outline] ${className}`} />
+  <span className={`icon-[solar--chart-2-bold-duotone] ${className}`} />
 )
 
 const CrownIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--crown-bold] ${className}`} />
+  <span className={`icon-[solar--crown-bold-duotone] ${className}`} />
 )
 
 const SettingsIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--settings-outline] ${className}`} />
+  <span className={`icon-[solar--settings-bold-duotone] ${className}`} />
 )
 
 const StarIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--star-bold] ${className}`} />
+  <span className={`icon-[solar--star-bold-duotone] ${className}`} />
 )
 
 const EditIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--pen-2-outline] ${className}`} />
+  <span className={`icon-[solar--pen-2-bold-duotone] ${className}`} />
 )
 
 const CheckIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--check-circle-outline] ${className}`} />
+  <span className={`icon-[solar--check-circle-bold-duotone] ${className}`} />
 )
 
 const TransferIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--transfer-horizontal-outline] ${className}`} />
+  <span className={`icon-[solar--transfer-horizontal-bold-duotone] ${className}`} />
 )
 
 const LogoutIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--logout-2-outline] ${className}`} />
+  <span className={`icon-[solar--logout-2-bold-duotone] ${className}`} />
+)
+
+const HelpIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--question-circle-bold-duotone] ${className}`} />
 )
 
 // --- Shared Components ---
@@ -444,14 +449,17 @@ const FocusSidebarAction = ({
   icon,
   label,
   onClick,
+  id,
 }: {
   icon: ReactNode
   label: string
   onClick: () => void
+  id?: string
 }) => {
   const { open, animate } = useSidebar()
   return (
     <button
+      id={id}
       onClick={onClick}
       className="group/sidebar flex w-full items-center justify-start gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-white/80 dark:hover:bg-white/10"
     >
@@ -798,6 +806,8 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const hasHydratedLayout = useRef(false)
   const skipLayoutEvent = useRef(false)
   const lastResetTime = useRef(0) // 追踪最后一次重置的时间戳
+
+  const { startTour } = useFocusTour() // Initialize tour hook
   const pendingImmediateSave = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncePersistLayout = useMemo(
     () =>
@@ -1375,7 +1385,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     if (!hasHydratedLayout.current) return
     debouncePersistLayout(layoutsByPreset)
     return () => {
-      debouncePersistLayout.cancel()
+      debouncePersistLayout.flush()
     }
   }, [layoutsByPreset, debouncePersistLayout])
 
@@ -2042,6 +2052,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       </AnimatePresence>
 
       <div
+        id="focus-lab-container"
         className={cn(
           'fixed inset-0 z-[100] flex h-full w-full overflow-hidden transition-colors duration-500',
           uiStyle === 'warm'
@@ -2065,11 +2076,13 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
                 <div className="mt-8 flex flex-col gap-2 px-1">
                   <FocusSidebarAction
+                    id="sidebar-goal"
                     icon={<StarIcon className="h-6 w-6" />}
                     label={t.focusLab.sidebar.dailyGoal || 'Daily Goal'}
                     onClick={() => setShowGoalModal(true)}
                   />
                   <FocusSidebarAction
+                    id="sidebar-stats"
                     icon={<StatsIcon className="h-6 w-6" />}
                     label={lang === 'zh' ? '统计数据' : 'Stats'}
                     onClick={handleOpenStats}
@@ -2078,6 +2091,12 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     icon={<SettingsIcon className="h-6 w-6" />}
                     label={lang === 'zh' ? '设置' : 'Settings'}
                     onClick={() => setShowSettingsModal(true)}
+                  />
+                  <FocusSidebarAction
+                    id="sidebar-tour"
+                    icon={<HelpIcon className="h-6 w-6" />}
+                    label={lang === 'zh' ? '使用引导' : 'Tour'}
+                    onClick={startTour}
                   />
                   {lang === 'zh' && (
                     <FocusSidebarAction
@@ -2479,15 +2498,21 @@ const TaskBreakerCard = ({
 }) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
+  const [isResultView, setIsResultView] = useState(false)
+
   return (
     <CardShell
       title={t.focusLab.widgets.taskBreaker.title}
       onDelete={onDelete}
       className={className}
       isFocused={isFocused}
-      variant="ai-assistant"
+      variant={isResultView ? 'default' : 'ai-assistant'}
     >
-      <TaskBreakerWidget uiStyle={uiStyle} />
+      <TaskBreakerWidget
+        uiStyle={uiStyle}
+        isResultView={isResultView}
+        onViewChange={setIsResultView}
+      />
     </CardShell>
   )
 }
@@ -3509,7 +3534,7 @@ const TimerWidget = ({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="flex items-center gap-2 rounded-xl bg-gray-50 p-1 dark:bg-gray-800"
+                    className={`flex items-center gap-2 rounded-xl p-1 dark:bg-gray-800 ${isCartoon ? 'bg-white' : 'bg-gray-50'}`}
                   >
                     {(['focus', 'short', 'long'] as TimerPreset[]).map((preset) => (
                       <button
@@ -3549,11 +3574,13 @@ const TimerWidget = ({
                                   setIsCustomChanged(true)
                                 }}
                                 onKeyDown={(e) => e.key === 'Enter' && setIsEditingCustom(false)}
-                                className="w-8 rounded bg-transparent p-0 text-center outline-none"
+                                className="w-8 [appearance:textfield] rounded bg-transparent p-0 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                               />
                             ) : (
                               <span onDoubleClick={() => setIsEditingCustom(true)}>
-                                {customMinutes}m
+                                {typeof settings.focus_lab?.timer?.custom_duration === 'number'
+                                  ? `${customMinutes}m`
+                                  : t.focusLab.widgets.timer.custom}
                               </span>
                             )}
                           </span>
@@ -3732,7 +3759,15 @@ const TimerWidget = ({
   )
 }
 
-const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
+const TaskBreakerWidget = ({
+  uiStyle,
+  isResultView,
+  onViewChange,
+}: {
+  uiStyle?: UIStyle
+  isResultView: boolean
+  onViewChange: (v: boolean) => void
+}) => {
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
   const isBlue = uiStyle === 'blue'
@@ -3740,9 +3775,9 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const [task, setTask] = useState('')
+  // isResultView lifted to parent
   const [visibleSteps, setVisibleSteps] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [isResultView, setIsResultView] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isTransferring, setIsTransferring] = useState(false)
   const [hasTransferred, setHasTransferred] = useState(false)
@@ -3762,7 +3797,7 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     if (!task.trim()) return
     clearTimers()
     setIsLoading(true)
-    setIsResultView(true)
+    onViewChange(true)
     setVisibleSteps([])
     setError(null)
     setHasTransferred(false)
@@ -3807,10 +3842,15 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     if (visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred) return
     setIsTransferring(true)
     try {
-      const existingItems = readStationStorage()
+      const existingItems = readStationStorage(user?.id)
       const newItems = visibleSteps.map((step) => createFocusItem('text', step))
-      // Combine and save. 'user' is available in component scope.
-      saveStationItems([...newItems, ...existingItems], user)
+
+      // Combine and sort: Active first, then Completed
+      const combined = [...existingItems, ...newItems]
+      const active = combined.filter((t) => !t.completed)
+      const completed = combined.filter((t) => t.completed)
+
+      saveStationItems([...active, ...completed], user)
       setTransferStatus('success')
       setHasTransferred(true)
     } catch (err) {
@@ -3825,7 +3865,7 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     clearTimers()
     setTask('')
     setVisibleSteps([])
-    setIsResultView(false)
+    onViewChange(false)
     setIsLoading(false)
     setError(null)
     setHasTransferred(false)
@@ -3838,8 +3878,12 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-stretch gap-4">
           {/* Left: Task Content Area */}
-          <div className="bg-primary-50 dark:bg-primary-900/20 relative flex flex-1 items-center justify-center rounded-[24px] p-6">
-            <p className="text-center text-sm leading-relaxed font-bold text-gray-900 dark:text-gray-100">
+          <div
+            className={`${isCartoon ? 'border-2 border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-primary-50 dark:bg-primary-900/20'} relative flex flex-1 items-center justify-center rounded-[24px] p-6`}
+          >
+            <p
+              className={`text-center text-sm leading-relaxed font-bold ${isCartoon ? 'text-black' : 'text-gray-900 dark:text-gray-100'}`}
+            >
               {task}
             </p>
           </div>
@@ -3849,7 +3893,11 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
             <button
               onClick={handleTransferToTodo}
               disabled={visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred}
-              className="bg-primary-100 text-primary-600 hover:bg-primary-200 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 flex h-[48px] w-[48px] items-center justify-center rounded-2xl shadow-sm transition-all disabled:opacity-30"
+              className={`${
+                isCartoon
+                  ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px]'
+                  : 'bg-primary-100 text-primary-600 hover:bg-primary-200 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 shadow-sm transition-all'
+              } flex h-[48px] w-[48px] items-center justify-center rounded-2xl disabled:opacity-30`}
               title={t.focusLab.widgets.taskBreaker.transferButton}
             >
               {isTransferring ? (
@@ -3860,7 +3908,11 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
             </button>
             <button
               onClick={handleReset}
-              className="flex h-[48px] w-[48px] items-center justify-center rounded-2xl bg-gray-50 text-gray-400 shadow-sm transition-all hover:bg-gray-100 hover:text-gray-600 dark:bg-gray-800 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+              className={`${
+                isCartoon
+                  ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px]'
+                  : 'bg-gray-50 text-gray-400 shadow-sm transition-all hover:bg-gray-100 hover:text-gray-600 dark:bg-gray-800 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300'
+              } flex h-[48px] w-[48px] items-center justify-center rounded-2xl`}
               title={t.focusLab.widgets.taskBreaker.newTask}
             >
               <PlusIcon className="h-5 w-5" />
@@ -3881,7 +3933,9 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
           </p>
         )}
 
-        <div className="no-scrollbar flex-1 overflow-y-auto rounded-2xl border border-dashed border-gray-200 p-1 pr-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
+        <div
+          className={`no-scrollbar flex-1 overflow-y-auto rounded-2xl border ${isCartoon ? 'border-2 border-black' : 'border-dashed border-gray-200 dark:border-gray-700'} p-1 pr-2 [&::-webkit-scrollbar]:hidden`}
+        >
           {isLoading ? (
             <div
               className={`flex h-full flex-col items-center justify-center gap-3 ${isWarm || isGreen || isBlue ? 'text-white/70' : 'text-gray-400'}`}
@@ -3930,7 +3984,7 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
               isWarm || isGreen || isBlue
                 ? 'focus:ring-accent border-white/10 bg-white/10 text-white placeholder:text-white/50'
                 : isCartoon
-                  ? 'border-2 border-black bg-gray-900 text-white placeholder:text-gray-400 focus:ring-0 dark:border-white dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500'
+                  ? 'border-2 border-black bg-white text-black placeholder:text-gray-400 focus:ring-0 dark:border-white dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500'
                   : 'focus:border-primary-500 focus:ring-primary-500 border-gray-100 bg-gray-100 text-gray-900 placeholder:text-gray-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800'
             } no-scrollbar mt-1 h-24 w-full resize-none rounded-2xl border px-3 py-3 text-sm focus:ring-2 focus:outline-none`}
           />

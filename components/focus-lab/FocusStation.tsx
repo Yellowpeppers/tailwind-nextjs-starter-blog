@@ -126,18 +126,18 @@ export const FocusStation = ({
   useEffect(() => {
     if (!isLoaded) return
     const handleSync = (event: Event) => {
-      if (user) return
+      // Remove 'if (user) return' to allow logged-in users to receive local sync events
+      // This ensures immediate UI updates when FocusLabApp modifies storage (e.g. AI transfer)
       const detail = (event as CustomEvent<FocusItem[]>).detail
       if (Array.isArray(detail)) {
         setItems(detail)
       }
     }
 
-    if (!user) {
-      window.addEventListener(STATION_SYNC_EVENT, handleSync as EventListener)
-      return () => window.removeEventListener(STATION_SYNC_EVENT, handleSync as EventListener)
-    }
-  }, [isLoaded, user])
+    // Always listen for sync events, whether guest or specific user
+    window.addEventListener(STATION_SYNC_EVENT, handleSync as EventListener)
+    return () => window.removeEventListener(STATION_SYNC_EVENT, handleSync as EventListener)
+  }, [isLoaded])
 
   const addTextItem = () => {
     if (!inputValue.trim()) return
@@ -149,12 +149,29 @@ export const FocusStation = ({
     }
 
     const newItem = createFocusItem('text', inputValue.trim())
-    setItems((prev) => [...prev, newItem]) // Original was append to bottom
+
+    // Add new item and sort immediately: Active first, then Completed
+    setItems((prev) => {
+      const updated = [...prev, newItem]
+      const active = updated.filter((t) => !t.completed)
+      const completed = updated.filter((t) => t.completed)
+      return [...active, ...completed]
+    })
     setInputValue('')
   }
 
   const toggleItem = (id: string) => {
-    setItems((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)))
+    setItems((prev) => {
+      // 1. Update status
+      const updatedItems = prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+
+      // 2. Separate into active and completed
+      const active = updatedItems.filter((t) => !t.completed)
+      const completed = updatedItems.filter((t) => t.completed)
+
+      // 3. Concatenate: Active first, then Completed (preserving relative order within groups)
+      return [...active, ...completed]
+    })
   }
 
   const removeItem = (id: string) => {

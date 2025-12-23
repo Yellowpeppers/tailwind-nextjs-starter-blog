@@ -178,6 +178,7 @@ export const dictionary = {
         },
         timer: {
           title: 'Focus Timer',
+          custom: 'Custom',
           switchMode: 'Switch Mode',
           subtitle: 'Customizable timer with Countdown and Target Time modes.',
           settings: 'Settings',
@@ -393,6 +394,56 @@ export const dictionary = {
             },
           ],
         },
+      },
+      tour: {
+        welcome: {
+          title: 'Welcome to Focus Lab',
+          description: 'Let us show you around your new distraction-free workspace.',
+        },
+        grid: {
+          title: 'Customizable Layout',
+          description:
+            'Drag the header of any card to move it. Drag the bottom-right corner to resize.',
+        },
+        sonic: {
+          title: 'White Noise',
+          description: 'Click the button on the middle right to flip cards and customize sounds.',
+        },
+        timer: {
+          title: 'Focus Timer',
+          description:
+            'Click middle-right button to switch modes. Double-click "Custom" in Countdown to edit duration.',
+        },
+        todo: {
+          title: 'To-Do List',
+          description: 'Click the target icon next to a task to start a Focus Timer for it.',
+        },
+        brain: {
+          title: 'Attention Hub',
+          description:
+            'Capture fleeting thoughts to prevent attention loss. You can paste text or images.',
+        },
+        breaker: {
+          title: 'AI Task Breaker',
+          description: 'Overwhelmed? Use AI to break big tasks into small, actionable steps.',
+        },
+        dopamine: {
+          title: 'Dopamine Menu',
+          description:
+            'Need stimulation? Draw a random task. Click middle-right button to customize options.',
+        },
+        stats: {
+          title: 'Focus Stats',
+          description: 'View your deep work hours and energy patterns.',
+        },
+        goal: {
+          title: 'Daily Goal',
+          description: 'Set goals. Achieve any goal to trigger a reward animation!',
+        },
+        next: 'Next',
+        prev: 'Previous',
+        done: 'Done',
+        skip: 'Skip Tour',
       },
     },
     auth: {
@@ -845,16 +896,31 @@ export const dictionary = {
         customBackgrounds: 'Custom Backgrounds',
         aiTaskBreaker: 'AI Task Breaker',
         prioritySupport: 'Priority Support',
-        unlimitedTasks: 'Unlimited Tasks',
+        unlimitedTasks: 'Task Quantity',
       },
       values: {
         basic: 'Basic',
         allAccess: 'All Access',
-        limit20: 'Limit 20',
+        limit20: 'Max 20',
         unlimited: 'Unlimited',
-        inDev: 'In Development',
-        limit10: 'Limit 10',
-        limitedTimes: 'Limited Times',
+        inDev: 'In Dev',
+        limit10: 'Max 10',
+        limitedTimes: 'Limited',
+        threePerDay: '3 times/day',
+        limited: 'Limited',
+      },
+      intervals: {
+        month: 'Monthly',
+        year: 'Yearly',
+        monthShort: 'month',
+        yearShort: 'year',
+      },
+      billing: {
+        cancelAnytime: '7-day free trial, cancel anytime.',
+        savePercent: '-17%',
+      },
+      cta: {
+        startTrial: 'Start 7-Day Free Trial',
       },
       beta: {
         msgPre: 'Good News! You are currently on the ',
@@ -1162,6 +1228,7 @@ export const dictionary = {
         },
         timer: {
           title: '专注时钟',
+          custom: '自定义',
           switchMode: '切换模式',
           subtitle: '记录时间，管理精力。',
           settings: '设置',
@@ -1375,6 +1442,52 @@ export const dictionary = {
             },
           ],
         },
+      },
+      tour: {
+        welcome: {
+          title: '欢迎来到 Focus Lab',
+          description: '让我们带您快速了解您的新专注空间。',
+        },
+        grid: {
+          title: '自定义布局',
+          description: '拖动每个卡片的标题栏可移动组件，拖动卡片右下角可调整大小。',
+        },
+        sonic: {
+          title: '白噪音',
+          description: '点击卡片右侧中部的按钮来翻转卡片，挑选您喜欢的白噪音。',
+        },
+        timer: {
+          title: '专注时钟',
+          description: '记录专注时间。点击右侧中部按钮切换模式，双击倒计时“自定义”可设定时长。',
+        },
+        todo: {
+          title: '待办清单',
+          description: '管理每日任务。点击任务右侧的目标图标，可为该任务开启专注时钟。',
+        },
+        brain: {
+          title: '注意力中转站',
+          description: '快速记录稍纵即逝的想法，清空大脑避免分心。可以粘贴文字或图片。',
+        },
+        breaker: {
+          title: 'AI 任务拆解',
+          description: '感到不知所措？使用 AI 将大任务拆解为小步骤。',
+        },
+        dopamine: {
+          title: '多巴胺菜单',
+          description: '需要刺激？抽取随机任务。点击右侧中部按钮来自定义您的选项。',
+        },
+        stats: {
+          title: '专注统计',
+          description: '查看您的深度工作时长和能量分布。',
+        },
+        goal: {
+          title: '每日目标',
+          description: '设定并追踪目标。完成任意目标即可获得相应的奖励！',
+        },
+        next: '下一步',
+        prev: '上一步',
+        done: '完成',
+        skip: '跳过引导',
       },
     },
     test: {
@@ -1824,7 +1937,7 @@ export const dictionary = {
       proBadge: '专业版',
     },
     comparePlans: {
-      title: '对比计划',
+      title: '会员计划',
       subtitle: '解锁 Pro 版全部潜力。',
       columns: {
         feature: '功能',
@@ -1838,7 +1951,7 @@ export const dictionary = {
         customBackgrounds: '自定义背景',
         aiTaskBreaker: 'AI 任务拆解',
         prioritySupport: '优先支持',
-        unlimitedTasks: '无限任务',
+        unlimitedTasks: '任务数量',
       },
       values: {
         basic: '基础',
@@ -1848,6 +1961,21 @@ export const dictionary = {
         inDev: '正在开发',
         limit10: '限10个',
         limitedTimes: '有限次数',
+        threePerDay: '一天三次',
+        limited: '有限',
+      },
+      intervals: {
+        month: '月度',
+        year: '年度',
+        monthShort: '月',
+        yearShort: '年',
+      },
+      billing: {
+        cancelAnytime: '7天免费试用，随时取消。',
+        savePercent: '省17%',
+      },
+      cta: {
+        startTrial: '开始7天免费试用',
       },
       beta: {
         msgPre: '好消息！您当前处于',
