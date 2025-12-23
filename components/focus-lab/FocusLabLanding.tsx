@@ -354,28 +354,28 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
                 title: t.focusLabLanding.features.items[0].title,
                 desc: t.focusLabLanding.features.items[0].desc,
                 color: 'from-orange-500/10 to-red-500/10',
-                image: `/static/images/focuslab-landing/专注时钟${language === 'zh' ? '' : 'en'}.png`,
+                image: `/static/images/focuslab-landing/focus-clock-${language === 'zh' ? 'zh' : 'en'}.png`,
               },
               {
                 emoji: '🗒',
                 title: t.focusLabLanding.features.items[1].title,
                 desc: t.focusLabLanding.features.items[1].desc,
                 color: 'from-blue-500/10 to-indigo-500/10',
-                image: `/static/images/focuslab-landing/AI任务拆解${language === 'zh' ? '' : 'en'}.png`,
+                image: `/static/images/focuslab-landing/ai-task-${language === 'zh' ? 'zh' : 'en'}.png`,
               },
               {
                 emoji: '🍬',
                 title: t.focusLabLanding.features.items[2].title,
                 desc: t.focusLabLanding.features.items[2].desc,
                 color: 'from-pink-500/10 to-purple-500/10',
-                image: `/static/images/focuslab-landing/多巴胺菜单${language === 'zh' ? '' : 'en'}.png`,
+                image: `/static/images/focuslab-landing/dopamine-menu-${language === 'zh' ? 'zh' : 'en'}.png`,
               },
               {
                 emoji: '📊',
                 title: t.focusLabLanding.features.items[3].title,
                 desc: t.focusLabLanding.features.items[3].desc,
                 color: 'from-emerald-500/10 to-teal-500/10',
-                image: `/static/images/focuslab-landing/白噪音${language === 'zh' ? '' : 'en'}.png`,
+                image: `/static/images/focuslab-landing/white-noise-${language === 'zh' ? 'zh' : 'en'}.png`,
               },
             ].map((f, i) => (
               <motion.div
