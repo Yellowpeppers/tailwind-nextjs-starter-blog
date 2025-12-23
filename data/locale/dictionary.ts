@@ -1379,6 +1379,7 @@ export const dictionary = {
           reward: '专属奖励',
           rewardUnlocked: '专注奖励已解锁!',
           rewardLocked: '达成目标解锁烟花',
+          save: '保存设置',
         },
       },
       promo: {
