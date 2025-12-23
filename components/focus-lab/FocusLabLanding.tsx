@@ -1,7 +1,28 @@
-import { motion, useMotionTemplate, useMotionValue, AnimatePresence } from 'framer-motion'
+import {
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  AnimatePresence,
+  useScroll,
+  useTransform,
+  MotionValue,
+} from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
 import Image from 'next/image'
-import { MouseEvent, useState } from 'react'
+import { MouseEvent, useState, useRef, useEffect } from 'react'
+import { cn } from '@/lib/utils'
+import {
+  CheckCircle,
+  Clock,
+  Star,
+  TrendingUp,
+  Video,
+  Globe,
+  BrainCircuit,
+  Smartphone,
+  Snowflake,
+  Zap,
+} from 'lucide-react'
 
 type Props = {
   onEnter: () => void
@@ -125,92 +146,89 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Navbar removed as requested (using global nav) */}
 
-        {/* Hero Section */}
-        <main className="flex min-h-[85vh] flex-col items-center justify-center pt-20 pb-32 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full"
-          >
-            <div className="border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-900/50 dark:bg-primary-900/20 dark:text-primary-400 mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
-              <span className="relative flex h-2 w-2">
-                <span className="bg-primary-400 absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
-                <span className="bg-primary-500 relative inline-flex h-2 w-2 rounded-full"></span>
-              </span>
-              {t.focusLabLanding.hero.newVersion}
-            </div>
-
-            <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl md:text-8xl">
-              <span className="block text-gray-900 dark:text-white">
-                {t.focusLabLanding.hero.titlePre}
-              </span>
-              <span className="from-primary-500 dark:from-primary-400 block bg-gradient-to-r to-indigo-600 bg-clip-text text-transparent dark:to-indigo-400">
-                {t.focusLabLanding.hero.titlePost}
-              </span>
-            </h1>
-
-            <p className="mx-auto mt-8 max-w-2xl text-lg text-gray-600 md:text-xl dark:text-gray-300">
-              {t.focusLabLanding.hero.descPre}
-              <span className="mx-1 inline-block rounded-lg bg-orange-100 px-2 py-0.5 font-bold text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
-                {t.focusLabLanding.hero.descHighlight}
-              </span>
-              {t.focusLabLanding.hero.descPost}
-            </p>
-
-            <motion.div
-              className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-            >
-              <MagneticButton
-                onClick={onEnter}
-                className="group hover:shadow-primary-500/25 relative flex h-16 min-w-[240px] items-center justify-center gap-3 overflow-hidden rounded-full bg-gray-900 px-8 text-xl font-bold text-white shadow-2xl dark:bg-white dark:text-black dark:hover:bg-gray-100"
+        {/* Hero Section with Scroll Animation */}
+        <ContainerScroll
+          titleComponent={
+            <div className="flex flex-col items-center justify-center text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full"
               >
-                <span className="relative z-10">{t.focusLabLanding.hero.enterBtn}</span>
-                <svg
-                  className="relative z-10 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <div className="border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-900/50 dark:bg-primary-900/20 dark:text-primary-400 mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
+                  <span className="relative flex h-2 w-2">
+                    <span className="bg-primary-400 absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
+                    <span className="bg-primary-500 relative inline-flex h-2 w-2 rounded-full"></span>
+                  </span>
+                  {t.focusLabLanding.hero.newVersion}
+                </div>
+
+                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+                  <span className="block text-gray-900 dark:text-white">
+                    {t.focusLabLanding.hero.titlePre}
+                  </span>
+                  <span className="from-primary-500 dark:from-primary-400 block bg-gradient-to-r to-indigo-600 bg-clip-text text-transparent dark:to-indigo-400">
+                    {t.focusLabLanding.hero.titlePost}
+                  </span>
+                </h1>
+
+                <p className="mx-auto mt-8 max-w-2xl text-lg text-gray-600 md:text-xl dark:text-gray-300">
+                  {t.focusLabLanding.hero.descPre}
+                  <span className="mx-1 inline-block rounded-lg bg-orange-100 px-2 py-0.5 font-bold text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                    {t.focusLabLanding.hero.descHighlight}
+                  </span>
+                  {t.focusLabLanding.hero.descPost}
+                </p>
+
+                <motion.div
+                  className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
                 >
-                  <path d="M5 12h14" />
-                  <path d="m12 5 7 7-7 7" />
-                </svg>
+                  <MagneticButton
+                    onClick={onEnter}
+                    className="group hover:shadow-primary-500/25 relative flex h-16 min-w-[240px] items-center justify-center gap-3 overflow-hidden rounded-full bg-gray-900 px-8 text-xl font-bold text-white shadow-2xl dark:bg-white dark:text-black dark:hover:bg-gray-100"
+                  >
+                    <span className="relative z-10">{t.focusLabLanding.hero.enterBtn}</span>
+                    <svg
+                      className="relative z-10 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
+                    {/* Glow Effect */}
+                    <div className="from-primary-500/0 via-primary-500/40 to-primary-500/0 absolute inset-0 z-0 translate-y-[100%] bg-gradient-to-r blur-lg transition-transform duration-1000 group-hover:translate-y-[-100%]" />
+                  </MagneticButton>
+                </motion.div>
 
-                {/* Glow Effect */}
-                <div className="from-primary-500/0 via-primary-500/40 to-primary-500/0 absolute inset-0 z-0 translate-y-[100%] bg-gradient-to-r blur-lg transition-transform duration-1000 group-hover:translate-y-[-100%]" />
-              </MagneticButton>
-            </motion.div>
-
-            <p className="mt-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-              {t.focusLabLanding.hero.noCreditCard}
-            </p>
-
-            {/* Dashboard Screenshot Preview */}
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
-              className="relative mt-20 w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-2xl dark:border-gray-800 dark:bg-gray-900"
-            >
-              <Image
-                src={`/static/images/dashboard-${language === 'zh' ? 'zh' : 'en'}.png`}
-                alt="Focus Lab Dashboard"
-                width={language === 'zh' ? 3364 : 3360}
-                height={language === 'zh' ? 1838 : 1862}
-                className="h-auto w-full"
-                priority
-              />
-              {/* Shimmer/Reflection Effect */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0" />
-            </motion.div>
-          </motion.div>
-        </main>
+                <p className="mt-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  {t.focusLabLanding.hero.noCreditCard}
+                </p>
+              </motion.div>
+            </div>
+          }
+        >
+          <div className="pointer-events-none relative h-full w-full overflow-hidden">
+            <Image
+              src={`/static/images/dashboard-${language === 'zh' ? 'zh' : 'en'}.png`}
+              alt="Focus Lab Dashboard"
+              width={language === 'zh' ? 3364 : 3360}
+              height={language === 'zh' ? 1838 : 1862}
+              className="h-auto w-full rounded-2xl object-cover object-top shadow-sm"
+              priority
+            />
+            {/* Shimmer/Reflection Effect */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0" />
+          </div>
+        </ContainerScroll>
 
         {/* 2. Pain Points Section */}
         <section id="pain-points" className="py-24">
@@ -223,42 +241,43 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: '🤯',
-                title: t.focusLabLanding.painPoints.items[0].title,
-                desc: t.focusLabLanding.painPoints.items[0].desc,
-              },
-              {
-                icon: '📱',
-                title: t.focusLabLanding.painPoints.items[1].title,
-                desc: t.focusLabLanding.painPoints.items[1].desc,
-              },
-              {
-                icon: '🕰',
-                title: t.focusLabLanding.painPoints.items[2].title,
-                desc: t.focusLabLanding.painPoints.items[2].desc,
-              },
-              {
-                icon: '🧊',
-                title: t.focusLabLanding.painPoints.items[3].title,
-                desc: t.focusLabLanding.painPoints.items[3].desc,
-              },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="rounded-3xl bg-gray-50 p-8 dark:bg-gray-900/50"
-              >
-                <div className="mb-4 text-4xl">{item.icon}</div>
-                <h3 className="mb-3 text-xl font-bold dark:text-white">{item.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400">{item.desc}</p>
-              </motion.div>
-            ))}
+          <div className="mt-16">
+            <BentoGrid
+              items={[
+                {
+                  title: t.focusLabLanding.painPoints.items[0].title,
+                  description: t.focusLabLanding.painPoints.items[0].desc,
+                  icon: <BrainCircuit className="h-4 w-4 text-rose-500" />,
+                  status: 'Critical',
+                  tags: ['Focus', 'Energy'],
+                  colSpan: 3,
+                  hasPersistentHover: true,
+                },
+                {
+                  title: t.focusLabLanding.painPoints.items[1].title,
+                  description: t.focusLabLanding.painPoints.items[1].desc,
+                  icon: <Smartphone className="h-4 w-4 text-amber-500" />,
+                  status: 'High Risk',
+                  tags: ['Distraction', 'Digital'],
+                  colSpan: 2,
+                },
+                {
+                  title: t.focusLabLanding.painPoints.items[2].title,
+                  description: t.focusLabLanding.painPoints.items[2].desc,
+                  icon: <Clock className="h-4 w-4 text-blue-500" />,
+                  tags: ['Planning', 'Time'],
+                  colSpan: 3,
+                },
+                {
+                  title: t.focusLabLanding.painPoints.items[3].title,
+                  description: t.focusLabLanding.painPoints.items[3].desc,
+                  icon: <Snowflake className="h-4 w-4 text-cyan-500" />,
+                  status: 'Common',
+                  tags: ['Action', 'Start'],
+                  colSpan: 2,
+                },
+              ]}
+            />
           </div>
         </section>
 
@@ -335,24 +354,28 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
                 title: t.focusLabLanding.features.items[0].title,
                 desc: t.focusLabLanding.features.items[0].desc,
                 color: 'from-orange-500/10 to-red-500/10',
+                image: `/static/images/focuslab-landing/专注时钟${language === 'zh' ? '' : 'en'}.png`,
               },
               {
                 emoji: '🗒',
                 title: t.focusLabLanding.features.items[1].title,
                 desc: t.focusLabLanding.features.items[1].desc,
                 color: 'from-blue-500/10 to-indigo-500/10',
+                image: `/static/images/focuslab-landing/AI任务拆解${language === 'zh' ? '' : 'en'}.png`,
               },
               {
                 emoji: '🍬',
                 title: t.focusLabLanding.features.items[2].title,
                 desc: t.focusLabLanding.features.items[2].desc,
                 color: 'from-pink-500/10 to-purple-500/10',
+                image: `/static/images/focuslab-landing/多巴胺菜单${language === 'zh' ? '' : 'en'}.png`,
               },
               {
                 emoji: '📊',
                 title: t.focusLabLanding.features.items[3].title,
                 desc: t.focusLabLanding.features.items[3].desc,
                 color: 'from-emerald-500/10 to-teal-500/10',
+                image: `/static/images/focuslab-landing/白噪音${language === 'zh' ? '' : 'en'}.png`,
               },
             ].map((f, i) => (
               <motion.div
@@ -361,26 +384,27 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="group hover:border-primary-200 dark:hover:border-primary-900/50 flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-xl sm:flex-row dark:border-zinc-800 dark:bg-zinc-900/50"
+                className="group hover:border-primary-200 dark:hover:border-primary-900/50 flex h-full flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-xl sm:flex-row dark:border-zinc-800 dark:bg-zinc-900/50"
               >
                 <div
-                  className={`relative flex aspect-video w-full items-center justify-center bg-gradient-to-br ${f.color} sm:w-1/2`}
+                  className={`relative flex h-52 w-full items-center justify-center bg-gradient-to-br ${f.color} p-4 sm:h-52 sm:w-1/2`}
                 >
                   {/* Decorative Elements */}
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] opacity-20"></div>
 
-                  {/* Image Placeholder */}
-                  <div className="relative z-10 flex h-3/4 w-3/4 flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300/50 bg-white/40 shadow-inner backdrop-blur-sm dark:border-zinc-700/50 dark:bg-zinc-800/40">
-                    <div className="mb-2 text-4xl grayscale transition-all duration-500 group-hover:scale-110 group-hover:grayscale-0">
-                      {f.emoji}
-                    </div>
-                    <span className="group-hover:text-primary-500 text-[10px] font-bold tracking-widest text-gray-400 uppercase transition-colors">
-                      {language === 'zh' ? '组件截图占位' : 'WIDGET SCREENSHOT'}
-                    </span>
+                  {/* Component Screenshot */}
+                  <div className="relative h-full w-full drop-shadow-2xl transition-transform duration-500 group-hover:scale-105">
+                    <Image
+                      src={f.image}
+                      alt={f.title}
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                    />
                   </div>
                 </div>
 
-                <div className="flex flex-1 flex-col justify-center p-8">
+                <div className="flex flex-1 flex-col justify-center p-6 md:p-8">
                   <h3 className="mb-3 text-2xl font-bold dark:text-white">{f.title}</h3>
                   <p className="text-gray-600 dark:text-zinc-400">{f.desc}</p>
                 </div>
@@ -398,87 +422,59 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
           </div>
 
           <div className="relative mx-auto max-w-4xl">
-            {/* The Main Card with Fixed/Min Height to avoid jumping */}
-            <div className="relative min-h-[320px] overflow-hidden rounded-[32px] border border-gray-100 bg-white p-12 shadow-2xl transition-all dark:border-zinc-800 dark:bg-zinc-900">
+            {/* The Main Card Wrapper */}
+            <div className="relative mx-auto mt-12 w-full max-w-2xl">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTestimonial}
-                  initial={{ opacity: 0, x: 10, scale: 0.98 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -10, scale: 0.98 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex flex-col items-center justify-center text-center"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  <div className="mb-8 flex gap-1.5">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg
-                        key={s}
-                        className="h-6 w-6 text-yellow-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-
-                  <blockquote className="mb-10 text-2xl leading-relaxed font-semibold text-gray-900 italic md:text-3xl dark:text-white">
-                    {t.focusLabLanding.testimonials.items[activeTestimonial].quote}
-                  </blockquote>
-
-                  <div className="flex flex-col items-center">
-                    <div className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
-                      {t.focusLabLanding.testimonials.items[activeTestimonial].name}
-                    </div>
-                    <div className="text-primary-500 text-sm font-bold tracking-widest uppercase">
-                      {t.focusLabLanding.testimonials.items[activeTestimonial].role}
-                    </div>
-                  </div>
+                  <Testimonial
+                    name={t.focusLabLanding.testimonials.items[activeTestimonial].name}
+                    role={t.focusLabLanding.testimonials.items[activeTestimonial].role}
+                    testimonial={t.focusLabLanding.testimonials.items[activeTestimonial].quote}
+                    rating={5}
+                  />
                 </motion.div>
               </AnimatePresence>
 
-              {/* Quotes Decor */}
-              <div className="pointer-events-none absolute top-10 left-10 font-serif text-8xl text-gray-100 opacity-50 dark:text-zinc-800">
-                “
-              </div>
-              <div className="pointer-events-none absolute right-10 bottom-10 font-serif text-8xl text-gray-100 opacity-50 dark:text-zinc-800">
-                ”
-              </div>
-            </div>
-
-            {/* Navigation Controls - Absolute and Fixed relative to the outer container to avoid moving */}
-            <div className="pointer-events-none absolute top-1/2 -left-6 flex w-[calc(100%+48px)] -translate-y-1/2 items-center justify-between">
-              <button
-                onClick={prevTestimonial}
-                className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-800 shadow-xl transition-all hover:scale-110 hover:bg-gray-50 active:scale-95 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-                aria-label="Previous testimonial"
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={3}
+              {/* Navigation Controls - Absolute and Fixed relative to the outer container to avoid moving */}
+              <div className="pointer-events-none absolute top-1/2 -left-20 flex w-[calc(100%+160px)] -translate-y-1/2 items-center justify-between xl:-left-32 xl:w-[calc(100%+256px)]">
+                <button
+                  onClick={prevTestimonial}
+                  className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-800 shadow-xl transition-all hover:scale-110 hover:bg-gray-50 active:scale-95 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+                  aria-label="Previous testimonial"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
 
-              <button
-                onClick={nextTestimonial}
-                className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-800 shadow-xl transition-all hover:scale-110 hover:bg-gray-50 active:scale-95 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-                aria-label="Next testimonial"
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={3}
+                <button
+                  onClick={nextTestimonial}
+                  className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-800 shadow-xl transition-all hover:scale-110 hover:bg-gray-50 active:scale-95 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+                  aria-label="Next testimonial"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Progress Dots */}
@@ -524,6 +520,286 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
           </div>
         </section>
       </div>
+    </div>
+  )
+}
+
+const ContainerScroll = ({
+  titleComponent,
+  children,
+}: {
+  titleComponent: string | React.ReactNode
+  children: React.ReactNode
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+  })
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => {
+      window.removeEventListener('resize', checkMobile)
+    }
+  }, [])
+
+  const scaleDimensions = () => {
+    return isMobile ? [0.7, 0.9] : [1.05, 1]
+  }
+
+  const rotate = useTransform(scrollYProgress, [0, 1], [20, 0])
+  const scale = useTransform(scrollYProgress, [0, 1], scaleDimensions())
+  const translate = useTransform(scrollYProgress, [0, 1], [0, -100])
+
+  return (
+    <div
+      className="relative flex h-[60rem] items-start justify-center overflow-hidden p-2 md:h-[80rem] md:px-20 md:pt-20"
+      ref={containerRef}
+    >
+      <div
+        className="relative w-full py-0 md:pt-0"
+        style={{
+          perspective: '1000px',
+        }}
+      >
+        <Header translate={translate} titleComponent={titleComponent} />
+        <Card rotate={rotate} translate={translate} scale={scale}>
+          {children}
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+const Header = ({
+  translate,
+  titleComponent,
+}: {
+  translate: MotionValue<number>
+  titleComponent: React.ReactNode | string
+}) => {
+  return (
+    <motion.div
+      style={{
+        translateY: translate,
+      }}
+      className="div mx-auto max-w-7xl text-center"
+    >
+      {titleComponent}
+    </motion.div>
+  )
+}
+
+const Card = ({
+  rotate,
+  scale,
+  children,
+}: {
+  rotate: MotionValue<number>
+  scale: MotionValue<number>
+  translate: MotionValue<number>
+  children: React.ReactNode
+}) => {
+  return (
+    <motion.div
+      style={{
+        rotateX: rotate,
+        scale,
+        boxShadow:
+          '0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003',
+      }}
+      className="mx-auto mt-20 w-full max-w-5xl rounded-[30px] border-none bg-transparent shadow-2xl md:p-0"
+    >
+      <div className="h-full w-full overflow-hidden rounded-2xl bg-transparent md:rounded-2xl">
+        {children}
+      </div>
+    </motion.div>
+  )
+}
+
+// --- New Testimonial Component ---
+
+interface TestimonialProps extends React.HTMLAttributes<HTMLDivElement> {
+  name: string
+  role: string
+  company?: string
+  testimonial: string
+  rating?: number
+  image?: string
+}
+
+const Testimonial = ({
+  name,
+  role,
+  company,
+  testimonial,
+  rating = 5,
+  image,
+  className,
+  ...props
+}: TestimonialProps) => {
+  return (
+    <div
+      className={cn(
+        'border-primary-500/10 dark:hover:shadow-primary-500/5 relative overflow-hidden rounded-2xl border bg-white p-6 transition-all hover:shadow-lg md:p-8 dark:bg-zinc-900',
+        className
+      )}
+      {...props}
+    >
+      <div className="absolute top-6 right-6 font-serif text-6xl text-gray-200 dark:text-zinc-800">
+        "
+      </div>
+
+      <div className="flex h-full flex-col justify-between gap-4">
+        {rating > 0 && (
+          <div className="flex gap-1">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <StarIcon
+                key={index}
+                className={cn(
+                  'h-4 w-4',
+                  index < rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'
+                )}
+              />
+            ))}
+          </div>
+        )}
+
+        <p className="text-base text-pretty text-gray-600 dark:text-zinc-300">{testimonial}</p>
+
+        <div className="flex items-center justify-start gap-4">
+          <div className="flex items-center gap-4">
+            {image ? (
+              <div className="relative h-12 w-12 overflow-hidden rounded-full">
+                <Image src={image} alt={name} fill className="object-cover" />
+              </div>
+            ) : (
+              <div className="bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 flex h-12 w-12 items-center justify-center rounded-full font-bold">
+                {name[0]}
+              </div>
+            )}
+
+            <div className="flex flex-col text-left">
+              <h3 className="font-semibold text-gray-900 dark:text-white">{name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {role}
+                {company && ` @ ${company}`}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const StarIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    {...props}
+  >
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+)
+
+// --- Bento Grid Components ---
+
+export interface BentoItem {
+  title: string
+  description: string
+  icon: React.ReactNode
+  status?: string
+  tags?: string[]
+  meta?: string
+  cta?: string
+  colSpan?: number
+  hasPersistentHover?: boolean
+}
+
+interface BentoGridProps {
+  items: BentoItem[]
+}
+
+function BentoGrid({ items }: BentoGridProps) {
+  return (
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-3 p-4 md:grid-cols-5">
+      {items.map((item, index) => (
+        <div
+          key={index}
+          className={cn(
+            'group relative overflow-hidden rounded-xl p-4 transition-all duration-300',
+            'border border-gray-100/80 bg-white dark:border-white/10 dark:bg-black',
+            'hover:shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:hover:shadow-[0_2px_12px_rgba(255,255,255,0.03)]',
+            'will-change-transform hover:-translate-y-0.5',
+            item.colSpan || 'col-span-1',
+            item.colSpan === 2 ? 'md:col-span-2' : '',
+            item.colSpan === 3 ? 'md:col-span-3' : '',
+            {
+              '-translate-y-0.5 shadow-[0_2px_12px_rgba(0,0,0,0.03)]': item.hasPersistentHover,
+              'dark:shadow-[0_2px_12px_rgba(255,255,255,0.03)]': item.hasPersistentHover,
+            }
+          )}
+        >
+          <div
+            className={`absolute inset-0 ${
+              item.hasPersistentHover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            } transition-opacity duration-300`}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[length:4px_4px] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.02)_1px,transparent_1px)]" />
+          </div>
+
+          <div className="relative flex flex-col space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/5 transition-all duration-300 group-hover:bg-gradient-to-br dark:bg-white/10">
+                {item.icon}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-[15px] font-medium tracking-tight text-gray-900 dark:text-gray-100">
+                {item.title}
+                <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+                  {item.meta}
+                </span>
+              </h3>
+              <p className="text-sm leading-snug font-[425] text-gray-600 dark:text-gray-300">
+                {item.description}
+              </p>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                {item.tags?.map((tag, i) => (
+                  <span
+                    key={i}
+                    className="rounded-md bg-black/5 px-2 py-1 backdrop-blur-sm transition-all duration-200 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`absolute inset-0 -z-10 rounded-xl bg-gradient-to-br from-transparent via-gray-100/50 to-transparent p-px transition-opacity duration-300 dark:via-white/10 ${
+              item.hasPersistentHover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+          />
+        </div>
+      ))}
     </div>
   )
 }

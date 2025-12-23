@@ -60,20 +60,20 @@ export const dictionary = {
         desc: "Get confident about how this adult ADHD self-screening works, why it's free, and what to do next once you have your score.",
         items: [
           {
-            q: 'Is this online test accurate?',
-            a: 'This tool uses the **ASRS v1.1**, a clinical screening scale developed by the World Health Organization (WHO). While an online test **cannot replace a formal diagnosis**, it is a reliable first step to identify symptom patterns and determine if professional help is needed.',
+            q: 'Is Focus Lab free?',
+            a: 'Yes! The core features (White Noise, Timer, etc.) are free forever. We also offer a Pro plan for power users who want unlimited tasks, cloud analytics, and custom themes.',
           },
           {
-            q: 'Is it really completely free?',
-            a: "Yes. We hate the 'pay to see results' trap. NeuroHacks Lab provides a completely free self-test with instant results.",
+            q: 'Why is this specifically for ADHD?',
+            a: 'Standard to-do lists just add anxiety. Focus Lab is designed to help you *start*. Tools like **Brown Noise** (for calming the mind), **Task Breaker** (for executive dysfunction), and **Dopamine Menu** are specifically built for the neurodivergent brain.',
           },
           {
-            q: 'Do I need to provide an email?',
-            a: 'No. We insist on **privacy first**. You can complete the test and view results without registering or leaving an email.',
+            q: 'Can I install this as an App?',
+            a: 'Yes! Focus Lab is a **Progressive Web App (PWA)**. You can "Add to Home Screen" or "Install" directly from your browser to get a fullscreen, distraction-free app experience on your desktop or phone.',
           },
           {
-            q: 'What should I do after the test?',
-            a: 'If your score is high, we recommend consulting a psychiatrist. Meanwhile, you can directly use our [Focus Lab](/focuslab) and read related guides to start managing distraction issues immediately.',
+            q: 'Do I need an account to sync?',
+            a: 'We recommend it. While you can use Focus Lab as a guest (data saved locally), logging in securely syncs your stats and settings to the cloud, allowing you to switch between devices without losing progress.',
           },
         ],
       },
@@ -2143,21 +2143,23 @@ export const dictionary = {
         items: [
           {
             question: 'Focus Lab 是免费的吗？',
-            answer: '是的！Focus Lab 完全免费使用。它完全在你的浏览器中运行。',
-          },
-          {
-            question: '我需要创建账户吗？',
             answer:
-              '不需要。你可以立即使用，你的数据将存储在浏览器的本地。无需注册即可体验所有功能。',
+              '是的！核心功能（如白噪音、番茄钟、基础任务管理）永久免费。同时，我们提供高级会员服务（Pro），您可以根据需要升级以解锁无限任务量、云端高级分析和自定义主题等功能。',
           },
           {
-            question: '这是如何帮助我专注的？',
+            question: '为什么说它是专为 ADHD 设计的？',
             answer:
-              '通过将所有抗干扰工具（白噪音、计时器、任务拆解）集成在一个界面，减少切换窗口，从而减少注意力流失。',
+              '普通清单只告诉你“做什么”，而 Focus Lab 帮助你“开始做”。我们内置了“棕噪音”来平复大脑杂音，“任务拆解器”来降低启动阻力，以及“多巴胺菜单”来提供健康的能量补给，这些都是针对 ADHD 大脑优化的。',
           },
           {
-            question: '我的数据安全吗？',
-            answer: '您的数据默认存储在本地浏览器中。如果您选择登录，数据将加密同步到云端。',
+            question: '我可以把它安装为 App 使用吗？',
+            answer:
+              '可以！这是一个渐进式网络应用 (PWA)。无需访问应用商店，你只需在浏览器菜单中选择“添加到主屏幕”或“安装应用”，即可获得像原生 App 一样的全屏沉浸体验。',
+          },
+          {
+            question: '我需要注册账户来同步数据吗？',
+            answer:
+              '推荐注册。游客模式下数据仅保存在本机；登录后，您的专注数据会自动加密上传至云端，实现电脑、平板和手机之间的无缝同步，防止数据丢失。',
           },
         ],
       },
