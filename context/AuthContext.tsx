@@ -17,7 +17,8 @@ type AuthContextType = {
     avatar_url?: string
   }) => Promise<{ error: Error | null }>
   refreshUser: () => Promise<void>
-  tier: string
+  subscriptionStatus: string | null
+  isPro: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -26,8 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tier, setTier] = useState<string>('free')
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Derived state for ease of use
+  const isPro = subscriptionStatus === 'premium'
 
   useEffect(() => {
     const {
@@ -38,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(null)
         setUser(null)
         setLoading(false)
-        setTier('free')
+        setSubscriptionStatus(null)
         // Clear any lingering local storage if needed, though supabase client handles it
         return
       }
@@ -59,16 +63,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check if profile exists
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, tier')
+        .select('id, email, subscription_status')
         .eq('id', user.id)
         .single()
 
       if (error || !data) {
         console.warn('Profile missing for authenticated user, attempting to heal...')
         // Create profile manually (Self-healing)
+        // Note: we don't set 'tier' anymore, just basic fields
         const { error: insertError } = await supabase
           .from('profiles')
-          .upsert({ id: user.id, email: user.email, tier: 'free' }, { onConflict: 'id' })
+          .upsert(
+            { id: user.id, email: user.email, subscription_status: 'free' },
+            { onConflict: 'id' }
+          )
 
         if (insertError) {
           console.error('Failed to auto-create profile:', {
@@ -80,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })
         } else {
           console.log('Profile successfully restored.')
-          setTier('free')
+          setSubscriptionStatus('free')
         }
       } else {
         // Profile exists, sync email if missing
@@ -88,14 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await supabase.from('profiles').update({ email: user.email }).eq('id', user.id)
         }
 
-        setTier(data.tier || 'free')
+        setSubscriptionStatus(data.subscription_status || 'free')
       }
     }
 
     if (user) {
       ensureProfile()
     } else {
-      setTier('free')
+      setSubscriptionStatus(null)
     }
   }, [user, supabase])
 
@@ -104,9 +112,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { user },
       error,
     } = await supabase.auth.getUser()
+
     if (user) {
       setUser(user)
+
+      // Also refresh profile data (subscription_status)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_status')
+        .eq('id', user.id)
+        .single()
+
+      if (profile) {
+        setSubscriptionStatus(profile.subscription_status || 'free')
+      }
     }
+
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -143,9 +164,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    // Clear local user data to prevent leakage to next session
+    Object.keys(window.localStorage).forEach((key) => {
+      if (key.startsWith('focus-lab-')) {
+        window.localStorage.removeItem(key)
+      }
+    })
     await supabase.auth.signOut()
     setUser(null)
     setSession(null)
+    window.location.reload()
   }
 
   const updateProfile = async (data: { full_name?: string; avatar_url?: string }) => {
@@ -167,7 +195,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         updateProfile,
         refreshUser,
-        tier,
+        subscriptionStatus,
+        isPro,
       }}
     >
       {children}

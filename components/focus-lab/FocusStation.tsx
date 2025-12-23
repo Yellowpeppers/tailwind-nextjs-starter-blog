@@ -183,22 +183,22 @@ export const FocusStation = ({
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addTextItem()}
               placeholder={t.focusLab.widgets.todo.placeholder}
-              className={`focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
+              className={`w-full rounded-xl border py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
                 isWarm
-                  ? 'border-[#ECE8E0] bg-[#F5F2EC] focus:bg-[#F5F2EC] dark:border-gray-700 dark:bg-gray-800'
+                  ? 'border-[#ECE8E0] bg-[#F5F2EC] focus:border-[#C27B4A] focus:bg-[#F5F2EC] focus:ring-[#C27B4A] dark:border-gray-700 dark:bg-gray-800'
                   : isGreen
-                    ? 'border-[#E2E8E2] bg-[#F8F9F7] text-gray-900 placeholder:text-gray-400 focus:ring-[#7A9F7A]'
+                    ? 'border-[#E2E8E2] bg-[#F8F9F7] text-gray-900 placeholder:text-gray-400 focus:border-[#7A9F7A] focus:ring-[#7A9F7A]'
                     : isBlue
-                      ? 'border-[#D1E3F3] bg-[#E0EEF8] text-gray-900 placeholder:text-gray-400 focus:ring-[#5B84B1]'
+                      ? 'border-[#D1E3F3] bg-[#E0EEF8] text-gray-900 placeholder:text-gray-400 focus:border-[#5B84B1] focus:ring-[#5B84B1]'
                       : isCartoon
-                        ? 'border-2 border-black bg-[#FFF8E7] text-black shadow-[2px_2px_0px_0px_#000000] placeholder:text-gray-500 focus:ring-0 dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_#FFFFFF]'
+                        ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] placeholder:text-gray-500 focus:ring-0 dark:border-white dark:bg-gray-900 dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
                         : 'focus:border-primary-500 focus:ring-primary-500 border-gray-100 bg-gray-100 text-gray-900 placeholder:text-gray-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800'
               }`}
             />
             <button
               onClick={addTextItem}
               disabled={!inputValue.trim()}
-              className="text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600"
+              className={`${isWarm ? 'text-[#C27B4A] hover:bg-[#F5F2EC]' : isGreen ? 'text-[#7A9F7A] hover:bg-[#F8F9F7]' : isBlue ? 'text-[#5B84B1] hover:bg-[#E0EEF8]' : isCartoon ? 'text-black dark:text-white' : 'text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'} absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600`}
             >
               <PlusIcon className="h-5 w-5" />
             </button>
@@ -221,7 +221,7 @@ export const FocusStation = ({
                   : isBlue
                     ? 'text-[#5B84B1] hover:bg-[#E0EEF8] hover:hover:text-[#4A6E94]'
                     : isCartoon
-                      ? 'border-2 border-transparent text-black hover:border-black hover:bg-[#FFF8E7] hover:text-black dark:text-white dark:hover:border-white dark:hover:bg-[#2A2A2A]'
+                      ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white dark:border-white dark:bg-black dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:hover:bg-white dark:hover:text-black'
                       : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
             }`}
             title={lang === 'en' ? 'Clear all tasks' : '清空所有任务'}
@@ -254,8 +254,18 @@ export const FocusStation = ({
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                     className={`group relative flex cursor-pointer items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900/40 ${
                       focusedTaskId === item.id
-                        ? 'border-primary-500 ring-primary-500 dark:border-primary-400 dark:ring-primary-400 border ring-1'
-                        : 'ring-primary-100/50 hover:border-primary-200 dark:ring-primary-900/30 border border-transparent ring-1'
+                        ? isWarm
+                          ? 'border border-[#C27B4A] bg-[#F5F2EC] ring-1 ring-[#C27B4A]'
+                          : isGreen
+                            ? 'border border-[#7A9F7A] bg-[#F8F9F7] ring-1 ring-[#7A9F7A]'
+                            : isBlue
+                              ? 'border border-[#5B84B1] bg-[#E0EEF8] ring-1 ring-[#5B84B1]'
+                              : isCartoon
+                                ? 'border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ring-0 dark:border-white dark:bg-gray-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
+                                : 'border-primary-500 ring-primary-500 dark:border-primary-400 dark:ring-primary-400 border ring-1'
+                        : isCartoon
+                          ? 'border-2 border-transparent hover:border-black dark:hover:border-white'
+                          : 'ring-primary-100/50 hover:border-primary-200 dark:ring-primary-900/30 border border-transparent ring-1'
                     }`}
                     onClick={() => toggleItem(item.id)}
                   >
@@ -276,7 +286,15 @@ export const FocusStation = ({
                                 : isCartoon
                                   ? 'border-2 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
                                   : 'border-primary-500 bg-primary-500 text-white'
-                          : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
+                          : isWarm
+                            ? 'border-[#C27B4A]/50 bg-white/50 hover:border-[#C27B4A] dark:bg-gray-800/50'
+                            : isGreen
+                              ? 'border-[#7A9F7A]/50 bg-white/50 hover:border-[#7A9F7A] dark:bg-gray-800/50'
+                              : isBlue
+                                ? 'border-[#5B84B1]/50 bg-white/50 hover:border-[#5B84B1] dark:bg-gray-800/50'
+                                : isCartoon
+                                  ? 'border-2 border-black bg-white hover:bg-gray-100 dark:border-white dark:bg-gray-900'
+                                  : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
                       }`}
                       onPointerDown={(e) => e.stopPropagation()}
                     >
@@ -305,7 +323,15 @@ export const FocusStation = ({
                           }}
                           className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
                             focusedTaskId === item.id
-                              ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
+                              ? isWarm
+                                ? 'bg-[#F5F2EC] text-[#C27B4A]'
+                                : isGreen
+                                  ? 'bg-[#F8F9F7] text-[#7A9F7A]'
+                                  : isBlue
+                                    ? 'bg-[#E0EEF8] text-[#5B84B1]'
+                                    : isCartoon
+                                      ? 'bg-black text-white dark:bg-white dark:text-black'
+                                      : 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
                               : 'hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 hover:bg-gray-100 dark:text-gray-600 dark:hover:bg-gray-800'
                           }`}
                           title="Focus on this"

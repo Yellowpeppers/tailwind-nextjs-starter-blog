@@ -17,7 +17,7 @@ type AuthModalProps = {
 
 export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModalProps) {
   const { t } = useTranslation()
-  const { signInWithGoogle, signInWithEmail, signUp, user, signOut, refreshUser, tier } = useAuth()
+  const { signInWithGoogle, signInWithEmail, signUp, user, signOut, refreshUser, isPro } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editName, setEditName] = useState('')
@@ -67,7 +67,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-[200]" onClose={handleClose}>
+      <Dialog as="div" className="relative z-[250]" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -150,31 +150,34 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                   </div>
                 ) : user ? (
                   // Profile View for Logged-in Users
-                  <div className="text-center">
+                  <div className="flex flex-col items-center">
+                    {/* Avatar Section */}
                     {!isEditingProfile ? (
                       <>
-                        <div
-                          className={`group relative mx-auto mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full text-2xl font-bold text-white shadow-lg ${
-                            user.user_metadata?.avatar_url
-                              ? 'bg-transparent'
-                              : user.user_metadata?.avatar_color === 'pink'
-                                ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
-                                : user.user_metadata?.avatar_color === 'emerald'
-                                  ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
-                                  : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
-                          }`}
-                        >
-                          {user.user_metadata?.avatar_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={user.user_metadata.avatar_url}
-                              alt="Avatar"
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            user.user_metadata?.full_name?.charAt(0) ||
-                            user.email?.charAt(0)?.toUpperCase()
-                          )}
+                        <div className="group relative mb-4">
+                          <div
+                            className={`flex h-24 w-24 items-center justify-center overflow-hidden rounded-full text-3xl font-bold text-white shadow-xl ring-4 ring-white dark:ring-gray-800 ${
+                              user.user_metadata?.avatar_url
+                                ? 'bg-transparent'
+                                : user.user_metadata?.avatar_color === 'pink'
+                                  ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
+                                  : user.user_metadata?.avatar_color === 'emerald'
+                                    ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
+                                    : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
+                            }`}
+                          >
+                            {user.user_metadata?.avatar_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={user.user_metadata.avatar_url}
+                                alt="Avatar"
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              user.user_metadata?.full_name?.charAt(0) ||
+                              user.email?.charAt(0)?.toUpperCase()
+                            )}
+                          </div>
                           <button
                             onClick={() => {
                               setEditName(user.user_metadata?.full_name || '')
@@ -188,36 +191,126 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                               fill="none"
                               stroke="currentColor"
                               strokeWidth="2"
-                              className="h-6 w-6 text-white"
+                              className="h-8 w-8 text-white"
                             >
-                              <path d="M12 20h9" />
-                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                             </svg>
                           </button>
                         </div>
-                        <Dialog.Title
-                          as="h3"
-                          className="mb-1 text-xl leading-6 font-bold text-gray-900 dark:text-gray-100"
-                        >
-                          {user.user_metadata?.full_name || t.auth.profile.userFallback}
-                        </Dialog.Title>
-                        <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-                          {user.email}
-                        </p>
 
-                        <div className="space-y-3">
-                          <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-500 dark:text-gray-400">
-                                {t.auth.profile.platformStatus}
-                              </span>
-                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                {tier === 'free'
-                                  ? t.auth.profile.freeMember
-                                  : t.auth.profile.focusMember}
-                              </span>
+                        <div className="mb-8 text-center">
+                          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                            {user.user_metadata?.full_name || t.auth.profile.userFallback}
+                          </h3>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            {user.email}
+                          </p>
+                        </div>
+
+                        {/* Status Card */}
+                        <div className="mb-8 w-full">
+                          <div
+                            className={`relative overflow-hidden rounded-2xl p-4 transition-all ${
+                              isPro
+                                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30'
+                                : 'bg-gray-50 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                                    isPro
+                                      ? 'bg-white/20 text-white backdrop-blur-sm'
+                                      : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                                  }`}
+                                >
+                                  {isPro ? (
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="currentColor"
+                                      className="h-6 w-6"
+                                    >
+                                      <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      strokeWidth={1.5}
+                                      stroke="currentColor"
+                                      className="h-6 w-6"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                                      />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="text-left">
+                                  <p
+                                    className={`text-xs font-semibold tracking-wider uppercase ${
+                                      isPro ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'
+                                    }`}
+                                  >
+                                    Member Status
+                                  </p>
+                                  <h4
+                                    className={`text-lg font-bold ${
+                                      isPro ? 'text-white' : 'text-gray-900 dark:text-gray-100'
+                                    }`}
+                                  >
+                                    {isPro ? 'Pro Workspace' : 'Free Plan'}
+                                  </h4>
+                                </div>
+                              </div>
+                              {isPro && (
+                                <div className="rounded-full bg-white/20 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                                  Active
+                                </div>
+                              )}
                             </div>
                           </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex w-full flex-col gap-3">
+                          {isPro && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch('/api/stripe/portal', {
+                                    method: 'POST',
+                                  })
+                                  const { url } = await response.json()
+                                  if (url) window.location.href = url
+                                } catch (error) {
+                                  console.error('Failed to open customer portal', error)
+                                  alert('Failed to load subscription portal.')
+                                }
+                              }}
+                              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-indigo-500/20 transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:ring-offset-gray-900"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="h-4 w-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"
+                                />
+                              </svg>
+                              Manage Subscription
+                            </button>
+                          )}
 
                           <button
                             type="button"
@@ -225,8 +318,21 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                               setEditName(user.user_metadata?.full_name || '')
                               setIsEditingProfile(true)
                             }}
-                            className="w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                            className="dark:hover:bg-gray-750 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                           >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              className="h-4 w-4"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                              />
+                            </svg>
                             {t.auth.profile.editProfile}
                           </button>
 
@@ -236,7 +342,7 @@ export default function AuthModal({ isOpen, onClose, onGuestContinue }: AuthModa
                               await signOut()
                               onClose()
                             }}
-                            className="w-full rounded-md px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                            className="w-full px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                           >
                             {t.auth.profile.signOut}
                           </button>

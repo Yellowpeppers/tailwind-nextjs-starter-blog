@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useMemo, useRef } from 'react'
-import type { IConfettiOptions, Shape } from 'canvas-confetti'
+import type { Options, Shape } from 'canvas-confetti'
 
 type CelebrationVariant = 'confetti' | 'sakura' | 'fireworks'
 
 type CelebrationOptions = Partial<
   Pick<
-    IConfettiOptions,
+    Options,
     | 'particleCount'
     | 'spread'
     | 'angle'
@@ -27,7 +27,7 @@ type CelebrationOptions = Partial<
 }
 
 // 基础烟花配置
-const baseOptions: IConfettiOptions = {
+const baseOptions: Options = {
   particleCount: 80,
   spread: 70,
   origin: { y: 0.7 },
@@ -127,7 +127,7 @@ export function useCelebration() {
             y: Math.random() * 0.25 + 0.05,
           })
 
-          const fireShot = (payload?: Partial<IConfettiOptions>) =>
+          const fireShot = (payload?: Partial<Options>) =>
             fire({
               ...baseOptions,
               particleCount: baseCount,

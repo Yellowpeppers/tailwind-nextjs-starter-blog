@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ResponsiveGridLayout, type Layout, type Layouts as RLayouts } from 'react-grid-layout'
+import { ResponsiveGridLayout, type Layout } from 'react-grid-layout'
+
+type RLayouts = Record<string, Layout>
 import isEqual from 'lodash/isEqual'
 import { useFocusSettingsContext } from '@/components/focus-lab/FocusSettingsContext'
 
@@ -61,7 +63,7 @@ const defaultCols: Record<LayoutPreset, number> = {
   double: 8,
 }
 
-const toRglLayout = (items: GridItem[]): Layout[] =>
+const toRglLayout = (items: GridItem[]): Layout =>
   items.map((item) => ({
     i: item.id,
     x: item.x,
@@ -70,9 +72,9 @@ const toRglLayout = (items: GridItem[]): Layout[] =>
     h: item.h,
     minW: item.minW,
     minH: item.minH,
-  }))
+  })) as unknown as Layout
 
-const fromRglLayout = (items: Layout[]): GridItem[] =>
+const fromRglLayout = (items: Layout): GridItem[] =>
   items.map((item) => ({
     id: String(item.i),
     x: item.x,
@@ -143,7 +145,7 @@ export function FocusGridLayout({
   }, [focusedCardIds, isFocusMode, layouts])
 
   const gridItemsForRender = useMemo(() => {
-    const makeMap = (items: Layout[]) => {
+    const makeMap = (items: Layout) => {
       const gridItems = fromRglLayout(items)
       const map = new Map<string, GridItem>()
       gridItems.forEach((item) => map.set(item.id, item))
@@ -156,7 +158,7 @@ export function FocusGridLayout({
     }
   }, [visibleLayouts])
 
-  const handleLayoutChange = (currentLayout: Layout[]) => {
+  const handleLayoutChange = (currentLayout: Layout) => {
     const mapped = fromRglLayout(currentLayout)
     const previous = layouts[currentBreakpoint] || []
     if (isEqual(previous, mapped)) return
@@ -174,6 +176,10 @@ export function FocusGridLayout({
     ? ({ [forcePreset]: visibleLayouts[forcePreset] } as RLayouts)
     : visibleLayouts
 
+  // Cast to any to avoid strict prop type errors (e.g. draggableHandle)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ResponsiveGridLayoutAny = ResponsiveGridLayout as any
+
   return (
     <div
       className="w-full"
@@ -181,7 +187,7 @@ export function FocusGridLayout({
       style={{ minWidth: gridWidth, width: gridWidth, margin: '0 auto' }}
     >
       {canRender && (
-        <ResponsiveGridLayout
+        <ResponsiveGridLayoutAny
           key={`rgl-${layoutKey}`}
           width={gridWidth}
           className="focuslab-grid"
@@ -228,7 +234,7 @@ export function FocusGridLayout({
               </div>
             )
           })}
-        </ResponsiveGridLayout>
+        </ResponsiveGridLayoutAny>
       )}
     </div>
   )

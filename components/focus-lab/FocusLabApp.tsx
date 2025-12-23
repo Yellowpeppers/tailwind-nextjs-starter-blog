@@ -229,15 +229,17 @@ type GreetingInfo = {
   emoji: string
 }
 
-const computeGreeting = (lang: string): GreetingInfo => {
+const computeGreeting = (lang: string, userName?: string): GreetingInfo => {
   const hour = new Date().getHours()
   const isMorning = hour >= 5 && hour < 12
-  const isAfternoon = hour >= 12 && hour < 17
-  const isEvening = hour >= 17 && hour < 21
+  const isAfternoon = hour >= 12 && hour < 18
+  // Removed Evening as per request, merged into Night/Afternoon partition
+
+  const nameSuffix = userName ? `, ${userName}` : ''
 
   if (isMorning) {
     return {
-      title: lang === 'zh' ? '早上好' : 'Good Morning',
+      title: (lang === 'zh' ? '早上好' : 'Good Morning') + nameSuffix,
       subtitle: lang === 'zh' ? '开启今天的专注旅程吧' : "Let's start fresh today",
       iconClass: 'icon-[solar--sunrise-bold-duotone]',
       emoji: '☀️',
@@ -245,29 +247,27 @@ const computeGreeting = (lang: string): GreetingInfo => {
   }
   if (isAfternoon) {
     return {
-      title: lang === 'zh' ? '下午好' : 'Good Afternoon',
+      title: (lang === 'zh' ? '下午好' : 'Good Afternoon') + nameSuffix,
       subtitle: lang === 'zh' ? '保持节奏，继续推进' : 'Keep the momentum going',
       iconClass: 'icon-[solar--sun-2-bold-duotone]',
       emoji: '🌤️',
     }
   }
-  if (isEvening) {
-    return {
-      title: lang === 'zh' ? '傍晚好' : 'Good Evening',
-      subtitle: lang === 'zh' ? '收个尾，轻松结束今天' : 'Wrap up and wind down',
-      iconClass: 'icon-[solar--sunset-bold-duotone]',
-      emoji: '🌇',
-    }
-  }
+  // Night (18:00 - 05:00)
   return {
-    title: lang === 'zh' ? '晚安' : 'Good Night',
+    title: (lang === 'zh' ? '晚安' : 'Good Night') + nameSuffix,
     subtitle: lang === 'zh' ? '好好休息，明天见' : 'Rest well and recharge',
     iconClass: 'icon-[solar--moon-stars-bold-duotone]',
     emoji: '🌙',
   }
 }
 
-const SoundVisualizer = ({ activeCount }: { activeCount: number }) => {
+const SoundVisualizer = ({ activeCount, uiStyle }: { activeCount: number; uiStyle?: UIStyle }) => {
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
+  const isBlue = uiStyle === 'blue'
+  const isCartoon = uiStyle === 'cartoon'
+
   if (activeCount === 0) {
     return (
       <div className="flex h-12 items-center justify-center gap-1 opacity-30" aria-hidden="true">
@@ -281,7 +281,7 @@ const SoundVisualizer = ({ activeCount }: { activeCount: number }) => {
       {Array.from({ length: 10 }).map((_, index) => (
         <motion.div
           key={index}
-          className="bg-primary-500/80 w-1.5 rounded-full"
+          className={`${isWarm ? 'bg-[#C27B4A]/80' : isGreen ? 'bg-[#7A9F7A]/80' : isBlue ? 'bg-[#5B84B1]/80' : isCartoon ? 'bg-black/80 dark:bg-white/80' : 'bg-primary-500/80'} w-1.5 rounded-full`}
           animate={{
             height: [12, 32 + Math.random() * 16, 12],
             opacity: [0.5, 1, 0.5],
@@ -648,6 +648,55 @@ const normalizeLayout = (
   return Array.from(byId.values())
 }
 
+const WeChatGroupModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="pointer-events-auto relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-800"
+            >
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+              <div className="flex flex-col items-center gap-4 text-center">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">加入微信交流群</h3>
+                <p className="space-y-1 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="block">扫码加入 Focus Lab 官方交流群</span>
+                  <span className="block">获取更多使用技巧与内测福利</span>
+                </p>
+                <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/static/images/wechat-group-qr.JPG"
+                    alt="WeChat Group QR"
+                    className="h-64 w-64 object-cover"
+                  />
+                </div>
+                <p className="text-xs text-gray-400">扫码识别或截图保存识别</p>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+
 const DEFAULT_LAYOUTS: Record<LayoutPreset, GridItem[]> = {
   desktop: cloneLayout(GRID_PRESETS.desktop.layout),
   triple: cloneLayout(GRID_PRESETS.triple.layout),
@@ -662,6 +711,13 @@ const EMPTY_HIDDEN: Record<LayoutPreset, Set<string>> = {
 export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const { theme, setTheme } = useTheme()
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
+  const { user } = useAuth()
+  const { t, language: lang } = useTranslation()
+  const displayName = user
+    ? user.user_metadata?.full_name ||
+      user.email?.split('@')[0] ||
+      (lang === 'zh' ? '探索者' : 'Explorer')
+    : undefined
 
   // Enforce Light Mode for Warm/Green/Cartoon Style
   useEffect(() => {
@@ -680,8 +736,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [focusedTask, setFocusedTask] = useState<FocusedTaskState>(null)
   const [externalCommand, setExternalCommand] = useState<string | null>(null)
-  const { t, language: lang } = useTranslation()
-  const [greeting, setGreeting] = useState<GreetingInfo>(() => computeGreeting(lang))
+  const [greeting, setGreeting] = useState<GreetingInfo>(() => computeGreeting(lang, displayName))
   const [viewportWidth, setViewportWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [activePreset, setActivePreset] = useState<LayoutPreset>('desktop')
@@ -693,8 +748,26 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authTrigger, setAuthTrigger] = useState<'generic' | 'stats'>('generic')
-  const { user } = useAuth()
-  const isPro = user?.user_metadata?.plan === 'pro'
+  // const { user } = useAuth() // Moved up
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (user) {
+      const fetchProfile = async () => {
+        const { data } = await createClient()
+          .from('profiles')
+          .select('subscription_status')
+          .eq('id', user.id)
+          .single()
+        if (data) {
+          setSubscriptionStatus(data.subscription_status)
+        }
+      }
+      fetchProfile()
+    }
+  }, [user])
+
+  const isPro = subscriptionStatus === 'premium'
   const upgradeLabel = isPro
     ? lang === 'zh'
       ? '会员权益'
@@ -707,6 +780,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showPricingModal, setShowPricingModal] = useState(false)
+  const [showWeChatModal, setShowWeChatModal] = useState(false)
 
   const [dailyGoalHours, setDailyGoalHours] = useState(4.5)
   const [dailyTaskGoal, setDailyTaskGoal] = useState(5)
@@ -745,8 +819,47 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       setTodayMinutes((prev) => prev + mins)
       refreshTodayProgress()
     },
+
     [refreshTodayProgress]
   )
+
+  const handleCheckout = async (interval: 'month' | 'year' = 'month') => {
+    if (!user) {
+      setShowPricingModal(false)
+      setShowAuthModal(true)
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      const { data } = await supabase.auth.getSession()
+      if (!data.session) {
+        alert('Please log in again.')
+        return
+      }
+
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ interval }),
+      })
+
+      if (response.status === 401) {
+        alert('Session expired. Please log in again.')
+        setShowAuthModal(true)
+        return
+      }
+
+      if (!response.ok) throw new Error('Checkout failed')
+      const { url } = await response.json()
+      if (url) window.location.href = url
+    } catch (error) {
+      console.error('Checkout error:', error)
+      alert('Checkout failed, please try again.')
+    }
+  }
 
   // Fetch today's progress on mount and interval
   useEffect(() => {
@@ -757,10 +870,10 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   }, [refreshTodayProgress])
 
   useEffect(() => {
-    setGreeting(computeGreeting(lang))
-    const interval = setInterval(() => setGreeting(computeGreeting(lang)), 60000)
+    setGreeting(computeGreeting(lang, displayName))
+    const interval = setInterval(() => setGreeting(computeGreeting(lang, displayName)), 60000)
     return () => clearInterval(interval)
-  }, [lang])
+  }, [lang, displayName])
 
   // Hydrate goals from settings
   useEffect(() => {
@@ -1026,7 +1139,9 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       let hasChanges = false
 
       if (localStation.length > 0) {
-        merged = [...merged, ...localStation]
+        // Regenerate IDs for station items too
+        const safeLocalStation = localStation.map((i) => ({ ...i, id: crypto.randomUUID() }))
+        merged = [...merged, ...safeLocalStation]
         hasChanges = true
         window.localStorage.removeItem(STATION_STORAGE_KEY)
       }
@@ -1057,9 +1172,15 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       // 2. Brain Dump
       const cloudBrain = await fetchCloudBrainDump(user)
       const localBrain = readBrainDumpStorage() // Guest
+
+      // Helper to regenerate IDs to avoid RLS conflicts if items were recycled from another user
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const regenerateBrainIds = (items: any[]) =>
+        items.map((i) => ({ ...i, id: crypto.randomUUID() }))
+
       if (localBrain.left.length > 0 || localBrain.right.length > 0) {
-        const mergedLeft = [...(cloudBrain?.left || []), ...localBrain.left]
-        const mergedRight = [...(cloudBrain?.right || []), ...localBrain.right]
+        const mergedLeft = [...(cloudBrain?.left || []), ...regenerateBrainIds(localBrain.left)]
+        const mergedRight = [...(cloudBrain?.right || []), ...regenerateBrainIds(localBrain.right)]
         await saveBrainDump({ left: mergedLeft, right: mergedRight }, user)
         // Clear local keys (v2 and v1)
         window.localStorage.removeItem('focus-lab-brain-dump-list-v2')
@@ -1615,7 +1736,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                         !(settings.focus_lab?.hide_headers ?? false)
                       )
                     }
-                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.hide_headers ?? false) ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
+                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.hide_headers ?? false) ? (uiStyle === 'warm' ? 'bg-[#F5F2EC] font-bold text-[#C27B4A]' : uiStyle === 'green' ? 'bg-[#F8F9F7] font-bold text-[#7A9F7A]' : uiStyle === 'blue' ? 'bg-[#E0EEF8] font-bold text-[#5B84B1]' : uiStyle === 'cartoon' ? 'border border-black bg-[#FFF8E7] font-bold text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-primary-100 text-primary-700 font-bold') : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
                   >
                     {(settings.focus_lab?.hide_headers ?? false)
                       ? t.focusLab.settings?.on || 'On'
@@ -1630,7 +1751,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   </span>
                   <button
                     onClick={handleToggleNotifications}
-                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${notificationsEnabled ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
+                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${notificationsEnabled ? (uiStyle === 'warm' ? 'bg-[#F5F2EC] font-bold text-[#C27B4A]' : uiStyle === 'green' ? 'bg-[#F8F9F7] font-bold text-[#7A9F7A]' : uiStyle === 'blue' ? 'bg-[#E0EEF8] font-bold text-[#5B84B1]' : uiStyle === 'cartoon' ? 'border border-black bg-[#FFF8E7] font-bold text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-primary-100 text-primary-700 font-bold') : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
                   >
                     {notificationsEnabled
                       ? t.focusLab.settings?.on || 'On'
@@ -1650,7 +1771,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                         !(settings.focus_lab?.sound?.enabled ?? true)
                       )
                     }
-                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.sound?.enabled ?? true) ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
+                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.sound?.enabled ?? true) ? (uiStyle === 'warm' ? 'bg-[#F5F2EC] font-bold text-[#C27B4A]' : uiStyle === 'green' ? 'bg-[#F8F9F7] font-bold text-[#7A9F7A]' : uiStyle === 'blue' ? 'bg-[#E0EEF8] font-bold text-[#5B84B1]' : uiStyle === 'cartoon' ? 'border border-black bg-[#FFF8E7] font-bold text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-primary-100 text-primary-700 font-bold') : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
                   >
                     {(settings.focus_lab?.sound?.enabled ?? true)
                       ? t.focusLab.settings?.on || 'On'
@@ -1678,7 +1799,15 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                         ref={customizeButtonRef}
                         className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm transition-all active:scale-95 ${
                           showCustomizeMenu
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                            ? uiStyle === 'warm'
+                              ? 'bg-[#F5F2EC] text-[#C27B4A]'
+                              : uiStyle === 'green'
+                                ? 'bg-[#F8F9F7] text-[#7A9F7A]'
+                                : uiStyle === 'blue'
+                                  ? 'bg-[#E0EEF8] text-[#5B84B1]'
+                                  : uiStyle === 'cartoon'
+                                    ? 'border border-black bg-[#FFF8E7] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                                    : 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
                             : 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700'
                         }`}
                       >
@@ -1898,8 +2027,13 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
       </AnimatePresence>
 
       {/* Pricing Modal */}
+      <WeChatGroupModal isOpen={showWeChatModal} onClose={() => setShowWeChatModal(false)} />
       <AnimatePresence>
-        <PlanComparisonModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
+        <PlanComparisonModal
+          isOpen={showPricingModal}
+          onClose={() => setShowPricingModal(false)}
+          onSubscribe={handleCheckout}
+        />
       </AnimatePresence>
 
       <div
@@ -1940,6 +2074,13 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     label={lang === 'zh' ? '设置' : 'Settings'}
                     onClick={() => setShowSettingsModal(true)}
                   />
+                  {lang === 'zh' && (
+                    <FocusSidebarAction
+                      icon={<span className="icon-[solar--chat-round-dots-bold-duotone] h-6 w-6" />}
+                      label="加入群聊"
+                      onClick={() => setShowWeChatModal(true)}
+                    />
+                  )}
                   <div className="my-1 h-2" aria-hidden />
                   <FocusSidebarAction
                     icon={<CrownIcon className="h-6 w-6 text-amber-500" />}
@@ -1953,10 +2094,14 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 <FocusSidebarAction
                   icon={<LogoutIcon className="h-6 w-6" />}
                   label={t.focusLab.controls.exitFocus || 'Exit Focus'}
-                  onClick={onExit}
+                  onClick={onExit || (() => {})}
                 />
                 <FocusSidebarProfile
-                  userName={user ? user.user_metadata?.full_name || 'Guest Space' : 'Guest Space'}
+                  userName={
+                    user
+                      ? user.user_metadata?.full_name || user.email?.split('@')[0] || 'Explorer'
+                      : 'Explorer'
+                  }
                   planLabel={isPro ? t.focusLab.sidebar.proMember : t.focusLab.sidebar.freePlan}
                   avatarUrl={user?.user_metadata?.avatar_url}
                   avatarColor={user?.user_metadata?.avatar_color}
@@ -2189,6 +2334,8 @@ const SonicShieldCard = ({
   isFocused?: boolean
 }) => {
   const { t } = useTranslation()
+  const { uiStyle } = useThemeColor()
+  const isCartoon = uiStyle === 'cartoon'
   const [isFlipped, setIsFlipped] = useState(false)
 
   return (
@@ -2206,8 +2353,12 @@ const SonicShieldCard = ({
           }}
           className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-lg ring-1 transition-all ${
             isFlipped
-              ? 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
-              : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+              ? uiStyle === 'cartoon'
+                ? 'border-2 border-black bg-black text-white shadow-none'
+                : 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
+              : uiStyle === 'cartoon'
+                ? 'border-2 border-transparent text-black hover:border-black hover:bg-white hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
           }`}
           aria-label={t.focusLab.widgets.sonicShield.settings?.title || 'Settings'}
         >
@@ -2240,9 +2391,10 @@ const TimerCard = ({
   isFocused?: boolean
 }) => {
   const { t } = useTranslation()
+  const { uiStyle } = useThemeColor()
+  const isCartoon = uiStyle === 'cartoon'
   const [isFlipped, setIsFlipped] = useState(false)
   const [showTaskTitle, setShowTaskTitle] = useState(true)
-  const { uiStyle } = useThemeColor()
 
   useEffect(() => {
     if (focusedTask) {
@@ -2283,8 +2435,12 @@ const TimerCard = ({
           }}
           className={`relative z-10 rounded-lg p-1 transition-all ${
             isFlipped
-              ? 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
-              : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+              ? uiStyle === 'cartoon'
+                ? 'border-2 border-black bg-black text-white shadow-none'
+                : 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
+              : uiStyle === 'cartoon'
+                ? 'border-2 border-transparent text-black hover:border-black hover:bg-white hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
           }`}
           aria-label={t.focusLab.widgets.timer.switchMode || 'Switch Mode'}
         >
@@ -2378,12 +2534,7 @@ const ToDoCard = ({
       className={className}
       isFocused={isFocused}
     >
-      <FocusStation
-        cols={cols}
-        onStartFocus={onStartFocus}
-        focusedTaskId={focusedTaskId}
-        uiStyle={uiStyle}
-      />
+      <FocusStation cols={cols} onStartFocus={onStartFocus} focusedTaskId={focusedTaskId} />
     </CardShell>
   )
 }
@@ -2419,8 +2570,12 @@ const DopamineMenuCard = ({
           }}
           className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-lg ring-1 transition-all ${
             isFlipped
-              ? 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
-              : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+              ? uiStyle === 'cartoon'
+                ? 'border-2 border-black bg-black text-white shadow-none'
+                : 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
+              : uiStyle === 'cartoon'
+                ? 'border-2 border-transparent text-black hover:border-black hover:bg-white hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
           }`}
           aria-label={t.focusLab.widgets.dopamineMenu.edit || 'Edit Options'}
         >
@@ -2463,6 +2618,11 @@ const SonicShieldWidget = ({
   onFlip: (v: boolean) => void
 }) => {
   const { t } = useTranslation()
+  const { uiStyle } = useThemeColor()
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
+  const isBlue = uiStyle === 'blue'
+  const isCartoon = uiStyle === 'cartoon'
   const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
   const isSoundEnabled = settings.focus_lab?.sound?.enabled ?? true
   const tSounds = t.sounds
@@ -2681,8 +2841,18 @@ const SonicShieldWidget = ({
                       key={sound.id}
                       className={`group relative flex items-center justify-between gap-2 rounded-xl border p-2 transition-all ${
                         isActive
-                          ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
-                          : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800'
+                          ? isWarm
+                            ? 'border-[#C27B4A] bg-[#F5F2EC]'
+                            : isGreen
+                              ? 'border-[#7A9F7A] bg-[#F8F9F7]'
+                              : isBlue
+                                ? 'border-[#5B84B1] bg-[#E0EEF8]'
+                                : isCartoon
+                                  ? 'border-2 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                                  : 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+                          : isCartoon
+                            ? 'border-2 border-black bg-white hover:bg-gray-100 dark:border-white dark:bg-gray-900 dark:hover:bg-gray-800'
+                            : 'hover:border-primary-200 dark:hover:border-primary-900 border-gray-100 bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800'
                       }`}
                     >
                       <button
@@ -2690,7 +2860,19 @@ const SonicShieldWidget = ({
                         className="flex flex-1 items-center text-left"
                       >
                         <span
-                          className={`text-xs font-bold ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
+                          className={`text-xs font-bold ${
+                            isActive
+                              ? isWarm
+                                ? 'text-[#C27B4A]'
+                                : isGreen
+                                  ? 'text-[#7A9F7A]'
+                                  : isBlue
+                                    ? 'text-[#5B84B1]'
+                                    : isCartoon
+                                      ? 'text-white dark:text-black'
+                                      : 'text-primary-700 dark:text-primary-300'
+                              : 'text-gray-700 dark:text-gray-300'
+                          }`}
                         >
                           {tSounds[sound.name as keyof typeof tSounds] || sound.name}
                         </span>
@@ -2708,7 +2890,17 @@ const SonicShieldWidget = ({
                               updateTrackVolume(sound.id, parseFloat(e.target.value))
                             }
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400 h-1 w-14 cursor-pointer rounded-full"
+                            className={`${
+                              isWarm
+                                ? 'bg-[#C27B4A]/30 accent-[#C27B4A]'
+                                : isGreen
+                                  ? 'bg-[#7A9F7A]/30 accent-[#7A9F7A]'
+                                  : isBlue
+                                    ? 'bg-[#5B84B1]/30 accent-[#5B84B1]'
+                                    : isCartoon
+                                      ? 'bg-white/30 accent-white dark:bg-black/30 dark:accent-black'
+                                      : 'bg-primary-200 accent-primary-600 dark:bg-primary-900 dark:accent-primary-400'
+                            } h-1 w-14 cursor-pointer rounded-full`}
                           />
                         </div>
                       )}
@@ -2732,6 +2924,7 @@ const SonicShieldWidget = ({
               <div className="flex flex-1 flex-col items-center justify-center">
                 <SoundVisualizer
                   activeCount={isGlobalPlaying && isSoundEnabled ? activeCount : 0}
+                  uiStyle={uiStyle}
                 />
               </div>
 
@@ -2779,7 +2972,7 @@ const SonicShieldWidget = ({
                     }}
                   >
                     <div
-                      className="group-hover:bg-primary-500 dark:group-hover:bg-primary-400 absolute left-0 h-full rounded-full bg-gray-300 transition-all dark:bg-gray-600"
+                      className={`${isWarm ? 'group-hover:bg-[#C27B4A]' : isGreen ? 'group-hover:bg-[#7A9F7A]' : isBlue ? 'group-hover:bg-[#5B84B1]' : isCartoon ? 'group-hover:bg-black dark:group-hover:bg-white' : 'group-hover:bg-primary-500 dark:group-hover:bg-primary-400'} absolute left-0 h-full rounded-full bg-gray-300 transition-all dark:bg-gray-600`}
                       style={{ width: `${masterVolume * 100}%` }}
                     />
                     <div
@@ -3185,13 +3378,15 @@ const TimerWidget = ({
                 style={{ containerType: 'inline-size' }}
               >
                 <div
-                  className="focuslab-numeric text-primary-600 dark:text-primary-400 leading-none font-black tracking-tight"
+                  className={`focuslab-numeric ${isWarm ? 'text-[#C27B4A]' : isGreen ? 'text-[#7A9F7A]' : isBlue ? 'text-[#5B84B1]' : isCartoon ? 'text-black dark:text-white' : 'text-primary-600 dark:text-primary-400'} leading-none font-black tracking-tight`}
                   style={{ fontSize: 'clamp(2.5rem, 26cqw, 7rem)' }}
                 >
                   {display}
                 </div>
               </div>
-              <p className="mt-2 text-sm font-medium text-gray-400">
+              <p
+                className={`mt-2 text-sm font-medium ${isCartoon ? 'text-black dark:text-white' : 'text-gray-400'}`}
+              >
                 {isRunning
                   ? t.focusLab.widgets.timer.recording || 'Recording time...'
                   : t.focusLab.widgets.timer.ready || 'Ready to start'}
@@ -3317,8 +3512,18 @@ const TimerWidget = ({
                         onClick={() => setActivePreset(preset)}
                         className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                           activePreset === preset
-                            ? 'text-primary-600 dark:text-primary-400 dark:bg-primary-800/40 bg-white shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                            ? isBlue
+                              ? 'bg-[#E0EEF8] text-[#5B84B1] shadow-sm'
+                              : isGreen
+                                ? 'bg-[#F8F9F7] text-[#7A9F7A] shadow-sm'
+                                : isWarm
+                                  ? 'bg-[#F5F2EC] text-[#C27B4A] shadow-sm'
+                                  : isCartoon
+                                    ? 'bg-black text-white shadow-md'
+                                    : 'text-primary-600 dark:text-primary-400 dark:bg-primary-800/40 bg-white shadow-sm'
+                            : isCartoon
+                              ? 'text-black hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
+                              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
                       >
                         {preset === 'focus' && '25m'}
@@ -3361,7 +3566,7 @@ const TimerWidget = ({
                 style={{ containerType: 'inline-size' }}
               >
                 <div
-                  className={`focuslab-numeric leading-none font-black tracking-tight ${isCompleted ? 'text-primary-600 dark:text-primary-400' : 'text-primary-600 dark:text-primary-400'}`}
+                  className={`focuslab-numeric leading-none font-black tracking-tight ${isBlue ? 'text-[#5B84B1]' : isGreen ? 'text-[#7A9F7A]' : isWarm ? 'text-[#C27B4A]' : isCartoon ? 'text-black dark:text-white' : isCompleted ? 'text-primary-600 dark:text-primary-400' : 'text-primary-600 dark:text-primary-400'}`}
                   style={{
                     fontSize: isCompleted
                       ? 'clamp(2rem, 15cqw, 4.5rem)'
@@ -3720,9 +3925,9 @@ const TaskBreakerWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
               isWarm || isGreen || isBlue
                 ? 'focus:ring-accent border-white/10 bg-white/10 text-white placeholder:text-white/50'
                 : isCartoon
-                  ? 'border-2 border-black bg-white text-black placeholder:text-gray-400 focus:ring-0 dark:border-white dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500'
+                  ? 'border-2 border-black bg-gray-900 text-white placeholder:text-gray-400 focus:ring-0 dark:border-white dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500'
                   : 'focus:border-primary-500 focus:ring-primary-500 border-gray-100 bg-gray-100 text-gray-900 placeholder:text-gray-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:bg-gray-800'
-            } no-scrollbar mt-1 h-24 w-full resize-none rounded-2xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none`}
+            } no-scrollbar mt-1 h-24 w-full resize-none rounded-2xl border px-3 py-3 text-sm focus:ring-2 focus:outline-none`}
           />
         </div>
       </div>
@@ -3808,6 +4013,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
   const isBlue = uiStyle === 'blue'
+  const isCartoon = uiStyle === 'cartoon'
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const [leftItems, setLeftItems] = useState<BrainDumpItem[]>([])
@@ -3838,67 +4044,67 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
         }
       }
 
-      // 2. Fallback to Local
-      const local = readBrainDumpStorage(user?.id)
-      if (local.left.length > 0 || local.right.length > 0) {
-        // ... (existing logic) ...
-        // We need to keep the existing sanitization logic here...
-        // Actually, to keep chunk size small, maybe I shouldn't rewrite the whole init function?
-        // But I need to set dataOwnerId.current!
-
-        // Let's use a smaller targeted replace if possible, or rewrite carefully.
-        // The existing code has a lot of logic inside local block.
-        // I will rewrite the whole `useEffect` for Init to be safe.
-
-        // Robust UUID Generator
-        const generateUUID = () => {
-          if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
-          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            const r = (Math.random() * 16) | 0,
-              v = c == 'x' ? r : (r & 0x3) | 0x8
-            return v.toString(16)
-          })
-        }
-
-        // Sanitize IDs
-        const sanitize = (list: BrainDumpItem[]) =>
-          list.map((item) => {
-            const isValidUUID =
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)
-            return isValidUUID ? item : { ...item, id: generateUUID() }
-          })
-
-        setLeftItems(sanitize(local.left))
-        setRightItems(sanitize(local.right))
-      } else {
-        // Migration Logic
-        try {
-          const storedV2 = window.localStorage.getItem('focus-lab-brain-dump-list-v2')
-          if (storedV2) {
-            const items: BrainDumpItem[] = JSON.parse(storedV2)
-            const fixedItems = items.map((i) => ({ ...i, id: crypto.randomUUID() }))
-            const mid = Math.ceil(fixedItems.length / 2)
-            setLeftItems(fixedItems.slice(0, mid))
-            setRightItems(fixedItems.slice(mid))
-          } else {
-            const storedV1 = window.localStorage.getItem('focus-lab-brain-dump-list')
-            if (storedV1) {
-              const oldItems: string[] = JSON.parse(storedV1)
-              const migrated = oldItems.map((item) => {
-                const isImage = item.startsWith('data:image')
-                return {
-                  id: crypto.randomUUID(),
-                  text: isImage ? '' : item,
-                  image: isImage ? item : undefined,
-                }
-              })
-              const mid = Math.ceil(migrated.length / 2)
-              setLeftItems(migrated.slice(0, mid))
-              setRightItems(migrated.slice(mid))
-            }
+      // 2. Fallback to Local (Only if Guest)
+      // If user is logged in, we do NOT load local data to avoid merging previous user's leftovers.
+      // The user must use the "Data Sync" modal if they explicitly want to import.
+      if (!user) {
+        const local = readBrainDumpStorage()
+        if (local.left.length > 0 || local.right.length > 0) {
+          // ... (existing Guest logic)
+          // Sanitize logic same as before...
+          // Robust UUID Generator
+          const generateUUID = () => {
+            if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+              const r = (Math.random() * 16) | 0,
+                v = c == 'x' ? r : (r & 0x3) | 0x8
+              return v.toString(16)
+            })
           }
-        } catch (e) {
-          console.error(e)
+
+          // Sanitize IDs
+          const sanitize = (list: BrainDumpItem[]) =>
+            list.map((item) => {
+              const isValidUUID =
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)
+              return isValidUUID ? item : { ...item, id: generateUUID() }
+            })
+
+          setLeftItems(sanitize(local.left))
+          setRightItems(sanitize(local.right))
+        } else {
+          // ... legacy migration ...
+          // (Copying inner block logic for legacy v2/v1 migration if needed, but only for Guest)
+          try {
+            const storedV2 = window.localStorage.getItem('focus-lab-brain-dump-list-v2')
+            if (storedV2) {
+              // ... same logic
+              const items: BrainDumpItem[] = JSON.parse(storedV2)
+              const fixedItems = items.map((i) => ({ ...i, id: crypto.randomUUID() }))
+              const mid = Math.ceil(fixedItems.length / 2)
+              setLeftItems(fixedItems.slice(0, mid))
+              setRightItems(fixedItems.slice(mid))
+            } else {
+              const storedV1 = window.localStorage.getItem('focus-lab-brain-dump-list')
+              if (storedV1) {
+                // ... same logic
+                const oldItems: string[] = JSON.parse(storedV1)
+                const migrated = oldItems.map((item) => {
+                  const isImage = item.startsWith('data:image')
+                  return {
+                    id: crypto.randomUUID(),
+                    text: isImage ? '' : item,
+                    image: isImage ? item : undefined,
+                  }
+                })
+                const mid = Math.ceil(migrated.length / 2)
+                setLeftItems(migrated.slice(0, mid))
+                setRightItems(migrated.slice(mid))
+              }
+            }
+          } catch (e) {
+            console.error(e)
+          }
         }
       }
 
@@ -4023,7 +4229,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
       value={item}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`group ring-primary-100/50 dark:ring-primary-900/40 relative mb-3 break-inside-avoid rounded-xl shadow-sm ring-1 transition-all hover:rotate-1 hover:shadow-md ${
+      className={`group ring-primary-100/50 dark:ring-primary-900/40 relative mb-3 break-inside-avoid rounded-t-none rounded-b-xl shadow-sm ring-1 transition-all hover:rotate-1 hover:shadow-md ${
         item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
       } `}
     >
@@ -4095,8 +4301,10 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
                   : isGreen
                     ? 'border-[#E2E8E2] bg-[#F8F9F7] dark:border-gray-700 dark:bg-gray-800'
                     : isBlue
-                      ? 'border-[#D1E3F3] bg-[#E0EEF8] dark:border-gray-700 dark:bg-gray-800'
-                      : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                      ? 'border-[#D1E3F3] bg-[#E0EEF8] focus:border-[#5B84B1] focus:ring-[#5B84B1] dark:border-gray-700 dark:bg-gray-800'
+                      : isCartoon
+                        ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] placeholder:text-gray-500 focus:border-black focus:ring-0 dark:border-white dark:bg-gray-900 dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                        : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
               }`}
             />
             <button
@@ -4120,7 +4328,9 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
                   ? 'border border-[#E2E8E2] bg-[#F8F9F7] text-[#7A9F7A]'
                   : isBlue
                     ? 'border border-[#D1E3F3] bg-[#E0EEF8] text-[#5B84B1]'
-                    : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
+                    : isCartoon
+                      ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white dark:border-white dark:bg-black dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:hover:bg-white dark:hover:text-black'
+                      : 'bg-gray-100 text-gray-500 disabled:hover:bg-gray-100'
             }`}
             title={t.focusLab.widgets.brainDump.accessibility.clearBoard}
             aria-label={t.focusLab.widgets.brainDump.accessibility.clearBoard}
@@ -4322,13 +4532,13 @@ const DopamineMenuWidget = ({
                   onChange={(e) => setNewOption(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addOption()}
                   placeholder={t.focusLab.widgets.dopamineMenu.addPlaceholder}
-                  className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                  className={`${isWarm ? 'focus:border-[#C27B4A] focus:ring-[#C27B4A]' : isGreen ? 'focus:border-[#7A9F7A] focus:ring-[#7A9F7A]' : isBlue ? 'focus:border-[#5B84B1] focus:ring-[#5B84B1]' : isCartoon ? 'border-2 border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:border-black focus:ring-0 dark:border-white dark:bg-gray-900 dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:focus:border-white' : 'focus:border-primary-500 focus:ring-primary-500 border-gray-200 bg-gray-50'} w-full rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 ${!isCartoon ? 'border' : ''}`}
                 />
               </div>
               <button
                 onClick={addOption}
                 aria-label={t.focusLab.widgets.dopamineMenu.add}
-                className="text-primary-600 hover:border-primary-400 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/20 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm transition-all active:scale-95 dark:border-gray-700 dark:bg-gray-900"
+                className={`${isWarm ? 'text-[#C27B4A] hover:border-[#C27B4A] hover:bg-[#F5F2EC]' : isGreen ? 'text-[#7A9F7A] hover:border-[#7A9F7A] hover:bg-[#F8F9F7]' : isBlue ? 'text-[#5B84B1] hover:border-[#5B84B1] hover:bg-[#E0EEF8]' : isCartoon ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white dark:border-white dark:bg-black dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:hover:bg-white dark:hover:text-black' : 'text-primary-600 hover:border-primary-400 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/20'} flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm transition-all active:scale-95 dark:border-gray-700 dark:bg-gray-900`}
               >
                 <PlusIcon className="h-4 w-4" />
                 <span className="sr-only">{t.focusLab.widgets.dopamineMenu.add}</span>
@@ -4343,7 +4553,11 @@ const DopamineMenuWidget = ({
                 {options.map((opt, idx) => (
                   <div
                     key={idx}
-                    className="group hover:bg-primary-50 dark:hover:bg-primary-900/20 flex min-w-0 items-center justify-between rounded-lg bg-white p-2 text-sm shadow-sm transition-all dark:bg-gray-800 dark:text-gray-200"
+                    className={`group hover:bg-primary-50 dark:hover:bg-primary-900/20 flex min-w-0 items-center justify-between rounded-lg p-2 text-sm transition-all dark:bg-gray-800 dark:text-gray-200 ${
+                      isCartoon
+                        ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-gray-900 dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                        : 'bg-white shadow-sm'
+                    }`}
                   >
                     <span className="truncate pr-2">{opt}</span>
                     <button
@@ -4431,7 +4645,9 @@ const DopamineMenuWidget = ({
               // Initial Simple State
               <div className="flex h-full flex-col justify-between">
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 pt-0 text-center">
-                  <div className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 mt-2 flex h-14 w-14 items-center justify-center rounded-full">
+                  <div
+                    className={`${isWarm ? 'bg-primary-100 text-[#C27B4A]' : isGreen ? 'bg-[#F8F9F7] text-[#7A9F7A]' : isBlue ? 'bg-[#E0EEF8] text-[#5B84B1]' : isCartoon ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'} mt-2 flex h-14 w-14 items-center justify-center rounded-full`}
+                  >
                     <SmileCircleIcon className="h-9 w-9" />
                   </div>
                 </div>

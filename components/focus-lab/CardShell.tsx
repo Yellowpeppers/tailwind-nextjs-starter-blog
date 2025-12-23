@@ -236,10 +236,12 @@ export function CardShell({
   const { resolvedTheme } = useTheme()
   const { settings } = useFocusSettingsContext()
   const { t } = useTranslation()
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return document.documentElement.classList.contains('dark')
-  })
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isDark = mounted && resolvedTheme === 'dark'
 
   // If UI style is warm, use specific tokens, otherwise use theme tokens
   // If UI style is custom (warm/green), use specific tokens, otherwise use theme tokens
@@ -278,11 +280,6 @@ export function CardShell({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  useEffect(() => {
-    const nextDark = resolvedTheme === 'dark' || document.documentElement.classList.contains('dark')
-    setIsDark(nextDark)
-  }, [resolvedTheme])
 
   const surfaceLayer = isDark ? cardTokens.darkSurface : cardTokens.surface
   const mutedLayer = isDark ? cardTokens.darkMuted : cardTokens.muted

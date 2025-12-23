@@ -13,7 +13,7 @@ type UserProfileModalProps = {
 }
 
 export default function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
-  const { user, signOut, updateProfile, tier } = useAuth()
+  const { user, signOut, updateProfile, isPro } = useAuth()
   const { t } = useTranslation()
   const [displayName, setDisplayName] = useState('')
   const [isEditing, setIsEditing] = useState(false)
@@ -128,19 +128,19 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
                 <div
                   className={`mb-6 flex w-fit items-center gap-3 rounded-xl p-4 transition-colors ${
-                    tier === 'pro'
+                    isPro
                       ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20'
                       : 'bg-gray-50 dark:bg-gray-800'
                   }`}
                 >
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                      tier === 'pro'
+                      isPro
                         ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400'
                         : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
                     }`}
                   >
-                    {tier === 'pro' ? (
+                    {isPro ? (
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -170,14 +170,14 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                   <div className="flex-1">
                     <div
                       className={`font-bold ${
-                        tier === 'pro'
+                        isPro
                           ? 'text-amber-800 dark:text-amber-200'
                           : 'text-gray-700 dark:text-gray-300'
                       }`}
                     >
-                      {tier === 'pro' ? 'Pro Plan' : 'Free Plan'}
+                      {isPro ? 'Pro Plan' : 'Free Plan'}
                     </div>
-                    {tier === 'pro' && (
+                    {isPro && (
                       <div className="text-xs text-amber-700/80 dark:text-amber-300/60">
                         {t.userProfile.betaDescription}
                       </div>

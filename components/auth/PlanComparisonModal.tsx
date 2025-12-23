@@ -1,17 +1,23 @@
 'use client'
 
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { useTranslation } from '@/context/LanguageContext'
 
 type PlanComparisonModalProps = {
   isOpen: boolean
   onClose: () => void
+  onSubscribe?: (interval?: 'month' | 'year') => void
 }
 
-export default function PlanComparisonModal({ isOpen, onClose }: PlanComparisonModalProps) {
+export default function PlanComparisonModal({
+  isOpen,
+  onClose,
+  onSubscribe,
+}: PlanComparisonModalProps) {
   const { t } = useTranslation()
+  const [interval, setInterval] = useState<'month' | 'year'>('month')
 
   const features = [
     {
@@ -51,7 +57,7 @@ export default function PlanComparisonModal({ isOpen, onClose }: PlanComparisonM
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -65,111 +71,151 @@ export default function PlanComparisonModal({ isOpen, onClose }: PlanComparisonM
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-2xl bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:p-6 dark:bg-gray-900">
-                <div className="absolute top-0 right-0 pt-4 pr-4">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-3xl border border-gray-100 bg-white px-4 pt-5 pb-4 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:p-8">
+                {/* Close Button */}
+                <div className="absolute top-0 right-0 pt-6 pr-6">
                   <button
                     type="button"
-                    className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none dark:bg-gray-900 dark:text-gray-500 dark:hover:text-gray-400"
+                    className="rounded-full bg-gray-50 p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none"
                     onClick={onClose}
                   >
                     <span className="sr-only">Close</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                    <XMarkIcon className="h-5 w-5" aria-hidden="true" />
                   </button>
                 </div>
 
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 w-full text-center sm:mt-0 sm:text-left">
+                <div className="w-full">
+                  {/* Header Content */}
+                  <div className="mb-8 text-center">
                     <Dialog.Title
                       as="h3"
-                      className="mb-2 text-center text-2xl leading-6 font-bold text-gray-900 dark:text-white"
+                      className="text-3xl font-extrabold text-gray-900 sm:text-4xl"
                     >
                       {t.comparePlans.title}
                     </Dialog.Title>
-                    <p className="mb-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                      {t.comparePlans.subtitle}
-                    </p>
+                    <p className="mt-2 text-gray-500">{t.comparePlans.subtitle}</p>
+                  </div>
 
-                    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-800">
-                          <tr>
-                            <th
-                              scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-                            >
-                              {t.comparePlans.columns.feature}
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-6 py-3 text-center text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400"
-                            >
-                              <div className="flex flex-col">
-                                <span>{t.comparePlans.columns.free}</span>
-                                <span className="mt-1 text-sm font-normal text-gray-400">$0</span>
-                              </div>
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-6 py-3 text-center text-xs font-bold tracking-wider text-indigo-600 uppercase dark:text-indigo-400"
-                            >
-                              <div className="flex flex-col">
-                                <span>{t.comparePlans.columns.pro}</span>
-                                <span className="mt-1 text-sm font-extrabold text-indigo-600 dark:text-indigo-400">
-                                  ?
-                                </span>
-                              </div>
-                            </th>
+                  {/* Toggle Switch */}
+                  <div className="mb-8 flex justify-center">
+                    <div className="relative flex h-12 w-64 rounded-xl bg-gray-100 p-1 md:w-80">
+                      <div className="relative z-10 grid h-full w-full grid-cols-2">
+                        <button
+                          onClick={() => setInterval('month')}
+                          className={`flex items-center justify-center rounded-lg text-sm font-bold transition-colors duration-200 ${
+                            interval === 'month'
+                              ? 'text-white'
+                              : 'text-gray-500 hover:text-gray-900'
+                          }`}
+                        >
+                          Monthly
+                        </button>
+                        <button
+                          onClick={() => setInterval('year')}
+                          className={`flex items-center justify-center rounded-lg text-sm font-bold transition-colors duration-200 ${
+                            interval === 'year' ? 'text-white' : 'text-gray-500 hover:text-gray-900'
+                          }`}
+                        >
+                          Yearly
+                          <span
+                            className={`${interval === 'year' ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'} ml-2 rounded-full px-1.5 py-0.5 text-[10px] tracking-wide uppercase transition-colors`}
+                          >
+                            -17%
+                          </span>
+                        </button>
+                      </div>
+                      {/* Sliding Background */}
+                      <div
+                        className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg bg-blue-600 shadow-md transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+                          interval === 'year' ? 'left-[calc(50%)]' : 'left-1'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Comparison Table */}
+                  <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-500 uppercase"
+                          >
+                            {t.comparePlans.columns.feature}
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-center text-xs font-bold tracking-wider text-gray-500 uppercase"
+                          >
+                            {t.comparePlans.columns.free}
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-center text-xs font-bold tracking-wider text-blue-600 uppercase"
+                          >
+                            {t.comparePlans.columns.pro}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {features.map((feature, idx) => (
+                          <tr
+                            key={feature.name}
+                            className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
+                          >
+                            <td className="px-6 py-4 text-left text-sm font-medium text-gray-900">
+                              {feature.name}
+                            </td>
+                            <td className="px-6 py-4 text-center text-sm text-gray-500">
+                              {feature.free === false ? (
+                                <span className="text-gray-300">-</span>
+                              ) : feature.free === true ? (
+                                <CheckIcon className="mx-auto h-5 w-5 text-gray-400" />
+                              ) : (
+                                feature.free
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-center text-sm font-bold text-gray-900">
+                              {feature.pro === true ? (
+                                <div className="flex items-center justify-center">
+                                  <div className="rounded-full bg-blue-100 p-1">
+                                    <CheckIcon className="h-4 w-4 text-blue-600" />
+                                  </div>
+                                </div>
+                              ) : (
+                                feature.pro
+                              )}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
-                          {features.map((feature, featureIdx) => (
-                            <tr
-                              key={feature.name}
-                              className={
-                                featureIdx % 2 === 0
-                                  ? 'bg-white dark:bg-gray-900'
-                                  : 'bg-gray-50 dark:bg-gray-800/50'
-                              }
-                            >
-                              <td className="px-6 py-4 text-left text-sm font-medium whitespace-nowrap text-gray-900 dark:text-white">
-                                {feature.name}
-                              </td>
-                              <td className="px-6 py-4 text-center text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
-                                {feature.free === false ? (
-                                  <span className="text-red-400">✕</span>
-                                ) : feature.free === true ? (
-                                  <span className="text-green-500">✓</span>
-                                ) : (
-                                  feature.free
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-center text-sm font-medium whitespace-nowrap text-gray-900 dark:text-white">
-                                {feature.pro === true ? (
-                                  <span className="flex items-center justify-center">
-                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300">
-                                      ✓
-                                    </span>
-                                  </span>
-                                ) : (
-                                  feature.pro
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pricing and Action */}
+                  <div className="mt-8 text-center">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-5xl font-extrabold tracking-tight text-gray-900">
+                        {interval === 'month' ? '$4.99' : '$49.99'}
+                      </span>
+                      <span className="text-lg font-medium text-gray-500">
+                        /{interval === 'month' ? 'month' : 'year'}
+                      </span>
                     </div>
 
-                    <div className="mt-8 rounded-xl bg-blue-50 p-4 text-center dark:bg-blue-900/20">
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                        {t.comparePlans.beta.msgPre}
-                        <span className="font-bold">{t.comparePlans.beta.planName}</span>
-                        {t.comparePlans.beta.msgPost}
-                      </p>
-                      <p className="mt-1 text-xs text-blue-600 dark:text-blue-300">
-                        {t.comparePlans.beta.description}
-                      </p>
-                    </div>
+                    <p className="mt-2 text-sm text-gray-500">7-day free trial, cancel anytime.</p>
+
+                    {onSubscribe && (
+                      <button
+                        onClick={() => onSubscribe(interval)}
+                        className="mt-6 w-full rounded-xl bg-blue-600 px-8 py-4 text-base font-bold text-white shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-blue-300 active:translate-y-0 active:scale-[0.98]"
+                      >
+                        Start 7-Day Free Trial
+                      </button>
+                    )}
+
+                    <p className="mt-4 text-xs text-gray-400">{t.comparePlans.beta.description}</p>
                   </div>
                 </div>
               </Dialog.Panel>

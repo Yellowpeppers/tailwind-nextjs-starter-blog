@@ -222,6 +222,14 @@ export const saveBrainDump = async (state: BrainDumpState, user?: User | null) =
   // Cloud Save
   if (user) {
     const supabase = createClient()
+    // Ensure the client has the current session to avoid RLS mismatch
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session || session.user.id !== user.id) {
+      console.warn('BrainDump sync skipped: Session mismatch or not ready')
+      return
+    }
 
     // Helper: Convert Data URI to Blob
     const dataURItoBlob = (dataURI: string) => {
