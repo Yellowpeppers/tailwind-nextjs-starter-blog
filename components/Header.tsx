@@ -72,10 +72,14 @@ const Header = () => {
                 })}
             </div>
             <SearchButton />
-            <ThemeSwitch />
-            <Suspense fallback={null}>
-              <LanguageSwitch />
-            </Suspense>
+            <div className="hidden sm:block">
+              <ThemeSwitch />
+            </div>
+            <div className="hidden sm:block">
+              <Suspense fallback={null}>
+                <LanguageSwitch />
+              </Suspense>
+            </div>
             <UserMenu
               onLoginClick={() => setIsAuthModalOpen(true)}
               onOpenProfile={() => setIsProfileModalOpen(true)}

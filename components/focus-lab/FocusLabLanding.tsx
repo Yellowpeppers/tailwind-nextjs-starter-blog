@@ -175,7 +175,7 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
 
                 <p className="mx-auto mt-8 max-w-2xl text-lg text-gray-600 md:text-xl dark:text-gray-300">
                   {t.focusLabLanding.hero.descPre}
-                  <span className="mx-1 inline-block rounded-lg bg-orange-100 px-2 py-0.5 font-bold text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                  <span className="mx-1 inline-block rounded-lg bg-orange-100 px-2 py-0.5 font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
                     {t.focusLabLanding.hero.descHighlight}
                   </span>
                   {t.focusLabLanding.hero.descPost}
@@ -224,6 +224,7 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
               height={language === 'zh' ? 1838 : 1862}
               className="h-auto w-full rounded-2xl object-cover object-top shadow-sm"
               priority
+              sizes="(max-width: 768px) 100vw, 85vw"
             />
             {/* Shimmer/Reflection Effect */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0" />
@@ -231,7 +232,7 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
         </ContainerScroll>
 
         {/* 2. Pain Points Section */}
-        <section id="pain-points" className="py-24">
+        <section id="pain-points" className="py-12 md:py-24">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
               {t.focusLabLanding.painPoints.title}
@@ -282,7 +283,7 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
         </section>
 
         {/* 3. How it Works */}
-        <section id="how-it-works" className="py-24">
+        <section id="how-it-works" className="py-12 md:py-24">
           <div className="relative overflow-hidden rounded-[40px] border border-zinc-800 bg-zinc-950 px-8 py-20 text-center text-white shadow-2xl md:px-20">
             {/* Premium Background Elements */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -317,16 +318,21 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
 
               <div className="grid gap-12 md:grid-cols-3">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="group relative">
-                    <div className="group-hover:border-primary-500/50 group-hover:bg-primary-500/10 mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl font-black text-white backdrop-blur-xl transition-all duration-300 group-hover:scale-110">
+                  <div
+                    key={i}
+                    className="group relative flex flex-row items-start gap-6 text-left md:flex-col md:items-center md:text-center"
+                  >
+                    <div className="group-hover:border-primary-500/50 group-hover:bg-primary-500/10 mb-0 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xl font-black text-white backdrop-blur-xl transition-all duration-300 group-hover:scale-110 md:mx-auto md:mb-8 md:h-20 md:w-20 md:text-3xl">
                       {i + 1}
                     </div>
-                    <h3 className="group-hover:text-primary-400 mb-3 text-xl font-bold text-white transition-colors">
-                      {t.focusLabLanding.howItWorks.steps[i].title}
-                    </h3>
-                    <p className="text-zinc-500 transition-colors group-hover:text-zinc-400">
-                      {t.focusLabLanding.howItWorks.steps[i].desc}
-                    </p>
+                    <div>
+                      <h3 className="group-hover:text-primary-400 mb-2 text-xl font-bold text-white transition-colors md:mb-3">
+                        {t.focusLabLanding.howItWorks.steps[i].title}
+                      </h3>
+                      <p className="text-zinc-500 transition-colors group-hover:text-zinc-400">
+                        {t.focusLabLanding.howItWorks.steps[i].desc}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -335,7 +341,7 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
         </section>
 
         {/* 4. Features Grid */}
-        <section id="features" className="py-24">
+        <section id="features" className="py-12 md:py-24">
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl dark:text-white">
               {t.focusLabLanding.features.title}
@@ -387,7 +393,7 @@ export const FocusLabLanding = ({ onEnter }: Props) => {
                 className="group hover:border-primary-200 dark:hover:border-primary-900/50 flex h-full flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-xl sm:flex-row dark:border-zinc-800 dark:bg-zinc-900/50"
               >
                 <div
-                  className={`relative flex h-52 w-full items-center justify-center bg-gradient-to-br ${f.color} p-4 sm:h-52 sm:w-1/2`}
+                  className={`relative flex h-64 w-full items-center justify-center bg-gradient-to-br ${f.color} p-4 sm:h-auto sm:w-1/2`}
                 >
                   {/* Decorative Elements */}
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] opacity-20"></div>
@@ -549,26 +555,21 @@ const ContainerScroll = ({
   }, [])
 
   const scaleDimensions = () => {
-    return isMobile ? [0.7, 0.9] : [1.05, 1]
+    return isMobile ? [1, 1] : [1.05, 1]
   }
 
-  const rotate = useTransform(scrollYProgress, [0, 1], [20, 0])
+  const rotate = useTransform(scrollYProgress, [0, 1], [isMobile ? 0 : 20, 0])
   const scale = useTransform(scrollYProgress, [0, 1], scaleDimensions())
-  const translate = useTransform(scrollYProgress, [0, 1], [0, -100])
+  const translate = useTransform(scrollYProgress, [0, 1], [0, isMobile ? 0 : -100])
 
   return (
     <div
-      className="relative flex h-[60rem] items-start justify-center overflow-hidden p-2 md:h-[80rem] md:px-20 md:pt-20"
+      className="relative flex h-auto items-start justify-center overflow-hidden p-2 py-12 md:h-[60rem] md:px-20 md:pt-20 lg:h-[80rem]"
       ref={containerRef}
     >
-      <div
-        className="relative w-full py-0 md:pt-0"
-        style={{
-          perspective: '1000px',
-        }}
-      >
+      <div className="relative w-full py-0 md:pt-0 md:[perspective:1000px]" style={{}}>
         <Header translate={translate} titleComponent={titleComponent} />
-        <Card rotate={rotate} translate={translate} scale={scale}>
+        <Card rotate={rotate} translate={translate} scale={scale} isMobile={isMobile}>
           {children}
         </Card>
       </div>
@@ -604,16 +605,15 @@ const Card = ({
   scale: MotionValue<number>
   translate: MotionValue<number>
   children: React.ReactNode
+  isMobile: boolean
 }) => {
   return (
     <motion.div
       style={{
         rotateX: rotate,
         scale,
-        boxShadow:
-          '0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003',
       }}
-      className="mx-auto mt-20 w-full max-w-5xl rounded-[30px] border-none bg-transparent shadow-2xl md:p-0"
+      className="mx-auto mt-8 w-full max-w-5xl rounded-[30px] border-none bg-transparent shadow-sm md:mt-20 md:p-0 md:shadow-[0_0_#0000004d,0_9px_20px_#0000004a,0_37px_37px_#00000042,0_84px_50px_#00000026,0_149px_60px_#0000000a,0_233px_65px_#00000003]"
     >
       <div className="h-full w-full overflow-hidden rounded-2xl bg-transparent md:rounded-2xl">
         {children}
