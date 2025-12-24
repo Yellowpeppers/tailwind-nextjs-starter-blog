@@ -27,6 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     'privacy',
     'tools/dopamine-menu',
     'tools/noise',
+    'focuslab/app',
   ]
 
   const routes = locales.flatMap((locale) =>

@@ -2,26 +2,42 @@ import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { FocusLabLandingEntry } from './FocusLabLandingEntry'
 import { genPageMetadata } from 'app/seo'
+import { resolveLocale } from '@/lib/i18n'
 
-const focusLabDescription =
-  'Free ADHD workspace with Brown Noise, AI Task Breaker, and Pomodoro timer. Beat executive dysfunction and enter flow state.'
+const focusLabDescription = {
+  en: 'Free ADHD workspace with Brown Noise, AI Task Breaker, and Pomodoro timer. Beat executive dysfunction and enter flow state.',
+  zh: '免费的 ADHD 专注工作台，内置红/白噪音、AI 任务拆解器和番茄钟。对抗执行功能障碍，快速进入心流状态。',
+}
+
+const focusLabTitle = {
+  en: 'White Noise, AI Task Breaker & ADHD Timer - Focus Lab',
+  zh: '白噪音、AI 任务拆解与番茄钟 - Focus Lab 专注工作台',
+}
+
+const focusLabKeywords = {
+  en: [
+    'ADHD workspace',
+    'brown noise player',
+    'AI task breakdown',
+    'pomodoro timer',
+    'focus tools',
+  ],
+  zh: ['ADHD工作台', '白噪音', '任务拆解', '番茄钟', '专注工具'],
+}
 
 export async function generateMetadata(props: {
   params: Promise<{ lang: string }>
 }): Promise<Metadata> {
   const params = await props.params
+  const locale = resolveLocale(params.lang)
+
   return genPageMetadata({
-    title: 'ADHD Productivity Online Tools - Focus Lab',
+    title: locale === 'zh' ? focusLabTitle.zh : focusLabTitle.en,
     params: { lang: params.lang },
-    description: focusLabDescription,
+    path: '/focuslab',
+    description: locale === 'zh' ? focusLabDescription.zh : focusLabDescription.en,
     appendSiteName: false,
-    keywords: [
-      'ADHD productivity tools',
-      'AI task breaker',
-      'brown noise',
-      'pomodoro timer',
-      'executive dysfunction',
-    ],
+    keywords: locale === 'zh' ? focusLabKeywords.zh : focusLabKeywords.en,
   })
 }
 
@@ -44,7 +60,7 @@ const focusLabSchema = {
     bestRating: '5',
     worstRating: '1',
   },
-  description: focusLabDescription,
+  description: focusLabDescription.en,
   featureList: [
     'Brown, pink, and white noise soundboard',
     'AI task breaker and dopamine menu',

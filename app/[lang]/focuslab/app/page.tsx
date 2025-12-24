@@ -2,26 +2,36 @@ import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { genPageMetadata } from 'app/seo'
 import { FocusLabDashboard } from '../FocusLabDashboard'
+import { resolveLocale } from '@/lib/i18n'
 
-const focusLabDescription =
-  'Free ADHD workspace with Brown Noise, AI Task Breaker, and Pomodoro timer. Beat executive dysfunction and enter flow state.'
+const focusLabAppDescription = {
+  en: 'Free ADHD workspace with Brown Noise, AI Task Breaker, and Pomodoro timer. Beat executive dysfunction and enter flow state.',
+  zh: '免费的 ADHD 专注工作台，内置红/白噪音、AI 任务拆解器和番茄钟。对抗执行功能障碍，快速进入心流状态。',
+}
+
+const focusLabAppTitle = {
+  en: 'Free Brown Noise, Pomodoro & ADHD Tools - Focus Lab App',
+  zh: '免费红噪音、番茄钟在线工具 - Focus Lab 专注面板',
+}
+
+const focusLabAppKeywords = {
+  en: ['ADHD dashboard', 'brown noise online', 'task breaker', 'pomodoro timer', 'focus app'],
+  zh: ['ADHD面板', '红噪音在线', '任务拆解', '番茄钟', '专注软件'],
+}
 
 export async function generateMetadata(props: {
   params: Promise<{ lang: string }>
 }): Promise<Metadata> {
   const params = await props.params
+  const locale = resolveLocale(params.lang)
+
   return genPageMetadata({
-    title: 'Focus Lab Dashboard',
+    title: locale === 'zh' ? focusLabAppTitle.zh : focusLabAppTitle.en,
     params: { lang: params.lang },
-    description: focusLabDescription,
-    appendSiteName: true,
-    keywords: [
-      'ADHD productivity tools',
-      'AI task breaker',
-      'brown noise',
-      'pomodoro timer',
-      'executive dysfunction',
-    ],
+    path: '/focuslab/app',
+    description: locale === 'zh' ? focusLabAppDescription.zh : focusLabAppDescription.en,
+    appendSiteName: false,
+    keywords: locale === 'zh' ? focusLabAppKeywords.zh : focusLabAppKeywords.en,
   })
 }
 
@@ -37,7 +47,7 @@ const focusLabAppSchema = {
     priceCurrency: 'USD',
     category: 'Free Tier',
   },
-  description: focusLabDescription,
+  description: focusLabAppDescription.en,
   url: `${siteMetadata.siteUrl}/focuslab/app`,
   creator: {
     '@type': 'Organization',
