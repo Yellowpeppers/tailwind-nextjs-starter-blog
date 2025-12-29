@@ -429,7 +429,14 @@ export function CardShell({
         </div>
       </div>
 
-      <div className={`mt-1.5 flex min-h-0 flex-1 flex-col ${bodyClassName}`}>{children}</div>
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div
+        className={`mt-1.5 flex min-h-0 flex-1 flex-col ${bodyClassName}`}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
 
       {customAction && customActionPosition === 'right' && (
         <div className="absolute top-1/2 -right-2 z-50 -translate-y-1/2 opacity-0 transition-all duration-300 group-hover:right-0 group-hover:opacity-100">
