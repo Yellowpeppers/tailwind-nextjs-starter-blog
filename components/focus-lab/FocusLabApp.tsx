@@ -740,6 +740,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     }
   }, [uiStyle, theme, setTheme])
   const isFocusMode = false
+  const [isLayoutLocked, setIsLayoutLocked] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isTipOpen, setIsTipOpen] = useState(true)
   const [showGroupModal, setShowGroupModal] = useState(false)
@@ -2150,6 +2151,23 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
               <div className="mt-auto flex flex-col gap-2 px-1">
                 <FocusSidebarAction
+                  icon={
+                    <span
+                      className={`${
+                        isLayoutLocked
+                          ? 'icon-[solar--lock-keyhole-bold-duotone]'
+                          : 'icon-[solar--lock-keyhole-unlocked-bold-duotone]'
+                      } h-6 w-6`}
+                    />
+                  }
+                  label={
+                    isLayoutLocked
+                      ? t.focusLab.controls.unlockLayout || 'Unlock Layout'
+                      : t.focusLab.controls.lockLayout || 'Lock Layout'
+                  }
+                  onClick={() => setIsLayoutLocked(!isLayoutLocked)}
+                />
+                <FocusSidebarAction
                   icon={<LogoutIcon className="h-6 w-6" />}
                   label={t.focusLab.controls.exitFocus || 'Exit Focus'}
                   onClick={onExit || (() => {})}
@@ -2253,6 +2271,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                       activePreset={activePreset}
                       forcePreset="desktop"
                       containerPadding={[0, 0]}
+                      isLayoutLocked={isLayoutLocked}
                       layouts={{
                         desktop: layoutsByPreset.desktop.filter(
                           (i) => !(hiddenByPreset.desktop || new Set()).has(i.id)

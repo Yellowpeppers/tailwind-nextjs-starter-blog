@@ -49,6 +49,8 @@ type Props = {
   layoutKey?: number
   /** 强制使用指定预设，忽略 RGL 的断点切换 */
   forcePreset?: LayoutPreset
+  /** 是否锁定布局 (禁止拖拽和调整大小) */
+  isLayoutLocked?: boolean
 }
 
 const defaultBreakpoints: Record<LayoutPreset, number> = {
@@ -63,7 +65,7 @@ const defaultCols: Record<LayoutPreset, number> = {
   double: 8,
 }
 
-const toRglLayout = (items: GridItem[]): Layout =>
+const toRglLayout = (items: GridItem[], locked: boolean): Layout =>
   items.map((item) => ({
     i: item.id,
     x: item.x,
@@ -72,6 +74,7 @@ const toRglLayout = (items: GridItem[]): Layout =>
     h: item.h,
     minW: item.minW,
     minH: item.minH,
+    static: locked, // Force static (no drag/resize) if locked
   })) as unknown as Layout
 
 const fromRglLayout = (items: Layout): GridItem[] =>
@@ -101,6 +104,7 @@ export function FocusGridLayout({
   renderItem,
   layoutKey = 0,
   forcePreset,
+  isLayoutLocked = false,
 }: Props) {
   const { isLoaded } = useFocusSettingsContext()
   const [currentBreakpoint, setCurrentBreakpoint] = useState<LayoutPreset>(
@@ -130,19 +134,19 @@ export function FocusGridLayout({
   const visibleLayouts = useMemo(() => {
     if (!isFocusMode || focusedCardIds.size === 0) {
       return {
-        desktop: toRglLayout(layouts.desktop),
-        triple: toRglLayout(layouts.triple),
-        double: toRglLayout(layouts.double),
+        desktop: toRglLayout(layouts.desktop, isLayoutLocked),
+        triple: toRglLayout(layouts.triple, isLayoutLocked),
+        double: toRglLayout(layouts.double, isLayoutLocked),
       } as RLayouts
     }
 
     const filterItems = (items: GridItem[]) => items.filter((i) => focusedCardIds.has(i.id))
     return {
-      desktop: toRglLayout(filterItems(layouts.desktop)),
-      triple: toRglLayout(filterItems(layouts.triple)),
-      double: toRglLayout(filterItems(layouts.double)),
+      desktop: toRglLayout(filterItems(layouts.desktop), isLayoutLocked),
+      triple: toRglLayout(filterItems(layouts.triple), isLayoutLocked),
+      double: toRglLayout(filterItems(layouts.double), isLayoutLocked),
     } as RLayouts
-  }, [focusedCardIds, isFocusMode, layouts])
+  }, [focusedCardIds, isFocusMode, layouts, isLayoutLocked])
 
   const gridItemsForRender = useMemo(() => {
     const makeMap = (items: Layout) => {
@@ -188,7 +192,7 @@ export function FocusGridLayout({
     >
       {canRender && (
         <ResponsiveGridLayoutAny
-          key={`rgl-${layoutKey}`}
+          key={`rgl-${layoutKey}-${isLayoutLocked}`}
           width={gridWidth}
           className="focuslab-grid"
           breakpoints={effectiveBreakpoints}
@@ -196,7 +200,8 @@ export function FocusGridLayout({
           layouts={effectiveLayouts}
           rowHeight={rowHeight}
           margin={margin}
-          draggableCancel=".nodrag"
+          draggableHandle=".focuslab-drag-handle"
+          draggableCancel=".focuslab-no-drag"
           containerPadding={containerPadding}
           isDraggable={!isFocusMode || focusedCardIds.size === 0}
           isResizable={!isFocusMode || focusedCardIds.size === 0}
