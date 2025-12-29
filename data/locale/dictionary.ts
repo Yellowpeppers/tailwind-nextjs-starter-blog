@@ -349,6 +349,8 @@ export const dictionary = {
           hide: 'Hide tips',
         },
         joinGroup: 'Join Focus Lab WeChat',
+        lockLayout: 'Lock Layout',
+        unlockLayout: 'Unlock Layout',
       },
       common: {
         cancel: 'Cancel',
@@ -1428,6 +1430,8 @@ export const dictionary = {
           hide: '收起提示',
         },
         joinGroup: '加入 Focus Lab 微信群',
+        lockLayout: '锁定布局',
+        unlockLayout: '解锁 layout',
       },
       common: {
         cancel: '取消',
