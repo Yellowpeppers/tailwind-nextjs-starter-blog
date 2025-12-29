@@ -196,8 +196,7 @@ export function FocusGridLayout({
           layouts={effectiveLayouts}
           rowHeight={rowHeight}
           margin={margin}
-          draggableHandle=".focuslab-drag-handle"
-          draggableCancel=".focuslab-no-drag"
+          draggableCancel=".nodrag"
           containerPadding={containerPadding}
           isDraggable={!isFocusMode || focusedCardIds.size === 0}
           isResizable={!isFocusMode || focusedCardIds.size === 0}

@@ -385,7 +385,7 @@ export function CardShell({
           }`}
         >
           {customAction && customActionPosition === 'top' && (
-            <div className="focuslab-no-drag">{customAction}</div>
+            <div className="nodrag">{customAction}</div>
           )}
           {!customAction && onDelete && (
             <div className="relative" ref={deleteRef}>
@@ -395,7 +395,7 @@ export function CardShell({
                   e.stopPropagation()
                   setShowDeleteConfirm(!showDeleteConfirm)
                 }}
-                className={`focuslab-no-drag flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all ${
+                className={`nodrag flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all ${
                   showDeleteConfirm
                     ? 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
                     : 'text-gray-300 hover:bg-gray-50 hover:text-red-500 dark:text-gray-500 dark:hover:bg-gray-800/50 dark:hover:text-red-400'
@@ -429,9 +429,12 @@ export function CardShell({
         </div>
       </div>
 
+      {/* Apply nodrag class (standard RGL cancel) and touch-action to ensure proper interaction */}
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div
-        className={`mt-1.5 flex min-h-0 flex-1 flex-col ${bodyClassName}`}
+        className={`nodrag flex min-h-0 flex-1 flex-col ${headerHidden ? 'pt-5' : 'mt-1.5'} ${bodyClassName}`}
+        style={{ touchAction: 'pan-y' }}
+        onPointerDown={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >
@@ -440,7 +443,7 @@ export function CardShell({
 
       {customAction && customActionPosition === 'right' && (
         <div className="absolute top-1/2 -right-2 z-50 -translate-y-1/2 opacity-0 transition-all duration-300 group-hover:right-0 group-hover:opacity-100">
-          <div className="focuslab-no-drag flex translate-x-1/2 items-center">{customAction}</div>
+          <div className="nodrag flex translate-x-1/2 items-center">{customAction}</div>
         </div>
       )}
     </motion.section>
