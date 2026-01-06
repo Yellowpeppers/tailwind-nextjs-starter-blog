@@ -49,10 +49,12 @@ export const FocusStation = ({
   cols = 1,
   onStartFocus,
   focusedTaskId,
+  onTaskComplete,
 }: {
   cols?: number
   onStartFocus?: (task: string, id: string) => void
   focusedTaskId?: string | null
+  onTaskComplete?: () => void
 }) => {
   const { uiStyle } = useThemeColor()
   const isWarm = uiStyle === 'warm'
@@ -161,15 +163,21 @@ export const FocusStation = ({
   }
 
   const toggleItem = (id: string) => {
+    // 1. Check if we need to trigger completion first
+    const itemToToggle = items.find((t) => t.id === id)
+    if (itemToToggle && !itemToToggle.completed && onTaskComplete) {
+      onTaskComplete()
+    }
+
     setItems((prev) => {
-      // 1. Update status
+      // 2. Update status
       const updatedItems = prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
 
-      // 2. Separate into active and completed
+      // 3. Separate into active and completed
       const active = updatedItems.filter((t) => !t.completed)
       const completed = updatedItems.filter((t) => t.completed)
 
-      // 3. Concatenate: Active first, then Completed (preserving relative order within groups)
+      // 4. Concatenate: Active first, then Completed (preserving relative order within groups)
       return [...active, ...completed]
     })
   }

@@ -53,6 +53,9 @@ export type Settings = {
       enabled?: boolean
       preset?: CardAnimationPreset
     }
+    incentives?: {
+      custom_messages?: string[]
+    }
     // Reserved for future
   }
 }
@@ -71,6 +74,7 @@ const defaultSettings: Settings = {
     stats: {},
     timer: { custom_duration: 1500 },
     motion: { enabled: true, preset: 'float' },
+    incentives: { custom_messages: [] },
   },
 }
 

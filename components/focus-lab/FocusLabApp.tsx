@@ -12,6 +12,7 @@ import { FocusStation } from '@/components/focus-lab/FocusStation'
 import DataMigrationModal from '@/components/focus-lab/DataMigrationModal'
 import { FocusGridLayout } from '@/components/focus-lab/FocusGridLayout'
 import { CardShell } from '@/components/focus-lab/CardShell'
+import { EncouragementToast } from '@/components/focus-lab/EncouragementToast'
 import {
   syncLocalToCloud,
   createFocusItem,
@@ -589,6 +590,7 @@ const FocusLabMobileGrid = ({
   onCommandHandled,
   onSessionLogged,
   onTimerComplete,
+  onTaskComplete,
 }: {
   focusedTask?: FocusedTaskState
   onStartFocus?: (task: string, id: string) => void
@@ -596,6 +598,7 @@ const FocusLabMobileGrid = ({
   onCommandHandled?: () => void
   onSessionLogged?: (minutes: number) => void
   onTimerComplete?: (minutes: number) => void
+  onTaskComplete?: () => void
 }) => {
   const { t } = useTranslation()
   return (
@@ -610,7 +613,12 @@ const FocusLabMobileGrid = ({
         onTimerComplete={onTimerComplete}
       />
       <BrainDumpCard className="h-auto" />
-      <ToDoCard className="h-auto" onStartFocus={onStartFocus} focusedTaskId={focusedTask?.id} />
+      <ToDoCard
+        className="h-auto"
+        onStartFocus={onStartFocus}
+        focusedTaskId={focusedTask?.id}
+        onTaskComplete={onTaskComplete}
+      />
       <TaskBreakerCard className="h-auto" />
       <DopamineMenuCard className="h-auto" />
     </div>
@@ -722,6 +730,33 @@ const EMPTY_HIDDEN: Record<LayoutPreset, Set<string>> = {
   double: new Set(),
 }
 
+const INCENTIVE_MESSAGES = {
+  zh: [
+    '太棒了！离目标更近了一步！',
+    '专注的你闪闪发光 ✨',
+    '今天的努力都算数！',
+    '干得漂亮！保持这个节奏！',
+    '效率满分！为你点赞 👍',
+    '你真的很自律！',
+    '坚持就是胜利，继续加油！',
+    '休息一下，整装待发！',
+    '已完成！成就感满满 🎉',
+    '你的进步肉眼可见！',
+  ],
+  en: [
+    'Great job! One step closer!',
+    "You're on fire today! 🔥",
+    'Focus looks good on you!',
+    'Well done! Keep the momentum.',
+    'Crushing it! 🚀',
+    'Proud of your progress!',
+    'Efficiency level: Expert!',
+    'Stay awesome!',
+    'Goal smashed! 🎉',
+    'Making it happen!',
+  ],
+}
+
 export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const { theme, setTheme } = useTheme()
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
@@ -796,6 +831,30 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showPricingModal, setShowPricingModal] = useState(false)
   const [showWeChatModal, setShowWeChatModal] = useState(false)
+  const [encouragementMessage, setEncouragementMessage] = useState<string | null>(null)
+  console.log('[Debug] FocusLabApp state - encouragementMessage:', encouragementMessage)
+
+  const { celebrate } = useCelebration()
+
+  const triggerEncouragement = useCallback(() => {
+    const customMessages = settings.focus_lab?.incentives?.custom_messages
+    const hasCustom = customMessages && customMessages.length > 0
+
+    // Choose pool: use Custom if available, else Default
+    const messagePool = hasCustom
+      ? customMessages
+      : lang === 'zh'
+        ? INCENTIVE_MESSAGES.zh
+        : INCENTIVE_MESSAGES.en
+
+    const randomMsg = messagePool[Math.floor(Math.random() * messagePool.length)]
+
+    console.log('[Debug] Triggering toast with:', randomMsg)
+    setEncouragementMessage(randomMsg)
+    celebrate({ variant: 'confetti' })
+  }, [lang, celebrate, settings.focus_lab?.incentives?.custom_messages])
+
+  /* Handlers moved below */
 
   const [dailyGoalHours, setDailyGoalHours] = useState(4.5)
   const [dailyTaskGoal, setDailyTaskGoal] = useState(5)
@@ -840,6 +899,18 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
     },
 
     [refreshTodayProgress, user?.id]
+  )
+
+  const handleTaskComplete = useCallback(() => {
+    triggerEncouragement()
+  }, [triggerEncouragement])
+
+  const handleTimerComplete = useCallback(
+    (minutes: number) => {
+      refreshTodayProgress()
+      triggerEncouragement()
+    },
+    [refreshTodayProgress, triggerEncouragement]
   )
 
   const handleCheckout = async (interval: 'month' | 'year' = 'month') => {
@@ -1829,6 +1900,32 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                   </button>
                 </div>
 
+                {/* Custom Incentives */}
+                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-medium dark:text-gray-200">
+                      {lang === 'zh' ? '自定义激励语' : 'Personalized Incentives'}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {lang === 'zh' ? '每行一条' : 'One per line'}
+                    </span>
+                  </div>
+                  <textarea
+                    className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border-gray-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                    rows={4}
+                    placeholder={
+                      lang === 'zh' ? '输入你的专属激励语...' : 'Enter your custom messages...'
+                    }
+                    value={settings.focus_lab?.incentives?.custom_messages?.join('\n') ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      // Split by newline, but verify we don't save empty string if input is empty
+                      const lines = val ? val.split('\n') : []
+                      updateSettings('focus_lab.incentives.custom_messages', lines)
+                    }}
+                  />
+                </div>
+
                 {/* Layout Customization */}
                 <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                   <div className="flex items-start justify-between gap-3">
@@ -2301,7 +2398,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                               externalCommand={externalCommand}
                               onCommandHandled={() => setExternalCommand(null)}
                               onSessionLogged={handleSessionLogged}
-                              onTimerComplete={refreshTodayProgress}
+                              onTimerComplete={handleTimerComplete}
                             />
                           )
                         }
@@ -2322,6 +2419,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                                 }
                               }}
                               focusedTaskId={focusedTask?.id}
+                              onTaskComplete={handleTaskComplete}
                             />
                           )
                         }
@@ -2397,6 +2495,15 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Encouragement Toast */}
+      {/* Encouragement Toast */}
+      {encouragementMessage && (
+        <EncouragementToast
+          message={encouragementMessage}
+          onClose={() => setEncouragementMessage(null)}
+        />
+      )}
     </>
   )
 }
@@ -2599,6 +2706,7 @@ const ToDoCard = ({
   className,
   onStartFocus,
   focusedTaskId,
+  onTaskComplete,
   isFocused,
 }: {
   cols?: number
@@ -2606,6 +2714,7 @@ const ToDoCard = ({
   className?: string
   onStartFocus?: (task: string, id: string) => void
   focusedTaskId?: string | null
+  onTaskComplete?: () => void
   isFocused?: boolean
 }) => {
   const { t } = useTranslation()
@@ -2617,21 +2726,26 @@ const ToDoCard = ({
       className={className}
       isFocused={isFocused}
     >
-      <FocusStation cols={cols} onStartFocus={onStartFocus} focusedTaskId={focusedTaskId} />
+      <FocusStation
+        cols={cols}
+        onStartFocus={onStartFocus}
+        focusedTaskId={focusedTaskId}
+        onTaskComplete={onTaskComplete}
+      />
     </CardShell>
   )
 }
 
 const DopamineMenuCard = ({
-  cols,
   onDelete,
   className,
   isFocused,
+  cols,
 }: {
-  cols?: number
   onDelete?: () => void
   className?: string
   isFocused?: boolean
+  cols?: number
 }) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
