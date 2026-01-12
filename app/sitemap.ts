@@ -6,6 +6,8 @@ import { addLocalePrefix, locales } from '@/lib/i18n'
 export const dynamic = 'force-static'
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // NOTE: This sitemap is manually maintained for static routes.
+  // If you add a new static page (e.g. app/new-page/page.tsx), you MUST add it to the `staticRoutes` array below.
   const siteUrl = siteMetadata.siteUrl
 
   const blogRoutes = allBlogs

@@ -102,26 +102,29 @@ export const FocusStation = ({
     loadItems()
   }, [user])
 
-  // Save logic
+  // Save logic with Debounce
   useEffect(() => {
     if (!isLoaded) return
 
     // Safety Check: Don't save if the current data doesn't belong to the current user.
-    // This happens during the split second of login/logout switching.
     if (user?.id !== dataOwnerId.current) {
       if (!user && dataOwnerId.current === undefined) {
         // Guest saving Guest data -> OK
       } else {
-        // Mismatch (e.g. User logged in, but dataOwner is still undefined/Guest) -> ABORT
+        // Mismatch -> ABORT
         return
       }
     }
 
-    try {
-      saveStationItems(items, user)
-    } catch (e) {
-      console.error('Failed to save items:', e)
-    }
+    const timer = setTimeout(() => {
+      try {
+        saveStationItems(items, user)
+      } catch (e) {
+        console.error('Failed to save items:', e)
+      }
+    }, 1000)
+
+    return () => clearTimeout(timer)
   }, [items, isLoaded, user])
 
   // Sync logic
