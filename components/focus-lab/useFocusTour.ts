@@ -145,5 +145,9 @@ export const useFocusTour = () => {
     }
   }, [t])
 
-  return { startTour }
+  const destroyTour = () => {
+    driverObj.current?.destroy()
+  }
+
+  return { startTour, destroyTour }
 }

@@ -870,7 +870,15 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [streak, setStreak] = useState(0)
   const lastResetTime = useRef(0) // 追踪最后一次重置的时间戳
 
-  const { startTour } = useFocusTour() // Initialize tour hook
+  const { startTour, destroyTour } = useFocusTour() // Initialize tour hook
+
+  // 当 AuthModal 打开时销毁 Tour 以避免 z-index 冲突
+  useEffect(() => {
+    if (showAuthModal) {
+      destroyTour()
+    }
+  }, [showAuthModal, destroyTour])
+
   const pendingImmediateSave = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncePersistLayout = useMemo(
     () =>
