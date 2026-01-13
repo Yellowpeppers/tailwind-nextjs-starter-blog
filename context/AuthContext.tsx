@@ -108,30 +108,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, supabase])
 
   const refreshUser = async () => {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser()
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
 
-    if (user) {
-      setUser(user)
-
-      // Also refresh profile data (subscription_status)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_status')
-        .eq('id', user.id)
-        .single()
-
-      if (profile) {
-        setSubscriptionStatus(profile.subscription_status || 'free')
+      if (error) {
+        // Stop infinite loops on invalid session
+        if (error.status === 400 || error.message.includes('invalid_grant')) {
+          console.warn('Session expired or invalid, clearing auth state.')
+          setSession(null)
+          setUser(null)
+          setSubscriptionStatus(null)
+          return
+        }
       }
-    }
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (session) setSession(session)
+      if (user) {
+        setUser(user)
+
+        // Also refresh profile data (subscription_status)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_status')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          setSubscriptionStatus(profile.subscription_status || 'free')
+        }
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session) setSession(session)
+    } catch (err) {
+      console.error('Unexpected error in refreshUser:', err)
+    }
   }
 
   const signInWithGoogle = async () => {
