@@ -66,6 +66,7 @@ const FocusTaskCard = memo(
     onEditChange,
     onEditSave,
     onEditCancel,
+    isDragging,
   }: {
     item: FocusItem
     isWarm: boolean
@@ -82,6 +83,7 @@ const FocusTaskCard = memo(
     onEditChange?: (value: string) => void
     onEditSave?: (id: string) => void
     onEditCancel?: () => void
+    isDragging?: boolean
   }) => {
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -117,8 +119,8 @@ const FocusTaskCard = memo(
                     ? 'border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ring-0 dark:border-white dark:bg-gray-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
                     : 'border-primary-500 ring-primary-500 dark:border-primary-400 dark:ring-primary-400 border ring-1'
             : isCartoon
-              ? 'border-2 border-transparent hover:border-black dark:hover:border-white'
-              : 'ring-primary-100/50 hover:border-primary-200 dark:ring-primary-900/30 border border-transparent ring-1'
+              ? `border-2 border-transparent ${!isDragging ? 'hover:border-black dark:hover:border-white' : ''}`
+              : `ring-primary-100/50 ${!isDragging ? 'hover:border-primary-200' : ''} dark:ring-primary-900/30 border border-transparent ring-1`
         }`}
       >
         {/* Checkbox - Only this triggers task completion */}
@@ -256,10 +258,15 @@ export const FocusStation = ({
   // 3. When 'items' updates (e.g. initial load, or sync event), we update FormKit's list via setListItems.
   // 4. When Drag happens, FormKit updates its own list and calls handleEnd. We then sync back to our 'items' state to trigger persistence.
 
+  // Dragging state to disable hover effects
+  const [isDragging, setIsDragging] = useState(false)
+
   const [parent, listItems, setListItems] = useDragAndDrop<HTMLDivElement, FocusItem>(items, {
     plugins: [animations()],
+    handleDragstart: () => setIsDragging(true),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handleEnd: (data: any) => {
+      setIsDragging(false)
       // Sync back to master state when drag ends
       // Check if order actually changed to avoid loop?
       // FormKit returns the new list in data.values
@@ -520,6 +527,7 @@ export const FocusStation = ({
                   onEditChange={handleEditChange}
                   onEditSave={handleEditSave}
                   onEditCancel={handleEditCancel}
+                  isDragging={isDragging}
                 />
               ))}
             </div>

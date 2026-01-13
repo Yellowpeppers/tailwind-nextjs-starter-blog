@@ -4256,6 +4256,7 @@ const BrainDumpCard = memo(
     onEditChange,
     onEditSave,
     onEditCancel,
+    isDragging,
   }: {
     item: BrainDumpItem
     onMove?: (item: BrainDumpItem, from: 'left' | 'right') => void
@@ -4269,6 +4270,7 @@ const BrainDumpCard = memo(
     onEditChange?: (value: string) => void
     onEditSave?: (id: string, column: 'left' | 'right') => void
     onEditCancel?: () => void
+    isDragging?: boolean
   }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -4300,7 +4302,7 @@ const BrainDumpCard = memo(
 
     return (
       <div
-        className={`group ring-primary-100/50 dark:ring-primary-900/40 relative break-inside-avoid ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} rounded-t-none rounded-b-xl shadow-sm ring-1 transition-shadow hover:shadow-md ${
+        className={`group ring-primary-100/50 dark:ring-primary-900/40 relative break-inside-avoid ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} rounded-t-none rounded-b-xl shadow-sm ring-1 transition-shadow ${!isDragging ? 'hover:shadow-md' : ''} ${
           item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
         }`}
       >
@@ -4349,7 +4351,9 @@ const BrainDumpCard = memo(
 
           {/* Actions - Only delete, since drag-to-move works now */}
           {!isEditing && (
-            <div className="mt-2 flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <div
+              className={`mt-2 flex justify-end gap-2 opacity-0 transition-opacity ${!isDragging ? 'group-hover:opacity-100' : ''}`}
+            >
               {onDelete && (
                 <button
                   onClick={(e) => {
@@ -4389,14 +4393,19 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   // Safety Ref to prevent leak
   const dataOwnerId = useRef<string | undefined>(undefined)
 
+  // Dragging state to disable hover effects
+  const [isDragging, setIsDragging] = useState(false)
+
   // FormKit Drag and Drop - Two columns with shared group for cross-list dragging
   const [leftParent, leftList, setLeftList] = useDragAndDrop<HTMLDivElement, BrainDumpItem>(
     leftItems,
     {
       group: 'brain-dump',
       plugins: [animations()],
+      handleDragstart: () => setIsDragging(true),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handleEnd: (data: any) => {
+        setIsDragging(false)
         if (data.values) {
           setLeftItems((prev) => {
             const newValues = data.values as BrainDumpItem[]
@@ -4413,8 +4422,10 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     {
       group: 'brain-dump',
       plugins: [animations()],
+      handleDragstart: () => setIsDragging(true),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handleEnd: (data: any) => {
+        setIsDragging(false)
         if (data.values) {
           setRightItems((prev) => {
             const newValues = data.values as BrainDumpItem[]
@@ -4775,6 +4786,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
                   onEditChange={handleEditChange}
                   onEditSave={handleEditSave}
                   onEditCancel={handleEditCancel}
+                  isDragging={isDragging}
                 />
               ))}
             </div>
@@ -4794,6 +4806,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
                   onEditChange={handleEditChange}
                   onEditSave={handleEditSave}
                   onEditCancel={handleEditCancel}
+                  isDragging={isDragging}
                 />
               ))}
             </div>
