@@ -3764,7 +3764,7 @@ const TimerWidget = ({
             className="flex h-full flex-col justify-between"
           >
             {/* Presets (Visible Only When Idle) */}
-            <div className="flex h-10 items-center justify-center">
+            <div className="relative flex h-10 w-full items-center justify-center">
               <AnimatePresence>
                 {timerState === 'idle' && (
                   <motion.div
@@ -3827,6 +3827,19 @@ const TimerWidget = ({
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Zen Mode Button - Positioned absolute right in header */}
+              <button
+                onClick={() => setIsZenMode(true)}
+                className={`absolute right-0 z-10 rounded-lg p-1.5 transition-all ${
+                  isCartoon
+                    ? 'text-black hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
+                    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+                }`}
+                aria-label="Enter Zen Mode"
+              >
+                <span className="icon-[solar--meditation-round-linear] text-lg" />
+              </button>
             </div>
 
             <div className="flex flex-1 flex-col items-center justify-center">
@@ -3992,19 +4005,6 @@ const TimerWidget = ({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Zen Mode Button - positioned in top right corner */}
-      <button
-        onClick={() => setIsZenMode(true)}
-        className={`absolute top-0 right-0 z-10 rounded-lg p-1.5 transition-all ${
-          isCartoon
-            ? 'text-black hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
-            : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-        }`}
-        aria-label="Enter Zen Mode"
-      >
-        <span className="icon-[solar--meditation-round-linear] text-lg" />
-      </button>
 
       {/* Zen Mode Fullscreen Overlay - using Portal to escape parent constraints */}
       {typeof document !== 'undefined' &&
