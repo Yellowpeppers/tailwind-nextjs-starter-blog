@@ -107,7 +107,7 @@ const FocusTaskCard = memo(
 
     return (
       <div
-        className={`group relative flex ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm hover:shadow-md dark:bg-gray-900/40 ${
+        className={`group relative flex ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm transition-[opacity,shadow] duration-200 [&[data-dragging="true"]]:opacity-50 [&[data-dragging="true"]]:shadow-lg ${!isDragging ? 'hover:shadow-md' : ''} dark:bg-gray-900/40 ${
           focusedTaskId === item.id
             ? isWarm
               ? 'border border-[#C27B4A] bg-[#F5F2EC] ring-1 ring-[#C27B4A]'
@@ -261,12 +261,25 @@ export const FocusStation = ({
   // Dragging state to disable hover effects
   const [isDragging, setIsDragging] = useState(false)
 
+  const dragStatePlugin = useCallback((parent: HTMLElement) => {
+    const handleDragStart = () => setIsDragging(true)
+    const handleDragEnd = () => setIsDragging(false)
+
+    parent.addEventListener('dragstart', handleDragStart)
+    parent.addEventListener('dragend', handleDragEnd)
+
+    return {
+      teardown: () => {
+        parent.removeEventListener('dragstart', handleDragStart)
+        parent.removeEventListener('dragend', handleDragEnd)
+      },
+    }
+  }, [])
+
   const [parent, listItems, setListItems] = useDragAndDrop<HTMLDivElement, FocusItem>(items, {
-    plugins: [animations()],
-    handleDragstart: () => setIsDragging(true),
+    plugins: [animations(), dragStatePlugin],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handleEnd: (data: any) => {
-      setIsDragging(false)
       // Sync back to master state when drag ends
       // Check if order actually changed to avoid loop?
       // FormKit returns the new list in data.values

@@ -4302,7 +4302,7 @@ const BrainDumpCard = memo(
 
     return (
       <div
-        className={`group ring-primary-100/50 dark:ring-primary-900/40 relative break-inside-avoid ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} rounded-t-none rounded-b-xl shadow-sm ring-1 transition-shadow ${!isDragging ? 'hover:shadow-md' : ''} ${
+        className={`group ring-primary-100/50 dark:ring-primary-900/40 relative break-inside-avoid ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} rounded-t-none rounded-b-xl shadow-sm ring-1 transition-[opacity,shadow] duration-200 ${!isDragging ? 'hover:shadow-md' : ''} [&[data-dragging="true"]]:opacity-50 [&[data-dragging="true"]]:shadow-lg ${
           item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
         }`}
       >
@@ -4396,13 +4396,27 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   // Dragging state to disable hover effects
   const [isDragging, setIsDragging] = useState(false)
 
+  const dragStatePlugin = useCallback((parent: HTMLElement) => {
+    const handleDragStart = () => setIsDragging(true)
+    const handleDragEnd = () => setIsDragging(false)
+
+    parent.addEventListener('dragstart', handleDragStart)
+    parent.addEventListener('dragend', handleDragEnd)
+
+    return {
+      teardown: () => {
+        parent.removeEventListener('dragstart', handleDragStart)
+        parent.removeEventListener('dragend', handleDragEnd)
+      },
+    }
+  }, [])
+
   // FormKit Drag and Drop - Two columns with shared group for cross-list dragging
   const [leftParent, leftList, setLeftList] = useDragAndDrop<HTMLDivElement, BrainDumpItem>(
     leftItems,
     {
       group: 'brain-dump',
-      plugins: [animations()],
-      handleDragstart: () => setIsDragging(true),
+      plugins: [animations(), dragStatePlugin],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handleEnd: (data: any) => {
         setIsDragging(false)
@@ -4421,8 +4435,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     rightItems,
     {
       group: 'brain-dump',
-      plugins: [animations()],
-      handleDragstart: () => setIsDragging(true),
+      plugins: [animations(), dragStatePlugin],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handleEnd: (data: any) => {
         setIsDragging(false)
