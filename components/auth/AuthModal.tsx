@@ -90,7 +90,7 @@ export default function AuthModal({
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-[250]" onClose={handleClose}>
+      <Dialog as="div" className="relative z-[10001]" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
