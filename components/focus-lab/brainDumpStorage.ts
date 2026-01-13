@@ -147,10 +147,14 @@ export const readBrainDumpStorage = (userId?: string): BrainDumpState => {
 
     if (!raw && !fallbackLeft && !fallbackRight) return { left: [], right: [] }
     if (raw) {
-      const parsed = JSON.parse(raw)
-      return {
-        left: Array.isArray(parsed.left) ? parsed.left : [],
-        right: Array.isArray(parsed.right) ? parsed.right : [],
+      try {
+        const parsed = JSON.parse(raw)
+        return {
+          left: Array.isArray(parsed.left) ? parsed.left : [],
+          right: Array.isArray(parsed.right) ? parsed.right : [],
+        }
+      } catch (e) {
+        console.warn('BrainDump storage corrupted or invalid JSON, ignoring.', e)
       }
     }
 

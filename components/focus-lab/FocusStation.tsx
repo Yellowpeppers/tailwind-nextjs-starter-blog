@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
 import Image from 'next/image'
 import Link from 'next/link'
+
 import { useAuth } from '@/context/AuthContext'
+import isEqual from 'lodash/isEqual'
+
+// FormKit imports
+import { useDragAndDrop } from '@formkit/drag-and-drop/react'
+import { animations } from '@formkit/drag-and-drop'
 
 import {
   STATION_SYNC_EVENT,
@@ -20,9 +26,6 @@ import { useThemeColor, type UIStyle } from '@/context/ThemeColorContext'
 import PlanComparisonModal from '@/components/auth/PlanComparisonModal'
 
 const UpgradeModal = PlanComparisonModal
-
-// Simple Upgrade Modal
-// Simple Upgrade Modal Replaced by PlanComparisonModal
 
 // --- Icons ---
 const PlusIcon = ({ className }: { className?: string }) => (
@@ -45,6 +48,183 @@ const XIcon = ({ className }: { className?: string }) => (
   <span className={`icon-[solar--close-circle-outline] ${className}`} />
 )
 
+// Presentation Component (Pure)
+const FocusTaskCard = memo(
+  ({
+    item,
+    isWarm,
+    isGreen,
+    isBlue,
+    isCartoon,
+    focusedTaskId,
+    onToggle,
+    onStartFocus,
+    onRemove,
+    isEditing,
+    editValue,
+    onEditStart,
+    onEditChange,
+    onEditSave,
+    onEditCancel,
+  }: {
+    item: FocusItem
+    isWarm: boolean
+    isGreen: boolean
+    isBlue: boolean
+    isCartoon: boolean
+    focusedTaskId?: string | null
+    onToggle: (id: string) => void
+    onStartFocus?: (task: string, id: string) => void
+    onRemove: (id: string) => void
+    isEditing?: boolean
+    editValue?: string
+    onEditStart?: (id: string, content: string) => void
+    onEditChange?: (value: string) => void
+    onEditSave?: (id: string) => void
+    onEditCancel?: () => void
+  }) => {
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    // Auto-focus input when entering edit mode
+    useEffect(() => {
+      if (isEditing && inputRef.current) {
+        inputRef.current.focus()
+        inputRef.current.select()
+      }
+    }, [isEditing])
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        onEditSave?.(item.id)
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        onEditCancel?.()
+      }
+    }
+
+    return (
+      <div
+        className={`group relative flex ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm hover:shadow-md dark:bg-gray-900/40 ${
+          focusedTaskId === item.id
+            ? isWarm
+              ? 'border border-[#C27B4A] bg-[#F5F2EC] ring-1 ring-[#C27B4A]'
+              : isGreen
+                ? 'border border-[#7A9F7A] bg-[#F8F9F7] ring-1 ring-[#7A9F7A]'
+                : isBlue
+                  ? 'border border-[#5B84B1] bg-[#E0EEF8] ring-1 ring-[#5B84B1]'
+                  : isCartoon
+                    ? 'border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ring-0 dark:border-white dark:bg-gray-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
+                    : 'border-primary-500 ring-primary-500 dark:border-primary-400 dark:ring-primary-400 border ring-1'
+            : isCartoon
+              ? 'border-2 border-transparent hover:border-black dark:hover:border-white'
+              : 'ring-primary-100/50 hover:border-primary-200 dark:ring-primary-900/30 border border-transparent ring-1'
+        }`}
+      >
+        {/* Checkbox - Only this triggers task completion */}
+        <button
+          onClick={() => {
+            if (!isEditing) onToggle(item.id)
+          }}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+            item.completed
+              ? isWarm
+                ? 'border-[#C27B4A] bg-[#C27B4A] text-white'
+                : isGreen
+                  ? 'border-[#7A9F7A] bg-[#7A9F7A] text-white'
+                  : isBlue
+                    ? 'border-[#5B84B1] bg-[#5B84B1] text-white'
+                    : isCartoon
+                      ? 'border-2 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                      : 'border-primary-500 bg-primary-500 text-white'
+              : isWarm
+                ? 'border-[#C27B4A]/50 bg-white/50 hover:border-[#C27B4A] dark:bg-gray-800/50'
+                : isGreen
+                  ? 'border-[#7A9F7A]/50 bg-white/50 hover:border-[#7A9F7A] dark:bg-gray-800/50'
+                  : isBlue
+                    ? 'border-[#5B84B1]/50 bg-white/50 hover:border-[#5B84B1] dark:bg-gray-800/50'
+                    : isCartoon
+                      ? 'border-2 border-black bg-white hover:bg-gray-100 dark:border-white dark:bg-gray-900'
+                      : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
+          }`}
+        >
+          {item.completed && <CheckIcon className="h-3.5 w-3.5" />}
+        </button>
+
+        {/* Content - Editable */}
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editValue}
+            onChange={(e) => onEditChange?.(e.target.value)}
+            onBlur={() => onEditSave?.(item.id)}
+            onKeyDown={handleKeyDown}
+            className="flex-1 border-none bg-transparent p-0 text-sm text-gray-700 shadow-none ring-0 outline-none focus:border-none focus:shadow-none focus:ring-0 focus:outline-none dark:text-gray-300"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span
+            className={`flex-1 text-left text-sm transition-all select-none ${
+              item.completed
+                ? 'text-gray-400 line-through decoration-gray-300 dark:text-gray-500'
+                : 'text-gray-700 dark:text-gray-300'
+            }`}
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              onEditStart?.(item.id, item.content)
+            }}
+          >
+            {item.content}
+          </span>
+        )}
+
+        {/* Actions */}
+        {!isEditing && (
+          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            {onStartFocus && !item.completed && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onStartFocus(item.content, item.id)
+                }}
+                className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+                  focusedTaskId === item.id
+                    ? isWarm
+                      ? 'bg-[#F5F2EC] text-[#C27B4A]'
+                      : isGreen
+                        ? 'bg-[#F8F9F7] text-[#7A9F7A]'
+                        : isBlue
+                          ? 'bg-[#E0EEF8] text-[#5B84B1]'
+                          : isCartoon
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
+                    : 'hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 hover:bg-gray-100 dark:text-gray-600 dark:hover:bg-gray-800'
+                }`}
+                title="Focus on this"
+              >
+                <TargetIcon className="h-4 w-4" />
+              </button>
+            )}
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove(item.id)
+              }}
+              className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+              title="Delete"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+)
+FocusTaskCard.displayName = 'FocusTaskCard'
+
 export const FocusStation = ({
   cols = 1,
   onStartFocus,
@@ -63,19 +243,80 @@ export const FocusStation = ({
   const isCartoon = uiStyle === 'cartoon'
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
+
+  // Master state
   const [items, setItems] = useState<FocusItem[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Upgrade modal state - keep it just in case, but triggered properly
+  // FormKit Drag and Drop
+  // We use this logic:
+  // 1. We have our 'items' state which is the "Source of Truth" (loaded from DB/Storage).
+  // 2. We pass 'items' to useDragAndDrop.
+  // 3. When 'items' updates (e.g. initial load, or sync event), we update FormKit's list via setListItems.
+  // 4. When Drag happens, FormKit updates its own list and calls handleEnd. We then sync back to our 'items' state to trigger persistence.
+
+  const [parent, listItems, setListItems] = useDragAndDrop<HTMLDivElement, FocusItem>(items, {
+    plugins: [animations()],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    handleEnd: (data: any) => {
+      // Sync back to master state when drag ends
+      // Check if order actually changed to avoid loop?
+      // FormKit returns the new list in data.values
+      // We should update our master 'items' state so it gets saved to storage/DB
+      if (data.values) {
+        setItems((prev) => {
+          const newValues = data.values as FocusItem[]
+          if (isEqual(prev, newValues)) return prev
+          return newValues
+        })
+      }
+    },
+  })
+
+  // Sync FormKit when master items change (e.g. loaded from DB)
+  // But be careful not to create a loop if handleEnd updates items -> items update list -> ...
+  // useDragAndDrop handles updates gracefully usually.
+  useEffect(() => {
+    setListItems(items)
+  }, [items, setListItems])
+
+  // Upgrade modal state
   const [showUpgrade, setShowUpgrade] = useState(false)
   const ITEM_LIMIT = 20
   const isLimitReached = items.length >= ITEM_LIMIT
-
-  // Track which user the current items belong to.
-  // This prevents "Guest Items" from being saved to "New User" immediately upon login
-  // before the load effect has a chance to fetch the user's actual data.
   const dataOwnerId = useRef<string | undefined>(undefined)
+
+  // Inline edit state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+
+  const handleEditStart = useCallback((id: string, content: string) => {
+    setEditingId(id)
+    setEditValue(content)
+  }, [])
+
+  const handleEditChange = useCallback((value: string) => {
+    setEditValue(value)
+  }, [])
+
+  const handleEditSave = useCallback(
+    (id: string) => {
+      if (editValue.trim()) {
+        setItems((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, content: editValue.trim() } : item))
+        )
+      }
+      setEditingId(null)
+      setEditValue('')
+    },
+    [editValue]
+  )
+
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null)
+    setEditValue('')
+  }, [])
 
   // Load logic
   useEffect(() => {
@@ -106,12 +347,11 @@ export const FocusStation = ({
   useEffect(() => {
     if (!isLoaded) return
 
-    // Safety Check: Don't save if the current data doesn't belong to the current user.
+    // Safety Check
     if (user?.id !== dataOwnerId.current) {
       if (!user && dataOwnerId.current === undefined) {
         // Guest saving Guest data -> OK
       } else {
-        // Mismatch -> ABORT
         return
       }
     }
@@ -131,23 +371,23 @@ export const FocusStation = ({
   useEffect(() => {
     if (!isLoaded) return
     const handleSync = (event: Event) => {
-      // Remove 'if (user) return' to allow logged-in users to receive local sync events
-      // This ensures immediate UI updates when FocusLabApp modifies storage (e.g. AI transfer)
       const detail = (event as CustomEvent<FocusItem[]>).detail
       if (Array.isArray(detail)) {
-        setItems(detail)
+        setItems((currentItems) => {
+          if (isEqual(currentItems, detail)) return currentItems
+          return detail
+        })
       }
     }
 
-    // Always listen for sync events, whether guest or specific user
     window.addEventListener(STATION_SYNC_EVENT, handleSync as EventListener)
     return () => window.removeEventListener(STATION_SYNC_EVENT, handleSync as EventListener)
   }, [isLoaded])
 
-  const addTextItem = () => {
+  /* Handlers wrapped in useCallback for performance */
+  const addTextItem = useCallback(() => {
     if (!inputValue.trim()) return
 
-    // Check limit for PRO upselling (Limit Guests Only)
     if (isLimitReached && !user) {
       setShowUpgrade(true)
       return
@@ -155,7 +395,6 @@ export const FocusStation = ({
 
     const newItem = createFocusItem('text', inputValue.trim())
 
-    // Add new item and sort immediately: Active first, then Completed
     setItems((prev) => {
       const updated = [...prev, newItem]
       const active = updated.filter((t) => !t.completed)
@@ -163,41 +402,42 @@ export const FocusStation = ({
       return [...active, ...completed]
     })
     setInputValue('')
-  }
+  }, [inputValue, isLimitReached, user])
 
-  const toggleItem = (id: string) => {
-    // 1. Check if we need to trigger completion first
-    const itemToToggle = items.find((t) => t.id === id)
-    if (itemToToggle && !itemToToggle.completed && onTaskComplete) {
-      onTaskComplete()
-    }
+  const itemsRef = useRef(items)
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
 
-    setItems((prev) => {
-      // 2. Update status
-      const updatedItems = prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+  const toggleItemStable = useCallback(
+    (id: string) => {
+      const currentItems = itemsRef.current
+      const itemToToggle = currentItems.find((t) => t.id === id)
+      if (itemToToggle && !itemToToggle.completed && onTaskComplete) {
+        onTaskComplete()
+      }
 
-      // 3. Separate into active and completed
-      const active = updatedItems.filter((t) => !t.completed)
-      const completed = updatedItems.filter((t) => t.completed)
+      setItems((prev) => {
+        const updatedItems = prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+        // Re-sort: Active then Completed
+        const active = updatedItems.filter((t) => !t.completed)
+        const completed = updatedItems.filter((t) => t.completed)
+        return [...active, ...completed]
+      })
+    },
+    [onTaskComplete]
+  )
 
-      // 4. Concatenate: Active first, then Completed (preserving relative order within groups)
-      return [...active, ...completed]
-    })
-  }
-
-  const removeItem = (id: string) => {
+  const removeItemStable = useCallback((id: string) => {
     setItems((prev) => prev.filter((t) => t.id !== id))
-  }
+  }, [])
 
-  const handleClearAll = () => {
-    if (items.length === 0) return
-    const confirmMsg = lang === 'en' ? 'Clear all tasks?' : '清空所有任务？'
-    if (confirm(confirmMsg)) {
+  const handleClearAll = useCallback(() => {
+    if (itemsRef.current.length === 0) return
+    if (confirm(lang === 'en' ? 'Clear all tasks?' : '清空所有任务？')) {
       setItems([])
     }
-  }
-
-  const isWide = cols >= 5
+  }, [lang])
 
   return (
     <>
@@ -209,7 +449,7 @@ export const FocusStation = ({
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addTextItem()}
+              onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === 'Enter' && addTextItem()}
               placeholder={t.focusLab.widgets.todo.placeholder}
               className={`w-full rounded-xl border py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
                 isWarm
@@ -232,12 +472,6 @@ export const FocusStation = ({
             </button>
           </div>
 
-          {/* Clear All Button (Replaces Trash in header, per user provided original code logic, but wait, user image showed trash in header?
-             User Image arrow (1) points to input area right side. But text says "Here behind has a trash can".
-             User provided code puts trash can HERE, next to input. 
-             "这里后面有个垃圾桶" -> pointing to the input row.
-             I will place it NEXT to the input, as per the code snippet the user asked me to follow.
-          */}
           <button
             onClick={handleClearAll}
             disabled={items.length === 0}
@@ -266,139 +500,29 @@ export const FocusStation = ({
               <p className="text-xs opacity-60">{t.focusLab.widgets.todo.emptySubtitle}</p>
             </div>
           ) : (
-            <Reorder.Group
-              axis="y"
-              values={items}
-              onReorder={setItems}
-              className="grid grid-cols-1 gap-2"
-            >
-              <AnimatePresence initial={false} mode="popLayout">
-                {items.map((item) => (
-                  <Reorder.Item
-                    key={item.id}
-                    value={item}
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                    className={`focuslab-no-drag group relative flex cursor-pointer items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900/40 ${
-                      focusedTaskId === item.id
-                        ? isWarm
-                          ? 'border border-[#C27B4A] bg-[#F5F2EC] ring-1 ring-[#C27B4A]'
-                          : isGreen
-                            ? 'border border-[#7A9F7A] bg-[#F8F9F7] ring-1 ring-[#7A9F7A]'
-                            : isBlue
-                              ? 'border border-[#5B84B1] bg-[#E0EEF8] ring-1 ring-[#5B84B1]'
-                              : isCartoon
-                                ? 'border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ring-0 dark:border-white dark:bg-gray-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
-                                : 'border-primary-500 ring-primary-500 dark:border-primary-400 dark:ring-primary-400 border ring-1'
-                        : isCartoon
-                          ? 'border-2 border-transparent hover:border-black dark:hover:border-white'
-                          : 'ring-primary-100/50 hover:border-primary-200 dark:ring-primary-900/30 border border-transparent ring-1'
-                    }`}
-                    onClick={() => toggleItem(item.id)}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                  >
-                    {/* Checkbox (Click toggle) */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleItem(item.id)
-                      }}
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                        item.completed
-                          ? isWarm
-                            ? 'border-[#C27B4A] bg-[#C27B4A] text-white'
-                            : isGreen
-                              ? 'border-[#7A9F7A] bg-[#7A9F7A] text-white'
-                              : isBlue
-                                ? 'border-[#5B84B1] bg-[#5B84B1] text-white'
-                                : isCartoon
-                                  ? 'border-2 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
-                                  : 'border-primary-500 bg-primary-500 text-white'
-                          : isWarm
-                            ? 'border-[#C27B4A]/50 bg-white/50 hover:border-[#C27B4A] dark:bg-gray-800/50'
-                            : isGreen
-                              ? 'border-[#7A9F7A]/50 bg-white/50 hover:border-[#7A9F7A] dark:bg-gray-800/50'
-                              : isBlue
-                                ? 'border-[#5B84B1]/50 bg-white/50 hover:border-[#5B84B1] dark:bg-gray-800/50'
-                                : isCartoon
-                                  ? 'border-2 border-black bg-white hover:bg-gray-100 dark:border-white dark:bg-gray-900'
-                                  : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
-                      }`}
-                      onPointerDown={(e) => e.stopPropagation()}
-                    >
-                      {item.completed && <CheckIcon className="h-3.5 w-3.5" />}
-                    </button>
-
-                    {/* Content */}
-                    <span
-                      className={`flex-1 text-left text-sm transition-all ${
-                        item.completed
-                          ? 'text-gray-400 line-through decoration-gray-300 dark:text-gray-500'
-                          : 'text-gray-700 dark:text-gray-300' // Changed from hover:text-primary to plain gray per user request "This text color ... should be gray"
-                      }`}
-                    >
-                      {item.content}
-                    </span>
-
-                    {/* Actions Group */}
-                    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                      {/* Focus Button (Target Icon) */}
-                      {onStartFocus && !item.completed && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onStartFocus(item.content, item.id)
-                          }}
-                          className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
-                            focusedTaskId === item.id
-                              ? isWarm
-                                ? 'bg-[#F5F2EC] text-[#C27B4A]'
-                                : isGreen
-                                  ? 'bg-[#F8F9F7] text-[#7A9F7A]'
-                                  : isBlue
-                                    ? 'bg-[#E0EEF8] text-[#5B84B1]'
-                                    : isCartoon
-                                      ? 'bg-black text-white dark:bg-white dark:text-black'
-                                      : 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-                              : 'hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 hover:bg-gray-100 dark:text-gray-600 dark:hover:bg-gray-800'
-                          }`}
-                          title="Focus on this"
-                          onPointerDown={(e) => e.stopPropagation()}
-                        >
-                          <TargetIcon className="h-4 w-4" />
-                        </button>
-                      )}
-
-                      {/* Delete Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          removeItem(item.id)
-                        }}
-                        className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                        title="Delete"
-                        onPointerDown={(e) => e.stopPropagation()}
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-4 w-4"
-                        >
-                          <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </Reorder.Item>
-                ))}
-              </AnimatePresence>
-            </Reorder.Group>
+            /* FormKit Parent Element with ref */
+            <div ref={parent} className="flex flex-col gap-2">
+              {listItems.map((item) => (
+                <FocusTaskCard
+                  key={item.id}
+                  item={item}
+                  isWarm={isWarm}
+                  isGreen={isGreen}
+                  isBlue={isBlue}
+                  isCartoon={isCartoon}
+                  focusedTaskId={focusedTaskId}
+                  onToggle={toggleItemStable}
+                  onStartFocus={onStartFocus}
+                  onRemove={removeItemStable}
+                  isEditing={editingId === item.id}
+                  editValue={editingId === item.id ? editValue : ''}
+                  onEditStart={handleEditStart}
+                  onEditChange={handleEditChange}
+                  onEditSave={handleEditSave}
+                  onEditCancel={handleEditCancel}
+                />
+              ))}
+            </div>
           )}
         </div>
       </div>

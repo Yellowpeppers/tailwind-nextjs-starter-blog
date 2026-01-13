@@ -425,7 +425,7 @@ export const dictionary = {
         grid: {
           title: 'Customizable Layout',
           description:
-            'Drag the header of any card to move it. Drag the bottom-right corner to resize.',
+            'Click here to unlock the layout. Once unlocked, drag headers to move cards or resize them.',
         },
         sonic: {
           title: 'White Noise',
@@ -438,12 +438,13 @@ export const dictionary = {
         },
         todo: {
           title: 'To-Do List',
-          description: 'Click the target icon next to a task to start a Focus Timer for it.',
+          description:
+            'Click + or press ⌘/Ctrl+Enter to add tasks. Double-click text to edit. Click the target icon to start Focus Timer.',
         },
         brain: {
           title: 'Attention Hub',
           description:
-            'Capture fleeting thoughts to prevent attention loss. You can paste text or images.',
+            'Click + or press ⌘/Ctrl+Enter to add notes. Double-click text to edit. Drag notes between columns to organize.',
         },
         breaker: {
           title: 'AI Task Breaker',
@@ -458,6 +459,11 @@ export const dictionary = {
         stats: {
           title: 'Focus Stats',
           description: 'View your deep work hours and energy patterns.',
+        },
+        settings: {
+          title: 'Settings',
+          description:
+            'Change theme style, dark mode, colors, sound effects, or customize layout here.',
         },
         goal: {
           title: 'Daily Goal',
@@ -1501,7 +1507,7 @@ export const dictionary = {
         },
         grid: {
           title: '自定义布局',
-          description: '拖动每个卡片的标题栏可移动组件，拖动卡片右下角可调整大小。',
+          description: '点击此处解锁布局。解锁后，拖动标题栏即可移动组件，或拖动右下角调整大小。',
         },
         sonic: {
           title: '白噪音',
@@ -1513,11 +1519,13 @@ export const dictionary = {
         },
         todo: {
           title: '待办清单',
-          description: '管理每日任务。点击任务右侧的目标图标，可为该任务开启专注时钟。',
+          description:
+            '点击 + 或按 ⌘/Ctrl+回车 添加任务。双击任务文字可编辑。点击目标图标开启专注计时。',
         },
         brain: {
           title: '注意力中转站',
-          description: '快速记录稍纵即逝的想法，清空大脑避免分心。可以粘贴文字或图片。',
+          description:
+            '点击 + 或按 ⌘/Ctrl+回车 添加便签。双击文字可编辑。拖拽便签到另一列可整理归类。',
         },
         breaker: {
           title: 'AI 任务拆解',
@@ -1531,6 +1539,10 @@ export const dictionary = {
         stats: {
           title: '专注统计',
           description: '查看您的深度工作时长和能量分布。',
+        },
+        settings: {
+          title: '个性化设置',
+          description: '在此切换主题风格、深色模式、主题色、音效，或自定义您的布局。',
         },
         goal: {
           title: '每日目标',

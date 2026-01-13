@@ -30,11 +30,11 @@ export const useFocusTour = () => {
         },
       },
       {
-        element: '.focuslab-grid',
+        element: '#sidebar-layout-lock',
         popover: {
           title: t.focusLab.tour.grid.title,
           description: t.focusLab.tour.grid.description,
-          side: 'bottom',
+          side: 'right',
           align: 'center',
         },
       },
@@ -97,6 +97,15 @@ export const useFocusTour = () => {
         popover: {
           title: t.focusLab.tour.stats.title,
           description: t.focusLab.tour.stats.description,
+          side: 'right',
+          align: 'start',
+        },
+      },
+      {
+        element: '#sidebar-settings',
+        popover: {
+          title: t.focusLab.tour.settings.title,
+          description: t.focusLab.tour.settings.description,
           side: 'right',
           align: 'start',
         },

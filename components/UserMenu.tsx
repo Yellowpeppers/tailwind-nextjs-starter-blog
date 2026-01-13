@@ -10,23 +10,72 @@ import Image from 'next/image'
 
 type UserMenuProps = {
   onLoginClick: () => void
+  onSignUpClick: () => void
   onOpenProfile: () => void
   onOpenPlan: () => void
 }
 
-export default function UserMenu({ onLoginClick, onOpenProfile, onOpenPlan }: UserMenuProps) {
+export default function UserMenu({
+  onLoginClick,
+  onSignUpClick,
+  onOpenProfile,
+  onOpenPlan,
+}: UserMenuProps) {
   const { t } = useTranslation()
   const { user, signOut } = useAuth()
 
   if (!user) {
     return (
-      <button
-        onClick={onLoginClick}
-        className="hover:text-primary-500 dark:hover:text-primary-400 rounded-full p-1 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
-        aria-label="Toggle user menu"
-      >
-        <UserCircleIcon className="h-6 w-6" />
-      </button>
+      <Menu as="div" className="relative ml-3">
+        <Menu.Button
+          className="hover:text-primary-500 dark:hover:text-primary-400 rounded-full p-1 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
+          aria-label="Toggle user menu"
+        >
+          <UserCircleIcon className="h-6 w-6" />
+        </Menu.Button>
+        <Transition
+          as={Fragment}
+          enter="transition ease-out duration-100"
+          enterFrom="transform opacity-0 scale-95"
+          enterTo="transform opacity-100 scale-100"
+          leave="transition ease-in duration-75"
+          leaveFrom="transform opacity-100 scale-100"
+          leaveTo="transform opacity-0 scale-95"
+        >
+          <Menu.Items className="absolute right-0 z-[150] mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-xl bg-white shadow-xl ring-1 ring-black/5 focus:outline-none dark:divide-gray-800 dark:bg-gray-900 dark:ring-white/10">
+            <div className="py-1">
+              <Menu.Item>
+                {({ active }) => (
+                  <button
+                    onClick={onLoginClick}
+                    className={`${
+                      active
+                        ? 'bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-white'
+                        : 'text-gray-700 dark:text-gray-300'
+                    } group flex w-full items-center px-4 py-2 text-sm`}
+                  >
+                    {t.auth.signIn}
+                  </button>
+                )}
+              </Menu.Item>
+              <Menu.Item>
+                {({ active }) => (
+                  <button
+                    onClick={onSignUpClick}
+                    className={`${
+                      active
+                        ? 'bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-white'
+                        : 'text-gray-700 dark:text-gray-300'
+                    } group flex w-full items-center px-4 py-2 text-sm`}
+                  >
+                    {t.auth.signUp}
+                  </button>
+                )}
+              </Menu.Item>
+            </div>
+          </Menu.Items>
+        </Transition>
+      </Menu>
     )
   }
 

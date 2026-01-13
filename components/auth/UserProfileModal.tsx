@@ -56,7 +56,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
 
-        <div className="fixed inset-0 z-10 overflow-y-auto">
+        <div className="fixed inset-0 z-10 overflow-hidden">
           <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
             <Transition.Child
               as={Fragment}
@@ -67,7 +67,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-2xl bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md sm:p-6 dark:bg-gray-900">
+              <Dialog.Panel className="no-scrollbar relative max-h-[85vh] transform overflow-y-auto rounded-2xl bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md sm:p-6 dark:bg-gray-900">
                 <div className="absolute top-0 right-0 pt-4 pr-4">
                   <button
                     type="button"

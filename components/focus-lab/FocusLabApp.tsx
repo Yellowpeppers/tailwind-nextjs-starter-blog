@@ -4,8 +4,12 @@ import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 import Image from 'next/image'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+
+// FormKit Drag and Drop
+import { useDragAndDrop } from '@formkit/drag-and-drop/react'
+import { animations } from '@formkit/drag-and-drop'
+import { useEffect, useMemo, useRef, useState, useCallback, memo, type ReactNode } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useTheme } from 'next-themes'
 import { FocusStation } from '@/components/focus-lab/FocusStation'
@@ -612,7 +616,7 @@ const FocusLabMobileGrid = ({
         onSessionLogged={onSessionLogged}
         onTimerComplete={onTimerComplete}
       />
-      <BrainDumpCard className="h-auto" />
+      <BrainDumpCardWidget className="h-auto" />
       <ToDoCard
         className="h-auto"
         onStartFocus={onStartFocus}
@@ -1813,7 +1817,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+              className="no-scrollbar relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="mb-4 text-xl font-bold dark:text-white">
@@ -2220,6 +2224,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                     onClick={handleOpenStats}
                   />
                   <FocusSidebarAction
+                    id="sidebar-settings"
                     icon={<SettingsIcon className="h-6 w-6" />}
                     label={t.focusLab.sidebar.settings}
                     onClick={() => setShowSettingsModal(true)}
@@ -2248,6 +2253,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
 
               <div className="mt-auto flex flex-col gap-2 px-1">
                 <FocusSidebarAction
+                  id="sidebar-layout-lock"
                   icon={
                     <span
                       className={`${
@@ -2403,7 +2409,9 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                           )
                         }
                         if (item.id === 'brain') {
-                          return <BrainDumpCard className="h-full w-full" isFocused={isFocused} />
+                          return (
+                            <BrainDumpCardWidget className="h-full w-full" isFocused={isFocused} />
+                          )
                         }
                         if (item.id === 'todo') {
                           return (
@@ -2677,7 +2685,7 @@ const TaskBreakerCard = ({
   )
 }
 
-const BrainDumpCard = ({
+const BrainDumpCardWidget = ({
   onDelete,
   className,
   isFocused,
@@ -4235,6 +4243,135 @@ const TaskStepItem = ({ step }: { step: string }) => {
   )
 }
 
+const BrainDumpCard = memo(
+  ({
+    item,
+    onMove,
+    onDelete,
+    column,
+    t,
+    isEditing,
+    editValue,
+    onEditStart,
+    onEditChange,
+    onEditSave,
+    onEditCancel,
+  }: {
+    item: BrainDumpItem
+    onMove?: (item: BrainDumpItem, from: 'left' | 'right') => void
+    onDelete?: (id: string, col: 'left' | 'right') => void
+    column: 'left' | 'right'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    t: any
+    isEditing?: boolean
+    editValue?: string
+    onEditStart?: (id: string, text: string, column: 'left' | 'right') => void
+    onEditChange?: (value: string) => void
+    onEditSave?: (id: string, column: 'left' | 'right') => void
+    onEditCancel?: () => void
+  }) => {
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+    // Auto-focus and resize textarea when entering edit mode
+    useEffect(() => {
+      if (isEditing && textareaRef.current) {
+        textareaRef.current.focus()
+        textareaRef.current.select()
+        // Auto-resize
+        textareaRef.current.style.height = 'auto'
+        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
+      }
+    }, [isEditing])
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onEditCancel?.()
+      }
+      // Note: Enter creates new line in textarea, so we don't save on Enter
+    }
+
+    const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      onEditChange?.(e.target.value)
+      // Auto-resize
+      e.target.style.height = 'auto'
+      e.target.style.height = e.target.scrollHeight + 'px'
+    }
+
+    return (
+      <div
+        className={`group ring-primary-100/50 dark:ring-primary-900/40 relative break-inside-avoid ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} rounded-t-none rounded-b-xl shadow-sm ring-1 transition-shadow hover:shadow-md ${
+          item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
+        }`}
+      >
+        {/* Header Bar - Always draggable */}
+        <div
+          className={`h-3 w-full ${
+            item.image
+              ? 'bg-primary-100 dark:bg-primary-900/40'
+              : 'bg-yellow-200/50 dark:bg-yellow-900/50'
+          } `}
+        />
+
+        <div className="p-2.5 pt-2">
+          {item.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.image}
+              alt="Brain dump"
+              className="mb-2 w-full rounded-lg object-cover"
+            />
+          )}
+
+          {/* Text Content - Editable */}
+          {isEditing ? (
+            <textarea
+              ref={textareaRef}
+              value={editValue}
+              onChange={handleTextareaChange}
+              onBlur={() => onEditSave?.(item.id, column)}
+              onKeyDown={handleKeyDown}
+              className="w-full resize-none border-none bg-transparent p-0 text-xs leading-relaxed font-medium text-gray-800 shadow-none ring-0 outline-none focus:border-none focus:shadow-none focus:ring-0 focus:outline-none dark:text-gray-200"
+              rows={1}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : item.text ? (
+            <p
+              className="text-xs leading-relaxed font-medium whitespace-pre-wrap text-gray-800 select-none dark:text-gray-200"
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                onEditStart?.(item.id, item.text || '', column)
+              }}
+            >
+              {item.text}
+            </p>
+          ) : null}
+
+          {/* Actions - Only delete, since drag-to-move works now */}
+          {!isEditing && (
+            <div className="mt-2 flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete(item.id, column)
+                  }}
+                  className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
+                  title={t.focusLab?.widgets?.brainDump?.accessibility?.deleteNote}
+                  aria-label={t.focusLab?.widgets?.brainDump?.accessibility?.deleteNote}
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+)
+BrainDumpCard.displayName = 'BrainDumpCard'
+
 const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
@@ -4251,6 +4388,84 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
 
   // Safety Ref to prevent leak
   const dataOwnerId = useRef<string | undefined>(undefined)
+
+  // FormKit Drag and Drop - Two columns with shared group for cross-list dragging
+  const [leftParent, leftList, setLeftList] = useDragAndDrop<HTMLDivElement, BrainDumpItem>(
+    leftItems,
+    {
+      group: 'brain-dump',
+      plugins: [animations()],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      handleEnd: (data: any) => {
+        if (data.values) {
+          setLeftItems((prev) => {
+            const newValues = data.values as BrainDumpItem[]
+            if (isEqual(prev, newValues)) return prev
+            return newValues
+          })
+        }
+      },
+    }
+  )
+
+  const [rightParent, rightList, setRightList] = useDragAndDrop<HTMLDivElement, BrainDumpItem>(
+    rightItems,
+    {
+      group: 'brain-dump',
+      plugins: [animations()],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      handleEnd: (data: any) => {
+        if (data.values) {
+          setRightItems((prev) => {
+            const newValues = data.values as BrainDumpItem[]
+            if (isEqual(prev, newValues)) return prev
+            return newValues
+          })
+        }
+      },
+    }
+  )
+
+  // Sync FormKit when master items change (e.g. loaded from DB)
+  useEffect(() => {
+    setLeftList(leftItems)
+  }, [leftItems, setLeftList])
+
+  useEffect(() => {
+    setRightList(rightItems)
+  }, [rightItems, setRightList])
+
+  // Inline edit state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [editColumn, setEditColumn] = useState<'left' | 'right'>('left')
+
+  const handleEditStart = useCallback((id: string, text: string, column: 'left' | 'right') => {
+    setEditingId(id)
+    setEditValue(text)
+    setEditColumn(column)
+  }, [])
+
+  const handleEditChange = useCallback((value: string) => {
+    setEditValue(value)
+  }, [])
+
+  const handleEditSave = useCallback(
+    (id: string, column: 'left' | 'right') => {
+      const setter = column === 'left' ? setLeftItems : setRightItems
+      setter((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, text: editValue.trim() } : item))
+      )
+      setEditingId(null)
+      setEditValue('')
+    },
+    [editValue]
+  )
+
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null)
+    setEditValue('')
+  }, [])
 
   // Load and migrate data
   useEffect(() => {
@@ -4297,6 +4512,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
             })
 
           setLeftItems(sanitize(local.left))
+
           setRightItems(sanitize(local.right))
         } else {
           // ... legacy migration ...
@@ -4390,7 +4606,8 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Cmd/Ctrl + Enter to add (avoid conflict with IME Enter)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault()
       handleAdd()
     }
@@ -4431,84 +4648,25 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     }
   }
 
-  const handleDelete = (id: string, column: 'left' | 'right') => {
+  const handleDelete = useCallback((id: string, column: 'left' | 'right') => {
     if (column === 'left') {
       setLeftItems((prev) => prev.filter((item) => item.id !== id))
     } else {
       setRightItems((prev) => prev.filter((item) => item.id !== id))
     }
-  }
+  }, [])
 
-  const handleMoveToOtherColumn = (item: BrainDumpItem, fromColumn: 'left' | 'right') => {
-    if (fromColumn === 'left') {
-      setLeftItems((prev) => prev.filter((i) => i.id !== item.id))
-      setRightItems((prev) => [item, ...prev])
-    } else {
-      setRightItems((prev) => prev.filter((i) => i.id !== item.id))
-      setLeftItems((prev) => [item, ...prev])
-    }
-  }
-
-  const renderCard = (item: BrainDumpItem, column: 'left' | 'right') => (
-    <Reorder.Item
-      key={item.id}
-      value={item}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={`focuslab-no-drag group ring-primary-100/50 dark:ring-primary-900/40 relative mb-3 break-inside-avoid rounded-t-none rounded-b-xl shadow-sm ring-1 transition-all hover:rotate-1 hover:shadow-md ${
-        item.image ? 'bg-white dark:bg-gray-800' : 'bg-yellow-100 dark:bg-yellow-900/30'
-      } `}
-      onPointerDown={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-    >
-      {/* Header Bar (Tape/Tag look) */}
-      <div
-        className={`h-3 w-full ${
-          item.image
-            ? 'bg-primary-100 dark:bg-primary-900/40'
-            : 'bg-yellow-200/50 dark:bg-yellow-900/50'
-        } `}
-      />
-
-      <div className="p-2.5 pt-2">
-        {item.image && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={item.image}
-              alt="Brain dump"
-              className="mb-2 w-full rounded-lg object-cover"
-            />
-          </>
-        )}
-        {item.text && (
-          <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap text-gray-800 dark:text-gray-200">
-            {item.text}
-          </p>
-        )}
-
-        {/* Actions */}
-        <div className="mt-2 flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            onClick={() => handleMoveToOtherColumn(item, column)}
-            className="hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 dark:text-gray-500"
-            title={t.focusLab.widgets.brainDump.accessibility.moveToOtherColumn}
-            aria-label={t.focusLab.widgets.brainDump.accessibility.moveToOtherColumn}
-          >
-            <TransferIcon className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => handleDelete(item.id, column)}
-            className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
-            title={t.focusLab.widgets.brainDump.accessibility.deleteNote}
-            aria-label={t.focusLab.widgets.brainDump.accessibility.deleteNote}
-          >
-            <XIcon className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-    </Reorder.Item>
+  const handleMoveToOtherColumn = useCallback(
+    (item: BrainDumpItem, fromColumn: 'left' | 'right') => {
+      if (fromColumn === 'left') {
+        setLeftItems((prev) => prev.filter((i) => i.id !== item.id))
+        setRightItems((prev) => [item, ...prev])
+      } else {
+        setRightItems((prev) => prev.filter((i) => i.id !== item.id))
+        setLeftItems((prev) => [item, ...prev])
+      }
+    },
+    []
   )
 
   return (
@@ -4600,26 +4758,45 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
             <p className="text-xs opacity-60">{t.focusLab.widgets.brainDump.emptySubtitle}</p>
           </div>
         ) : (
+          /* FormKit Parent Elements with refs - no DndContext needed */
           <div className="flex items-start gap-3">
-            {/* Left Column */}
-            <Reorder.Group
-              axis="y"
-              values={leftItems}
-              onReorder={setLeftItems}
-              className="min-w-0 flex-1"
-            >
-              {leftItems.map((item) => renderCard(item, 'left'))}
-            </Reorder.Group>
+            <div ref={leftParent} className="flex min-h-[50px] min-w-0 flex-1 flex-col gap-3">
+              {leftList.map((item) => (
+                <BrainDumpCard
+                  key={item.id}
+                  item={item}
+                  column="left"
+                  onMove={handleMoveToOtherColumn}
+                  onDelete={handleDelete}
+                  t={t}
+                  isEditing={editingId === item.id}
+                  editValue={editingId === item.id ? editValue : ''}
+                  onEditStart={handleEditStart}
+                  onEditChange={handleEditChange}
+                  onEditSave={handleEditSave}
+                  onEditCancel={handleEditCancel}
+                />
+              ))}
+            </div>
 
-            {/* Right Column */}
-            <Reorder.Group
-              axis="y"
-              values={rightItems}
-              onReorder={setRightItems}
-              className="min-w-0 flex-1"
-            >
-              {rightItems.map((item) => renderCard(item, 'right'))}
-            </Reorder.Group>
+            <div ref={rightParent} className="flex min-h-[50px] min-w-0 flex-1 flex-col gap-3">
+              {rightList.map((item) => (
+                <BrainDumpCard
+                  key={item.id}
+                  item={item}
+                  column="right"
+                  onMove={handleMoveToOtherColumn}
+                  onDelete={handleDelete}
+                  t={t}
+                  isEditing={editingId === item.id}
+                  editValue={editingId === item.id ? editValue : ''}
+                  onEditStart={handleEditStart}
+                  onEditChange={handleEditChange}
+                  onEditSave={handleEditSave}
+                  onEditCancel={handleEditCancel}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -21,6 +21,7 @@ import PlanComparisonModal from '@/components/auth/PlanComparisonModal'
 const Header = () => {
   const { t } = useTranslation()
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authModalView, setAuthModalView] = useState<'login' | 'signup'>('login')
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
 
@@ -81,7 +82,14 @@ const Header = () => {
               </Suspense>
             </div>
             <UserMenu
-              onLoginClick={() => setIsAuthModalOpen(true)}
+              onLoginClick={() => {
+                setAuthModalView('login')
+                setIsAuthModalOpen(true)
+              }}
+              onSignUpClick={() => {
+                setAuthModalView('signup')
+                setIsAuthModalOpen(true)
+              }}
               onOpenProfile={() => setIsProfileModalOpen(true)}
               onOpenPlan={() => setIsPlanModalOpen(true)}
             />
@@ -111,6 +119,7 @@ const Header = () => {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onGuestContinue={() => setIsAuthModalOpen(false)}
+        initialView={authModalView}
       />
       <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
       <PlanComparisonModal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} />
