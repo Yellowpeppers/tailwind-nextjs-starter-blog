@@ -434,7 +434,7 @@ export const dictionary = {
         timer: {
           title: 'Focus Timer',
           description:
-            'Click middle-right button to switch modes. Double-click "Custom" in Countdown to edit duration.',
+            'Switch modes with the side button. Double-click the rightmost option (25m) to edit time. Click the top-right icon 🧘 to enter Zen Mode.',
         },
         todo: {
           title: 'To-Do List',
@@ -1515,7 +1515,8 @@ export const dictionary = {
         },
         timer: {
           title: '专注时钟',
-          description: '记录专注时间。点击右侧中部按钮切换模式，双击倒计时“自定义”可设定时长。',
+          description:
+            '点击右侧中部按钮切换模式，双击右侧时间选项（25m）可自定义时长。点击右上角图标 🧘 进入禅模式。',
         },
         todo: {
           title: '待办清单',

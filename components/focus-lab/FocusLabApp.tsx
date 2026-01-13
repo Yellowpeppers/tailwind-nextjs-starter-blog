@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { createPortal } from 'react-dom'
 
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -3299,6 +3300,9 @@ const TimerWidget = ({
   const prevCustomDurationRef = useRef<number | null>(null)
   // Internal isFlipped removed in favor of prop
 
+  // Zen Mode State
+  const [isZenMode, setIsZenMode] = useState(false)
+
   // Timer Core State
   const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration) // Seconds. Countdown: remaining. Stopwatch: elapsed.
   const [timerState, setTimerState] = useState<TimerState>('idle')
@@ -3356,6 +3360,18 @@ const TimerWidget = ({
       setPermission(Notification.permission)
     }
   }, [])
+
+  // Escape key to exit Zen Mode
+  useEffect(() => {
+    if (!isZenMode) return
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsZenMode(false)
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [isZenMode])
 
   // Hydrate custom duration from settings (seconds -> minutes)
   useEffect(() => {
@@ -3976,6 +3992,197 @@ const TimerWidget = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Zen Mode Button - positioned in top right corner */}
+      <button
+        onClick={() => setIsZenMode(true)}
+        className={`absolute top-0 right-0 z-10 rounded-lg p-1.5 transition-all ${
+          isCartoon
+            ? 'text-black hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
+            : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+        }`}
+        aria-label="Enter Zen Mode"
+      >
+        <span className="icon-[solar--meditation-round-linear] text-lg" />
+      </button>
+
+      {/* Zen Mode Fullscreen Overlay - using Portal to escape parent constraints */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {isZenMode && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black"
+              >
+                {/* Exit Button */}
+                <button
+                  onClick={() => setIsZenMode(false)}
+                  className="absolute top-6 right-6 rounded-full p-3 text-white/60 transition-all hover:bg-white/10 hover:text-white"
+                  aria-label="Exit Zen Mode"
+                >
+                  <span className="icon-[solar--close-circle-linear] text-3xl" />
+                </button>
+
+                {/* Task Name */}
+                {focusedTask && (
+                  <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-8 max-w-[80%] text-center text-2xl font-medium text-white/60"
+                  >
+                    {focusedTask.text}
+                  </motion.p>
+                )}
+
+                {/* Large Timer Display */}
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                  className={`focuslab-numeric text-[12rem] leading-none font-black tracking-tight ${
+                    isCompleted
+                      ? 'text-green-400'
+                      : isWarm
+                        ? 'text-[#C27B4A]'
+                        : isGreen
+                          ? 'text-[#7A9F7A]'
+                          : isBlue
+                            ? 'text-[#5B84B1]'
+                            : 'text-white'
+                  }`}
+                >
+                  {isCompleted ? t.focusLab.widgets.timer.congratulations || '🎉' : display}
+                </motion.div>
+
+                {/* Status Text */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="mt-6 text-lg text-white/40"
+                >
+                  {isCompleted
+                    ? 'Session Complete!'
+                    : isRunning
+                      ? isFlipped
+                        ? t.focusLab.widgets.timer.recording || 'Recording time...'
+                        : 'Stay focused'
+                      : isPaused
+                        ? 'Paused'
+                        : timerState === 'idle'
+                          ? t.focusLab.widgets.timer.ready || 'Ready to start'
+                          : ''}
+                </motion.p>
+
+                {/* Control Buttons */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-12 flex gap-4"
+                >
+                  {timerState === 'idle' && (
+                    <button
+                      onClick={() => {
+                        playClickSound()
+                        startTimer()
+                      }}
+                      className="flex items-center gap-2 rounded-full bg-white/10 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-white/20"
+                    >
+                      <span className="icon-[solar--play-bold] text-xl" />
+                      {t.focusLab.widgets.timer.start || 'Start'}
+                    </button>
+                  )}
+                  {isRunning && (
+                    <button
+                      onClick={() => {
+                        playClickSound()
+                        pauseTimer()
+                      }}
+                      className="flex items-center gap-2 rounded-full bg-white/10 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-white/20"
+                    >
+                      <span className="icon-[solar--pause-bold] text-xl" />
+                      {t.focusLab.widgets.timer.pause}
+                    </button>
+                  )}
+
+                  {isPaused && (
+                    <>
+                      <button
+                        onClick={() => {
+                          playClickSound()
+                          endSession()
+                          setIsZenMode(false)
+                        }}
+                        className="flex items-center gap-2 rounded-full bg-red-500/20 px-8 py-4 text-lg font-semibold text-red-400 transition-all hover:bg-red-500/30"
+                      >
+                        {t.focusLab.widgets.timer.endSession || 'End'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          playClickSound()
+                          startTimer()
+                        }}
+                        className="flex items-center gap-2 rounded-full bg-white/10 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-white/20"
+                      >
+                        <span className="icon-[solar--play-bold] text-xl" />
+                        {t.focusLab.widgets.timer.resume || 'Resume'}
+                      </button>
+                    </>
+                  )}
+
+                  {isCompleted && (
+                    <>
+                      <button
+                        onClick={() => {
+                          playClickSound()
+                          endSession()
+                          setIsZenMode(false)
+                        }}
+                        className="flex items-center gap-2 rounded-full bg-white/10 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-white/20"
+                      >
+                        {t.focusLab.widgets.timer.endFocus || 'End Focus'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          playClickSound()
+                          continueNewSession()
+                        }}
+                        className={`flex items-center gap-2 rounded-full px-8 py-4 text-lg font-semibold text-white transition-all ${
+                          isWarm
+                            ? 'bg-[#C27B4A] hover:bg-[#A6663E]'
+                            : isGreen
+                              ? 'bg-[#7A9F7A] hover:bg-[#688868]'
+                              : isBlue
+                                ? 'bg-[#5B84B1] hover:bg-[#4A6E94]'
+                                : 'bg-primary-500 hover:bg-primary-600'
+                        }`}
+                      >
+                        {t.focusLab.widgets.timer.continueFocus || 'One more round'}
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+
+                {/* Keyboard hint */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="absolute bottom-8 text-sm text-white/20"
+                >
+                  Press ESC to exit
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   )
 }
