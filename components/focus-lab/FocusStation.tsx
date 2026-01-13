@@ -277,7 +277,8 @@ export const FocusStation = ({
   }, [])
 
   const [parent, listItems, setListItems] = useDragAndDrop<HTMLDivElement, FocusItem>(items, {
-    plugins: [animations(), dragStatePlugin],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    plugins: [animations(), dragStatePlugin as any],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handleEnd: (data: any) => {
       // Sync back to master state when drag ends

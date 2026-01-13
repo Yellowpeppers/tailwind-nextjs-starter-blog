@@ -836,7 +836,6 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
   const [showPricingModal, setShowPricingModal] = useState(false)
   const [showWeChatModal, setShowWeChatModal] = useState(false)
   const [encouragementMessage, setEncouragementMessage] = useState<string | null>(null)
-  console.log('[Debug] FocusLabApp state - encouragementMessage:', encouragementMessage)
 
   const { celebrate } = useCelebration()
 
@@ -852,8 +851,6 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
         : INCENTIVE_MESSAGES.en
 
     const randomMsg = messagePool[Math.floor(Math.random() * messagePool.length)]
-
-    console.log('[Debug] Triggering toast with:', randomMsg)
     setEncouragementMessage(randomMsg)
     celebrate({ variant: 'confetti' })
   }, [lang, celebrate, settings.focus_lab?.incentives?.custom_messages])
@@ -1827,21 +1824,34 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
               <div className="space-y-4">
                 {/* Dark Mode */}
                 <div
-                  className={`flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800 ${uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' ? 'opacity-50' : ''}`}
+                  className={`flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800 ${uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' || uiStyle === 'cartoon' ? 'opacity-50' : ''}`}
                 >
                   <span className="font-medium dark:text-gray-200">
                     {t.focusLab.settings?.darkMode || 'Dark Mode'}
                   </span>
                   <button
-                    disabled={uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue'}
+                    disabled={
+                      uiStyle === 'warm' ||
+                      uiStyle === 'green' ||
+                      uiStyle === 'blue' ||
+                      uiStyle === 'cartoon'
+                    }
                     onClick={() => {
-                      if (uiStyle !== 'warm' && uiStyle !== 'green' && uiStyle !== 'blue') {
+                      if (
+                        uiStyle !== 'warm' &&
+                        uiStyle !== 'green' &&
+                        uiStyle !== 'blue' &&
+                        uiStyle !== 'cartoon'
+                      ) {
                         setTheme(theme === 'dark' ? 'light' : 'dark')
                       }
                     }}
-                    className={`rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700 ${uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' ? 'cursor-not-allowed opacity-50' : ''}`}
+                    className={`rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700 ${uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' || uiStyle === 'cartoon' ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
-                    {uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue'
+                    {uiStyle === 'warm' ||
+                    uiStyle === 'green' ||
+                    uiStyle === 'blue' ||
+                    uiStyle === 'cartoon'
                       ? 'Light Only'
                       : theme === 'dark'
                         ? t.focusLab.settings?.on || 'On'
@@ -2119,6 +2129,17 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                       Blue
                     </button>
                   </div>
+                  {/* Light mode only hint for non-Modern styles */}
+                  {(uiStyle === 'warm' ||
+                    uiStyle === 'green' ||
+                    uiStyle === 'blue' ||
+                    uiStyle === 'cartoon') && (
+                    <p className="mt-2 text-xs text-gray-400">
+                      {lang === 'zh'
+                        ? '此风格仅支持浅色模式'
+                        : 'This style only supports light mode'}
+                    </p>
+                  )}
                 </div>
 
                 {/* Theme Color (Only visible in Modern style) */}
@@ -2798,6 +2819,25 @@ const DopamineMenuCard = ({
   )
 }
 
+/**
+ * Timer State Machine:
+ * - idle: 初始/待机状态，可以开始新的专注
+ * - focusing: 专注进行中（倒计时或秒表）
+ * - paused-focusing: 专注暂停中
+ * - focus-completed: 专注时间结束，显示完成界面
+ * - break: 休息进行中
+ * - paused-break: 休息暂停中
+ * - break-completed: 休息结束
+ *
+ * 状态转换:
+ *   idle -> focusing (点击开始)
+ *   focusing -> paused-focusing (点击暂停)
+ *   focusing -> focus-completed (倒计时归零)
+ *   paused-focusing -> focusing (点击继续)
+ *   paused-focusing -> idle (点击结束)
+ *   focus-completed -> idle (点击结束)
+ *   focus-completed -> focusing (点击再来一轮)
+ */
 type TimerState =
   | 'idle'
   | 'focusing'
@@ -2840,7 +2880,6 @@ const SonicShieldWidget = ({
     active_tracks?: Record<string, ActiveTrack>
     master_volume?: number
   }>({})
-  const prevGoalRef = useRef<{ hours?: number; tasks?: number }>({})
 
   // Ref to prevent saving immediately after loading from context
   const isRemoteUpdate = useRef(false)
@@ -3255,7 +3294,6 @@ const TimerWidget = ({
   // Timer Core State
   const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration) // Seconds. Countdown: remaining. Stopwatch: elapsed.
   const [timerState, setTimerState] = useState<TimerState>('idle')
-  const [timerMode, setTimerMode] = useState<'countdown' | 'stopwatch'>('countdown')
   const [totalAllocatedDuration, setTotalAllocatedDuration] = useState(timerPresets.focus.duration) // For accurate countdown accounting
   const prevModeRef = useRef<'countdown' | 'stopwatch'>('countdown')
 
@@ -3525,7 +3563,7 @@ const TimerWidget = ({
     } else {
       // Mid-session extension
       setTimeLeft((prev) => prev + 300)
-      if (timerMode === 'countdown') {
+      if (derivedMode === 'countdown') {
         setTotalAllocatedDuration((prev) => prev + 300)
       }
     }
@@ -3634,7 +3672,7 @@ const TimerWidget = ({
                     }}
                     className={`${
                       isWarm
-                        ? 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-lg text-white' // Note: Warm pause used primary blue originally? Or C27B4A? Original trace showed primary for pause in one view, C27B4A for Start. Let's assume Play=C27B4A, Pause=Primary(Blue/Gray)? Actually Pause was Primary-500.
+                        ? 'h-10 flex-1 rounded-xl bg-[#C27B4A] text-white shadow-lg shadow-[#C27B4A]/25 hover:bg-[#A6663E] hover:shadow-[#C27B4A]/40 focus:ring-2 focus:ring-[#C27B4A] focus:ring-offset-2'
                         : isGreen
                           ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
                           : isBlue
@@ -3833,7 +3871,7 @@ const TimerWidget = ({
                     }}
                     className={`${
                       isWarm
-                        ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-lg' // Note: Warm pause used primary blue originally? Or C27B4A? Original trace showed primary for pause in one view, C27B4A for Start. Let's assume Play=C27B4A, Pause=Primary(Blue/Gray)? Actually Pause was Primary-500.
+                        ? 'h-10 flex-1 rounded-xl bg-[#C27B4A] text-white shadow-lg shadow-[#C27B4A]/25 hover:bg-[#A6663E] hover:shadow-[#C27B4A]/40 focus:ring-2 focus:ring-[#C27B4A] focus:ring-offset-2'
                         : isGreen
                           ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
                           : isBlue
@@ -4416,7 +4454,8 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     leftItems,
     {
       group: 'brain-dump',
-      plugins: [animations(), dragStatePlugin],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      plugins: [animations(), dragStatePlugin as any],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handleEnd: (data: any) => {
         setIsDragging(false)
@@ -4435,7 +4474,8 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     rightItems,
     {
       group: 'brain-dump',
-      plugins: [animations(), dragStatePlugin],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      plugins: [animations(), dragStatePlugin as any],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handleEnd: (data: any) => {
         setIsDragging(false)
