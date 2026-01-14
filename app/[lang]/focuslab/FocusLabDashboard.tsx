@@ -20,7 +20,7 @@ export const FocusLabDashboard = ({ onExitHref }: { onExitHref?: string }) => {
   return (
     <div className="focuslab-typography focuslab-dark relative min-h-screen font-sans">
       <FocusSettingsProvider>
-        <FocusLabAppLazy onExit={handleExit} />
+        <FocusLabAppLazy onExitAction={handleExit} />
       </FocusSettingsProvider>
     </div>
   )

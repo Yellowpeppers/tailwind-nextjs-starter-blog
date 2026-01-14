@@ -49,7 +49,7 @@ const XIcon = ({ className }: { className?: string }) => (
 )
 
 // Presentation Component (Pure)
-const FocusTaskCard = memo(
+export const FocusTaskCard = memo(
   ({
     item,
     isWarm,
@@ -67,6 +67,7 @@ const FocusTaskCard = memo(
     onEditSave,
     onEditCancel,
     isDragging,
+    variant = 'default',
   }: {
     item: FocusItem
     isWarm: boolean
@@ -84,7 +85,9 @@ const FocusTaskCard = memo(
     onEditSave?: (id: string) => void
     onEditCancel?: () => void
     isDragging?: boolean
+    variant?: 'default' | 'reward'
   }) => {
+    const { t } = useTranslation()
     const inputRef = useRef<HTMLInputElement>(null)
 
     // Auto-focus input when entering edit mode
@@ -107,8 +110,14 @@ const FocusTaskCard = memo(
 
     return (
       <div
-        className={`group relative flex ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm transition-[opacity,shadow] duration-200 [&[data-dragging="true"]]:opacity-50 [&[data-dragging="true"]]:shadow-lg ${!isDragging ? 'hover:shadow-md' : ''} dark:bg-gray-900/40 ${
-          focusedTaskId === item.id
+        className={`group relative flex ${
+          variant === 'reward'
+            ? 'h-full flex-col items-center justify-between gap-4 border-none bg-transparent py-3 shadow-none'
+            : 'items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm dark:bg-gray-900/40'
+        } ${isEditing ? 'cursor-text' : 'cursor-grab active:cursor-grabbing'} transition-[opacity,shadow] duration-200 [&[data-dragging="true"]]:opacity-50 [&[data-dragging="true"]]:shadow-lg ${
+          !isDragging && variant !== 'reward' ? 'hover:shadow-md' : ''
+        } ${
+          variant !== 'reward' && focusedTaskId === item.id
             ? isWarm
               ? 'border border-[#C27B4A] bg-[#F5F2EC] ring-1 ring-[#C27B4A]'
               : isGreen
@@ -118,40 +127,44 @@ const FocusTaskCard = memo(
                   : isCartoon
                     ? 'border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ring-0 dark:border-white dark:bg-gray-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
                     : 'border-primary-500 ring-primary-500 dark:border-primary-400 dark:ring-primary-400 border ring-1'
-            : isCartoon
+            : variant !== 'reward' && isCartoon
               ? `border-2 border-transparent ${!isDragging ? 'hover:border-black dark:hover:border-white' : ''}`
-              : `ring-primary-100/50 ${!isDragging ? 'hover:border-primary-200' : ''} dark:ring-primary-900/30 border border-transparent ring-1`
+              : variant !== 'reward'
+                ? `ring-primary-100/50 ${!isDragging ? 'hover:border-primary-200' : ''} dark:ring-primary-900/30 border border-transparent ring-1`
+                : ''
         }`}
       >
-        {/* Checkbox - Only this triggers task completion */}
-        <button
-          onClick={() => {
-            if (!isEditing) onToggle(item.id)
-          }}
-          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-            item.completed
-              ? isWarm
-                ? 'border-[#C27B4A] bg-[#C27B4A] text-white'
-                : isGreen
-                  ? 'border-[#7A9F7A] bg-[#7A9F7A] text-white'
-                  : isBlue
-                    ? 'border-[#5B84B1] bg-[#5B84B1] text-white'
-                    : isCartoon
-                      ? 'border-2 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
-                      : 'border-primary-500 bg-primary-500 text-white'
-              : isWarm
-                ? 'border-[#C27B4A]/50 bg-white/50 hover:border-[#C27B4A] dark:bg-gray-800/50'
-                : isGreen
-                  ? 'border-[#7A9F7A]/50 bg-white/50 hover:border-[#7A9F7A] dark:bg-gray-800/50'
-                  : isBlue
-                    ? 'border-[#5B84B1]/50 bg-white/50 hover:border-[#5B84B1] dark:bg-gray-800/50'
-                    : isCartoon
-                      ? 'border-2 border-black bg-white hover:bg-gray-100 dark:border-white dark:bg-gray-900'
-                      : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
-          }`}
-        >
-          {item.completed && <CheckIcon className="h-3.5 w-3.5" />}
-        </button>
+        {/* Checkbox - Only show if NOT reward variant */}
+        {variant !== 'reward' && (
+          <button
+            onClick={() => {
+              if (!isEditing) onToggle(item.id)
+            }}
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+              item.completed
+                ? isWarm
+                  ? 'border-[#C27B4A] bg-[#C27B4A] text-white'
+                  : isGreen
+                    ? 'border-[#7A9F7A] bg-[#7A9F7A] text-white'
+                    : isBlue
+                      ? 'border-[#5B84B1] bg-[#5B84B1] text-white'
+                      : isCartoon
+                        ? 'border-2 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                        : 'border-primary-500 bg-primary-500 text-white'
+                : isWarm
+                  ? 'border-[#C27B4A]/50 bg-white/50 hover:border-[#C27B4A] dark:bg-gray-800/50'
+                  : isGreen
+                    ? 'border-[#7A9F7A]/50 bg-white/50 hover:border-[#7A9F7A] dark:bg-gray-800/50'
+                    : isBlue
+                      ? 'border-[#5B84B1]/50 bg-white/50 hover:border-[#5B84B1] dark:bg-gray-800/50'
+                      : isCartoon
+                        ? 'border-2 border-black bg-white hover:bg-gray-100 dark:border-white dark:bg-gray-900'
+                        : 'hover:border-primary-400 border-primary-200 dark:border-primary-800/50 bg-white/50 dark:bg-gray-800/50'
+            }`}
+          >
+            {item.completed && <CheckIcon className="h-3.5 w-3.5" />}
+          </button>
+        )}
 
         {/* Content - Editable */}
         {isEditing ? (
@@ -166,59 +179,79 @@ const FocusTaskCard = memo(
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span
-            className={`flex-1 text-left text-sm transition-all select-none ${
-              item.completed
-                ? 'text-gray-400 line-through decoration-gray-300 dark:text-gray-500'
-                : 'text-gray-700 dark:text-gray-300'
-            }`}
-            onDoubleClick={(e) => {
-              e.stopPropagation()
-              onEditStart?.(item.id, item.content)
-            }}
+          <div
+            className={`${variant === 'reward' ? 'flex w-full flex-1 items-center justify-center px-2 py-4' : 'min-w-0 flex-1'}`}
           >
-            {item.content}
-          </span>
+            <span
+              className={`break-words transition-all select-none ${
+                variant === 'reward'
+                  ? 'text-center text-4xl leading-tight font-bold'
+                  : 'block truncate text-left text-sm'
+              } ${
+                item.completed
+                  ? 'text-gray-400 line-through decoration-gray-300 dark:text-gray-500'
+                  : 'text-gray-900 dark:text-gray-100'
+              }`}
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                onEditStart?.(item.id, item.content)
+              }}
+            >
+              {item.content}
+            </span>
+          </div>
         )}
 
         {/* Actions */}
         {!isEditing && (
-          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div
+            className={`${variant === 'reward' ? 'flex' : 'flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100'}`}
+          >
             {onStartFocus && !item.completed && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   onStartFocus(item.content, item.id)
                 }}
-                className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
-                  focusedTaskId === item.id
-                    ? isWarm
-                      ? 'bg-[#F5F2EC] text-[#C27B4A]'
-                      : isGreen
-                        ? 'bg-[#F8F9F7] text-[#7A9F7A]'
-                        : isBlue
-                          ? 'bg-[#E0EEF8] text-[#5B84B1]'
-                          : isCartoon
-                            ? 'bg-black text-white dark:bg-white dark:text-black'
-                            : 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-                    : 'hover:text-primary-500 dark:hover:text-primary-400 text-gray-400 hover:bg-gray-100 dark:text-gray-600 dark:hover:bg-gray-800'
+                className={`flex items-center justify-center rounded-lg transition-colors ${
+                  variant === 'reward'
+                    ? `h-10 w-full px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95 disabled:active:scale-100 ${
+                        isWarm
+                          ? 'rounded-lg bg-[#C27B4A] text-white shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
+                          : isGreen
+                            ? 'rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40'
+                            : isBlue
+                              ? 'rounded-xl bg-[#5B84B1] text-white shadow-lg shadow-[#5B84B1]/25 hover:bg-[#4A6E94] hover:shadow-[#5B84B1]/40'
+                              : isCartoon
+                                ? 'rounded-xl bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none dark:bg-white dark:text-black dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                                : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 rounded-xl text-white'
+                      }`
+                    : 'hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30 dark:hover:text-primary-400 h-6 w-6 text-gray-400'
                 }`}
-                title="Focus on this"
+                title="Start Focus"
               >
-                <TargetIcon className="h-4 w-4" />
+                {variant === 'reward' ? (
+                  <span className="flex items-center gap-2">
+                    <span className="icon-[solar--play-circle-outline] h-6 w-6" />
+                    {t.focusLab.widgets.todo.startFocus || 'Start Focus'}
+                  </span>
+                ) : (
+                  <TargetIcon className="h-4 w-4" />
+                )}
               </button>
             )}
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onRemove(item.id)
-              }}
-              className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              title="Delete"
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
+            {variant !== 'reward' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemove(item.id)
+                }}
+                className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                title="Delete"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
         )}
       </div>

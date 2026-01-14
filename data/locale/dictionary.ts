@@ -289,6 +289,7 @@ export const dictionary = {
           emptyTitle: 'No tasks yet',
           emptySubtitle: 'Add a task to get started',
           focusTooltip: 'Focus on this task',
+          startFocus: 'Start Focus',
         },
         goal: {
           title: 'Daily Goal',

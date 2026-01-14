@@ -13,7 +13,7 @@ import { animations } from '@formkit/drag-and-drop'
 import { useEffect, useMemo, useRef, useState, useCallback, memo, type ReactNode } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useTheme } from 'next-themes'
-import { FocusStation } from '@/components/focus-lab/FocusStation'
+import { FocusStation, FocusTaskCard } from '@/components/focus-lab/FocusStation'
 import DataMigrationModal from '@/components/focus-lab/DataMigrationModal'
 import { FocusGridLayout } from '@/components/focus-lab/FocusGridLayout'
 import { CardShell } from '@/components/focus-lab/CardShell'
@@ -762,7 +762,7 @@ const INCENTIVE_MESSAGES = {
   ],
 }
 
-export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
+export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => {
   const { theme, setTheme } = useTheme()
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
   const { user } = useAuth()
@@ -2303,7 +2303,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 <FocusSidebarAction
                   icon={<LogoutIcon className="h-6 w-6" />}
                   label={t.focusLab.controls.exitFocus || 'Exit Focus'}
-                  onClick={onExit || (() => {})}
+                  onClick={onExitAction || (() => {})}
                 />
                 <FocusSidebarProfile
                   userName={
@@ -2361,7 +2361,7 @@ export const FocusLabApp = ({ onExit }: { onExit?: () => void }) => {
                 >
                   <span className="text-lg font-bold dark:text-white">Focus Lab</span>
                   <button
-                    onClick={onExit}
+                    onClick={onExitAction}
                     className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600"
                   >
                     Exit
@@ -2655,7 +2655,7 @@ const TimerCard = ({
             e.stopPropagation()
             setIsFlipped(!isFlipped)
           }}
-          className={`relative z-10 rounded-lg p-1 transition-all ${
+          className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-lg ring-1 transition-all ${
             isFlipped
               ? uiStyle === 'cartoon'
                 ? 'border-2 border-black bg-black text-white shadow-none'
@@ -2738,6 +2738,223 @@ const BrainDumpCardWidget = ({
   )
 }
 
+const TicketIcon = ({ className }: { className?: string }) => (
+  <span className={`icon-[solar--ticket-star-bold-duotone] ${className}`} />
+)
+
+const ScratchCard = ({
+  onStartFocus,
+  onFlipBack,
+}: {
+  onStartFocus?: (task: string, id: string) => void
+  onFlipBack: () => void
+}) => {
+  const { user } = useAuth()
+  const { uiStyle } = useThemeColor()
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
+  const isBlue = uiStyle === 'blue'
+  const isCartoon = uiStyle === 'cartoon'
+  const { t } = useTranslation()
+
+  const [targetTask, setTargetTask] = useState<FocusItem | null>(null)
+  const [isRevealed, setIsRevealed] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Initialize: Pick a random task
+  useEffect(() => {
+    const allItems = readStationStorage(user?.id)
+    const activeItems = allItems.filter((i) => !i.completed)
+
+    if (activeItems.length > 0) {
+      const randomItem = activeItems[Math.floor(Math.random() * activeItems.length)]
+      setTargetTask(randomItem)
+    } else {
+      setTargetTask(null)
+    }
+  }, [user])
+
+  // Initialize Canvas
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const container = containerRef.current
+    if (!canvas || !container || !targetTask) return
+
+    const themeColors = {
+      default: '#333333',
+      cartoon: '#000000',
+    }
+    const overlayColor = isCartoon ? themeColors.cartoon : themeColors.default
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const { width, height } = container.getBoundingClientRect()
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = width * dpr
+    canvas.height = height * dpr
+    ctx.scale(dpr, dpr)
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+
+    ctx.fillStyle = overlayColor
+    ctx.fillRect(0, 0, width, height)
+
+    // Removed Sparkle Icon as per user request for a cleaner look
+    // ctx.font = 'bold 32px sans-serif'
+    // ctx.fillStyle = isCartoon ? '#ffffff' : '#666666'
+    // ctx.textAlign = 'center'
+    // ctx.textBaseline = 'middle'
+    // ctx.fillText('✨', width / 2, height / 2)
+
+    ctx.globalCompositeOperation = 'destination-out'
+  }, [targetTask, isCartoon])
+
+  const checkRevealProgress = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const w = canvas.width
+    const h = canvas.height
+    const imageData = ctx.getImageData(0, 0, w, h)
+    const data = imageData.data
+    let transparentPixels = 0
+    const totalPixels = data.length / 4
+
+    for (let i = 0; i < totalPixels; i += 10) {
+      if (data[i * 4 + 3] === 0) transparentPixels++
+    }
+
+    if (transparentPixels / (totalPixels / 10) > 0.4) {
+      setIsRevealed(true)
+    }
+  }
+
+  /* Smooth Scratching State */
+  const lastPosition = useRef<{ x: number; y: number } | null>(null)
+
+  const scratch = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current
+    if (!canvas || isRevealed) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+
+    ctx.lineWidth = 70 // 2 * radius (35)
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+
+    ctx.beginPath()
+    if (lastPosition.current) {
+      ctx.moveTo(lastPosition.current.x, lastPosition.current.y)
+      ctx.lineTo(x, y)
+      ctx.stroke()
+    } else {
+      ctx.arc(x, y, 35, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    lastPosition.current = { x, y }
+    checkRevealProgress()
+  }
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.buttons === 1) {
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (rect) {
+        lastPosition.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        }
+        scratch(e.clientX, e.clientY)
+      }
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (e.buttons !== 1) {
+      lastPosition.current = null
+      return
+    }
+    scratch(e.clientX, e.clientY)
+  }
+
+  const handleMouseUp = () => {
+    lastPosition.current = null
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (rect) {
+      lastPosition.current = {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      }
+      scratch(touch.clientX, touch.clientY)
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault() // Prevent scrolling while scratching
+    const touch = e.touches[0]
+    scratch(touch.clientX, touch.clientY)
+  }
+
+  const handleTouchEnd = () => {
+    lastPosition.current = null
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden"
+    >
+      {!targetTask ? (
+        <div className="text-center text-gray-400">
+          <p>{t.focusLab.widgets.todo.emptyTitle}</p>
+        </div>
+      ) : (
+        <>
+          <div className="absolute inset-0 z-0 flex items-center justify-center p-4">
+            <FocusTaskCard
+              item={targetTask}
+              onToggle={() => {}}
+              onRemove={() => {}}
+              onStartFocus={onStartFocus}
+              variant="reward"
+              isWarm={isWarm}
+              isGreen={isGreen}
+              isBlue={isBlue}
+              isCartoon={isCartoon}
+            />
+          </div>
+
+          <canvas
+            ref={canvasRef}
+            className={`absolute inset-0 z-10 cursor-crosshair touch-none transition-all duration-1000 ${
+              isRevealed ? 'pointer-events-none invisible opacity-0' : 'visible opacity-100'
+            }`}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
 const ToDoCard = ({
   cols,
   onDelete,
@@ -2757,19 +2974,77 @@ const ToDoCard = ({
 }) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
+  const [isFlipped, setIsFlipped] = useState(false)
+
   return (
     <CardShell
+      // Hide header when flipped so ScratchCard can take over the full area
+      showHeader={!isFlipped}
       title={t.focusLab.widgets.todo.title}
       onDelete={onDelete}
-      className={className}
+      // Remove padding when flipped
+      className={`${className} ${isFlipped ? '!overflow-hidden !p-0' : ''}`}
+      // Remove top margin when flipped
+      bodyClassName={isFlipped ? '!mt-0' : ''}
       isFocused={isFocused}
+      customActionPosition="right"
+      customAction={
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsFlipped(!isFlipped)
+          }}
+          className={`flex aspect-square h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-lg ring-1 transition-all ${
+            isFlipped
+              ? uiStyle === 'cartoon'
+                ? 'border-2 border-black bg-black text-white shadow-none'
+                : 'bg-gray-100 text-gray-900 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
+              : uiStyle === 'cartoon'
+                ? 'border-2 border-transparent text-black hover:border-black hover:bg-white hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+          }`}
+          title="Flip to Scratch Card"
+        >
+          <MoreHorizontalIcon className="h-5 w-5" />
+        </button>
+      }
     >
-      <FocusStation
-        cols={cols}
-        onStartFocus={onStartFocus}
-        focusedTaskId={focusedTaskId}
-        onTaskComplete={onTaskComplete}
-      />
+      <AnimatePresence mode="wait">
+        {isFlipped ? (
+          <motion.div
+            key="back"
+            initial={{ opacity: 0, rotateY: 180 }}
+            animate={{ opacity: 1, rotateY: 0 }}
+            exit={{ opacity: 0, rotateY: -180 }}
+            transition={{ duration: 0.3 }}
+            className="flex h-full w-full flex-col"
+          >
+            <ScratchCard
+              onStartFocus={(task, id) => {
+                onStartFocus?.(task, id)
+                setIsFlipped(false)
+              }}
+              onFlipBack={() => setIsFlipped(false)}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="front"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex h-full min-h-0 flex-col"
+          >
+            <FocusStation
+              cols={cols}
+              onStartFocus={onStartFocus}
+              focusedTaskId={focusedTaskId}
+              onTaskComplete={onTaskComplete}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </CardShell>
   )
 }
