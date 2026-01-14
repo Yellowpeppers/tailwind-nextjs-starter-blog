@@ -1106,6 +1106,19 @@ export const dictionary = {
         button: 'Start Focusing - Free',
       },
     },
+    bubu: {
+      welcome: {
+        title: 'Hi there! I am BuBu~',
+        subtitle: 'Chat with me, or tell me what you want to do today',
+      },
+      placeholder: 'Chat with BuBu...',
+      confirmClear: 'Are you sure you want to clear the conversation?',
+      personality: {
+        gentle: 'Friendly Partner',
+        professional: 'Efficiency Expert',
+        energetic: 'Energy Coach',
+      },
+    },
   },
   zh: {
     nav: {
@@ -2206,6 +2219,19 @@ export const dictionary = {
       cta: {
         title: '准备好找回你的注意力了吗？',
         button: '立即开始专注 - 免费使用',
+      },
+    },
+    bubu: {
+      welcome: {
+        title: '你好呀！我是 BuBu~',
+        subtitle: '你可以和我聊聊天，或者告诉我今天要做的事情',
+      },
+      placeholder: '和 BuBu 聊聊天...',
+      confirmClear: '确定要清空对话吗？',
+      personality: {
+        gentle: '温柔伙伴',
+        professional: '效率专家',
+        energetic: '活力教练',
       },
     },
   },

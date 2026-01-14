@@ -92,10 +92,16 @@ Important rules:
 // Build complete system prompt
 function buildSystemPrompt(personality: string, language: string): string {
   const basePrompt = getBasePrompt(language)
-  const personalityPrompt = PERSONALITY_PROMPTS[personality as keyof typeof PERSONALITY_PROMPTS]
+  // Default to 'gentle' if personality key is invalid or missing
+  const personalityPrompt =
+    PERSONALITY_PROMPTS[personality as keyof typeof PERSONALITY_PROMPTS] ||
+    PERSONALITY_PROMPTS.gentle
 
   return `${basePrompt}
 
+---
+🌟 CURRENT PERSONALITY MODE: ${personality || 'gentle'}
+Please strictly adhere to the following personality guidelines, ignoring any previous conversation tone if it differs:
 ${personalityPrompt}`
 }
 

@@ -9,7 +9,7 @@ interface BuBuFloatingButtonProps {
 }
 
 export const BuBuFloatingButton = ({ onClick, hasNewFeature = true }: BuBuFloatingButtonProps) => {
-  const { uiStyle, primaryColor } = useThemeColor()
+  const { uiStyle } = useThemeColor()
 
   // Theme-specific styles
   const getButtonStyles = () => {

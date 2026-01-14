@@ -63,6 +63,7 @@ export const useBuBuChat = () => {
             language,
           }),
         })
+        console.log('[useBuBuChat] Sending message with personality:', personality)
 
         const data: BuBuApiResponse = await response.json()
 
@@ -103,7 +104,7 @@ export const useBuBuChat = () => {
         if (message.action.type === 'add_tasks') {
           // Add tasks to Focus Station
           const tasks = message.action.payload as string[]
-          const currentItems = await readStationStorage(user)
+          const currentItems = await readStationStorage(user?.id)
 
           // Create new focus items
           const newItems = tasks.map((task) => createFocusItem('text', task))
@@ -121,7 +122,7 @@ export const useBuBuChat = () => {
         } else if (message.action.type === 'add_idea') {
           // Add idea to Brain Dump (left column)
           const idea = message.action.payload as string
-          const currentState = await readBrainDumpStorage(user)
+          const currentState = await readBrainDumpStorage(user?.id)
 
           // Create new item and add to left column
           const newItem = createBrainDumpItem(idea)

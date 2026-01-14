@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { Menu, Transition } from '@headlessui/react'
+import { useState, useRef, useEffect, Fragment } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Trash2, Send, Check, XCircle } from 'lucide-react'
+import { X, Trash2, Send, Check, XCircle, ChevronDown } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { useTranslation } from '@/context/LanguageContext'
 import { useBuBuChat } from './useBuBuChat'
@@ -18,13 +21,14 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
   const { uiStyle } = useThemeColor()
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const {
     messages,
     isLoading,
     error,
     personality,
+    setPersonality,
     sendMessage,
     confirmAction,
     cancelAction,
@@ -33,7 +37,29 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
     retry,
   } = useBuBuChat()
 
-  // Auto-scroll to bottom when new message arrives
+  // Personality options configuration
+  const personalities = [
+    {
+      id: 'gentle',
+      name: t.bubu?.personality?.gentle || '温柔伙伴',
+      icon: '🌸',
+      desc: '温暖治愈，倾听你的心声',
+    },
+    {
+      id: 'professional',
+      name: t.bubu?.personality?.professional || '效率专家',
+      icon: '👔',
+      desc: '干练简洁，专注任务管理',
+    },
+    {
+      id: 'energetic',
+      name: t.bubu?.personality?.energetic || '活力教练',
+      icon: '🔥',
+      desc: '激情满满，通过鼓励驱动你',
+    },
+  ] as const
+
+  const currentPersonality = personalities.find((p) => p.id === personality) || personalities[0]
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -45,10 +71,27 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
     }
   }, [isOpen])
 
+  // Auto-resize textarea
+  const adjustTextareaHeight = () => {
+    const textarea = inputRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px` // Max height 120px
+    }
+  }
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [inputValue])
+
   const handleSend = () => {
     if (!inputValue.trim() || isLoading) return
     sendMessage(inputValue.trim())
     setInputValue('')
+    // Reset height manually after send
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -76,7 +119,7 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
         animate={{ opacity: 1, y: 0 }}
         className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
       >
-        <div className={`flex max-w-[80%] gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex max-w-[85%] gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
           {/* Avatar */}
           {!isUser && (
             <div className="from-primary-400 to-primary-600 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr text-sm font-bold text-white">
@@ -85,11 +128,35 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
           )}
 
           {/* Message bubble */}
-          <div className="flex flex-col gap-2">
+          <div className="flex min-w-0 flex-col gap-2">
             <div
-              className={`rounded-2xl px-4 py-2.5 ${isUser ? 'bg-primary-500 rounded-br-sm text-white' : 'rounded-bl-sm bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'} `}
+              className={`rounded-2xl px-4 py-2.5 ${
+                isUser
+                  ? 'bg-primary-500 rounded-br-sm text-white'
+                  : 'rounded-bl-sm bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
+              } `}
             >
-              {message.content}
+              <div
+                className={`prose prose-sm max-w-none break-words ${
+                  isUser ? 'prose-invert text-white' : 'dark:prose-invert'
+                }`}
+              >
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    // Override link to open in new tab
+                    a: ({ node, children, ...props }) => (
+                      <a target="_blank" rel="noopener noreferrer" {...props}>
+                        {children}
+                      </a>
+                    ),
+                    // Reduce margin on paragraphs
+                    p: ({ node, ...props }) => <p className="mb-1 last:mb-0" {...props} />,
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
             </div>
 
             {/* Action preview card (for tasks/ideas) */}
@@ -206,10 +273,63 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
           >
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">💬</span>
-                <span className="font-bold">BuBu</span>
-              </div>
+              <Menu as="div" className="relative inline-block text-left">
+                <div>
+                  <Menu.Button className="group flex cursor-pointer items-center gap-2 rounded-lg py-1 pr-2 transition-colors outline-none hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <span className="text-xl">{currentPersonality.icon}</span>
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className="leading-none font-bold text-gray-800 dark:text-gray-100">
+                        BuBu
+                      </span>
+                      <span className="text-[10px] font-medium text-gray-500">
+                        {currentPersonality.name}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-3 w-3 text-gray-400 transition-transform group-hover:text-gray-600 group-data-[open]:rotate-180" />
+                  </Menu.Button>
+                </div>
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out duration-100"
+                  enterFrom="transform opacity-0 scale-95"
+                  enterTo="transform opacity-100 scale-100"
+                  leave="transition ease-in duration-75"
+                  leaveFrom="transform opacity-100 scale-100"
+                  leaveTo="transform opacity-0 scale-95"
+                >
+                  <Menu.Items className="absolute left-0 z-50 mt-2 w-56 origin-top-left divide-y divide-gray-100 rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none dark:divide-gray-700 dark:bg-gray-800 dark:ring-white/10">
+                    <div className="p-1">
+                      {personalities.map((p) => (
+                        <Menu.Item key={p.id}>
+                          {({ active }) => (
+                            <button
+                              onClick={() => setPersonality(p.id)}
+                              className={`${active ? 'bg-primary-50 dark:bg-primary-900/30' : ''} ${
+                                personality === p.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                              } group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors`}
+                            >
+                              <span className="text-lg">{p.icon}</span>
+                              <div className="flex flex-col items-start text-left">
+                                <span
+                                  className={`font-medium ${personality === p.id ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-gray-100'}`}
+                                >
+                                  {p.name}
+                                </span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  {p.desc}
+                                </span>
+                              </div>
+                              {personality === p.id && (
+                                <Check className="text-primary-500 ml-auto h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          )}
+                        </Menu.Item>
+                      ))}
+                    </div>
+                  </Menu.Items>
+                </Transition>
+              </Menu>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleClearWithConfirm}
@@ -269,20 +389,20 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
             {/* Input area */}
             <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-800">
               <div className="flex gap-2">
-                <input
+                <textarea
                   ref={inputRef}
-                  type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={t.bubu?.placeholder || '和 BuBu 聊聊天...'}
                   disabled={isLoading}
-                  className="focus:border-primary-500 focus:ring-primary-500/20 flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
+                  rows={1}
+                  className="focus:border-primary-500 focus:ring-primary-500/20 max-h-[120px] flex-1 resize-none rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!inputValue.trim() || isLoading}
-                  className="bg-primary-500 hover:bg-primary-600 rounded-lg px-4 py-2 text-white disabled:opacity-50"
+                  className="bg-primary-500 hover:bg-primary-600 h-fit self-end rounded-lg px-4 py-2 text-white disabled:opacity-50"
                 >
                   <Send className="h-5 w-5" />
                 </button>

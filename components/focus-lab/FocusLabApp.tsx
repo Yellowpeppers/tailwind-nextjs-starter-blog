@@ -62,7 +62,11 @@ import { debounce, uniq } from 'lodash'
 import isEqual from 'lodash/isEqual'
 import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
 import { useFocusTour } from '@/components/focus-lab/useFocusTour'
-import { BuBu } from '@/components/focus-lab/BuBu'
+import dynamic from 'next/dynamic'
+// Dynamic import for BuBu to reduce initial bundle size
+const BuBu = dynamic(() => import('@/components/focus-lab/BuBu').then((mod) => mod.BuBu), {
+  ssr: false,
+})
 
 // --- Icons ---
 const SmileCircleIcon = ({ className }: { className?: string }) => (
@@ -5194,7 +5198,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
       console.log('[Brain Dump] Received broadcast message:', event.data)
       // Reload data from storage when another tab/component updates
       try {
-        const updatedData = readBrainDumpStorage(user)
+        const updatedData = readBrainDumpStorage(user?.id)
 
         // Deep compare to avoid unnecessary re-renders
         if (isEqual(updatedData.left, leftItems) && isEqual(updatedData.right, rightItems)) {
