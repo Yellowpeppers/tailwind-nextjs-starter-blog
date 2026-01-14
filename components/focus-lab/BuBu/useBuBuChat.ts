@@ -1,9 +1,21 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
+import { useAuth } from '@/context/AuthContext'
+import {
+  createFocusItem,
+  saveStationItems,
+  readStationStorage,
+} from '@/components/focus-lab/focusStationStorage'
+import {
+  createBrainDumpItem,
+  saveBrainDump,
+  readBrainDumpStorage,
+} from '@/components/focus-lab/brainDumpStorage'
 import type { ChatMessage, PersonalityType, BuBuApiResponse } from './types'
 
 export const useBuBuChat = () => {
   const { language } = useTranslation()
+  const { user } = useAuth()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,16 +93,69 @@ export const useBuBuChat = () => {
     [messages, personality, language]
   )
 
-  // Confirm action (add tasks or idea)
-  const confirmAction = useCallback((messageId: string) => {
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId && msg.action
-          ? { ...msg, action: { ...msg.action, status: 'confirmed' } }
-          : msg
-      )
-    )
-  }, [])
+  // Confirm action (add tasks or idea) - WITH ACTUAL INTEGRATION
+  const confirmAction = useCallback(
+    async (messageId: string) => {
+      const message = messages.find((msg) => msg.id === messageId)
+      if (!message || !message.action) return
+
+      try {
+        if (message.action.type === 'add_tasks') {
+          // Add tasks to Focus Station
+          const tasks = message.action.payload as string[]
+          const currentItems = await readStationStorage(user)
+
+          // Create new focus items
+          const newItems = tasks.map((task) => createFocusItem('text', task))
+          const updatedItems = [...currentItems, ...newItems]
+
+          // Save to storage
+          await saveStationItems(updatedItems, user)
+
+          // Trigger sync event for FocusStation component
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('focus-station-sync'))
+          }
+
+          console.log(`[BuBu] Added ${tasks.length} tasks to Focus Station`)
+        } else if (message.action.type === 'add_idea') {
+          // Add idea to Brain Dump (left column)
+          const idea = message.action.payload as string
+          const currentState = await readBrainDumpStorage(user)
+
+          // Create new item and add to left column
+          const newItem = createBrainDumpItem(idea)
+          const updatedState = {
+            left: [newItem, ...currentState.left],
+            right: currentState.right,
+          }
+
+          // Save to storage
+          await saveBrainDump(updatedState, user)
+
+          // Trigger sync event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('brain-dump-sync'))
+          }
+
+          console.log('[BuBu] Added idea to Brain Dump')
+        }
+
+        // Update message status to confirmed
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId && msg.action
+              ? { ...msg, action: { ...msg.action, status: 'confirmed' } }
+              : msg
+          )
+        )
+      } catch (error) {
+        console.error('[BuBu] Failed to save:', error)
+        setError('保存失败，请重试')
+      }
+    },
+    [messages, user]
+  )
 
   // Cancel action
   const cancelAction = useCallback((messageId: string) => {
