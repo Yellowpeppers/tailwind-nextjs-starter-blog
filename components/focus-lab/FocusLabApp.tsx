@@ -4958,6 +4958,9 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   // Safety Ref to prevent leak
   const dataOwnerId = useRef<string | undefined>(undefined)
 
+  // Ref to track updates from BroadcastChannel to prevent echo loops
+  const remoteUpdateRef = useRef(false)
+
   // Dragging state to disable hover effects
   const [isDragging, setIsDragging] = useState(false)
 
@@ -5161,6 +5164,18 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
       }
     }
 
+    // Checking if this update was triggered by a remote broadcast
+    if (remoteUpdateRef.current) {
+      remoteUpdateRef.current = false
+      return
+    }
+
+    // Checking if this update was triggered by a remote broadcast
+    if (remoteUpdateRef.current) {
+      remoteUpdateRef.current = false
+      return
+    }
+
     const save = async () => {
       await saveBrainDump({ left: leftItems, right: rightItems }, user)
     }
@@ -5180,7 +5195,17 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
       // Reload data from storage when another tab/component updates
       try {
         const updatedData = readBrainDumpStorage(user)
-        console.log('[Brain Dump] Reloaded data:', updatedData)
+
+        // Deep compare to avoid unnecessary re-renders
+        if (isEqual(updatedData.left, leftItems) && isEqual(updatedData.right, rightItems)) {
+          return
+        }
+
+        console.log('[Brain Dump] Reloading data from remote update')
+
+        // Mark as remote update so the persist effect doesn't echo it back
+        remoteUpdateRef.current = true
+
         setLeftItems(updatedData.left)
         setRightItems(updatedData.right)
       } catch (error) {
