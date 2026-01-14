@@ -62,6 +62,7 @@ import { debounce, uniq } from 'lodash'
 import isEqual from 'lodash/isEqual'
 import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
 import { useFocusTour } from '@/components/focus-lab/useFocusTour'
+import { BuBu } from '@/components/focus-lab/BuBu'
 
 // --- Icons ---
 const SmileCircleIcon = ({ className }: { className?: string }) => (
@@ -5167,6 +5168,36 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
     return () => clearTimeout(timeout)
   }, [leftItems, rightItems, isLoaded, user])
 
+  // Listen to BroadcastChannel for real-time sync (e.g., from BuBu)
+  useEffect(() => {
+    if (!isLoaded) return
+    if (typeof BroadcastChannel === 'undefined') return
+
+    const channel = new BroadcastChannel('focus-lab-brain-dump-channel')
+
+    const handleMessage = async (event: MessageEvent) => {
+      console.log('[Brain Dump] Received broadcast message:', event.data)
+      // Reload data from storage when another tab/component updates
+      try {
+        const updatedData = readBrainDumpStorage(user)
+        console.log('[Brain Dump] Reloaded data:', updatedData)
+        setLeftItems(updatedData.left)
+        setRightItems(updatedData.right)
+      } catch (error) {
+        console.error('[Brain Dump] Failed to reload data:', error)
+      }
+    }
+
+    channel.addEventListener('message', handleMessage)
+    console.log('[Brain Dump] BroadcastChannel listener attached')
+
+    return () => {
+      channel.removeEventListener('message', handleMessage)
+      channel.close()
+      console.log('[Brain Dump] BroadcastChannel listener removed')
+    }
+  }, [isLoaded, user])
+
   const handleClearAll = () => {
     if (
       window.confirm(
@@ -5705,6 +5736,10 @@ const DopamineMenuWidget = ({
           </motion.div>
         )}
       </AnimatePresence>
+      {/* BuBu AI Assistant */}
+      <BuBu />
     </div>
   )
 }
+// Add BuBu at the end - temporary manual integration
+// TODO: Properly integrate into JSX return statement
