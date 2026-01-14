@@ -234,8 +234,8 @@ export async function POST(request: Request) {
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    // Use same models as existing Gemini API
-    const modelCandidates = ['gemini-1.5-flash', 'gemini-1.5-flash-001']
+    // Use models that work (same as existing Gemini API)
+    const modelCandidates = ['gemini-2.5-flash', 'gemini-1.5-flash']
     let result
 
     for (const modelName of modelCandidates) {
