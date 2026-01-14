@@ -117,7 +117,8 @@ const BUBU_FUNCTIONS = [
   },
   {
     name: 'add_tasks',
-    description: '从用户消息中提取具体任务，添加到任务列表（Focus Station）',
+    description:
+      '从用户消息中提取具体任务，生成预览供用户确认。注意：这不会立即添加任务，用户需要点击确认按钮',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -128,7 +129,8 @@ const BUBU_FUNCTIONS = [
         },
         reply: {
           type: SchemaType.STRING,
-          description: 'BuBu 对提取任务的确认性回复',
+          description:
+            'BuBu 的回复。必须告知用户"识别到任务"并提示"点击下面按钮确认添加"，不要说"已经添加"',
         },
       },
       required: ['tasks', 'reply'],
@@ -146,7 +148,8 @@ const BUBU_FUNCTIONS = [
         },
         reply: {
           type: SchemaType.STRING,
-          description: 'BuBu 的回复',
+          description:
+            'BuBu 的回复。必须告知用户"识别到想法"并提示"确认一下就能保存"，不要说"已经记录"',
         },
       },
       required: ['idea', 'reply'],
