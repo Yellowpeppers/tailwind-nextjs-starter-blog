@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import { NextResponse } from 'next/server'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
 
@@ -91,10 +91,10 @@ const BUBU_FUNCTIONS = [
     name: 'chat_only',
     description: '纯聊天，不执行任何操作。用于情绪倾诉、闲聊、打招呼等',
     parameters: {
-      type: 'object',
+      type: SchemaType.OBJECT,
       properties: {
         reply: {
-          type: 'string',
+          type: SchemaType.STRING,
           description: 'BuBu 的回复内容',
         },
       },
@@ -105,15 +105,15 @@ const BUBU_FUNCTIONS = [
     name: 'add_tasks',
     description: '从用户消息中提取具体任务，添加到任务列表（Focus Station）',
     parameters: {
-      type: 'object',
+      type: SchemaType.OBJECT,
       properties: {
         tasks: {
-          type: 'array',
-          items: { type: 'string' },
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING },
           description: '提取的任务列表，每个任务是清晰的动作',
         },
         reply: {
-          type: 'string',
+          type: SchemaType.STRING,
           description: 'BuBu 对提取任务的确认性回复',
         },
       },
@@ -124,14 +124,14 @@ const BUBU_FUNCTIONS = [
     name: 'add_idea',
     description: '识别用户的想法、灵感、待思考的事，保存到 Brain Dump',
     parameters: {
-      type: 'object',
+      type: SchemaType.OBJECT,
       properties: {
         idea: {
-          type: 'string',
+          type: SchemaType.STRING,
           description: '提取的想法或灵感',
         },
         reply: {
-          type: 'string',
+          type: SchemaType.STRING,
           description: 'BuBu 的回复',
         },
       },
@@ -234,8 +234,8 @@ export async function POST(request: Request) {
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    // Try gemini-2.0-flash-exp first, fallback to gemini-1.5-flash
-    const modelCandidates = ['gemini-2.0-flash-exp', 'gemini-1.5-flash']
+    // Use same models as existing Gemini API
+    const modelCandidates = ['gemini-1.5-flash', 'gemini-1.5-flash-001']
     let result
 
     for (const modelName of modelCandidates) {
@@ -259,8 +259,12 @@ export async function POST(request: Request) {
         // Start chat with function calling
         const chat = model.startChat({
           history: chatHistory,
-          systemInstruction: systemPrompt,
-          tools: [{ functionDeclarations: BUBU_FUNCTIONS }],
+          systemInstruction: {
+            role: 'system',
+            parts: [{ text: systemPrompt }],
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          tools: [{ functionDeclarations: BUBU_FUNCTIONS as any }],
         })
 
         result = await chat.sendMessage(message)
