@@ -57,7 +57,10 @@ const getBasePrompt = (language: string) => {
 - 用户表达的是想法、灵感、未来计划 → 调用 add_idea  
 - 用户纯粹倾诉情绪、闲聊 → 调用 chat_only
 
-你必须用中文回复。`
+🌍 语言策略（重要）：
+- **用户用什么语言提问，你就用什么语言回复**
+- 例如：用户说中文 → 你用中文回复；用户说英文 → 你用英文回复
+- 如果无法判断用户语言，默认使用中文`
   }
 
   return `You are BuBu, the AI assistant for Focus Lab. Your responsibilities are:
@@ -70,7 +73,10 @@ Important rules:
 - If the user expresses ideas, inspirations, or future plans → call add_idea
 - If the user is purely venting emotions or chatting → call chat_only
 
-You must reply in English.`
+🌍 Language Strategy (Important):
+- **Reply in the same language the user uses**
+- Example: User speaks Chinese → Reply in Chinese; User speaks English → Reply in English  
+- If you cannot determine the language, default to English`
 }
 
 // Build complete system prompt
@@ -80,9 +86,7 @@ function buildSystemPrompt(personality: string, language: string): string {
 
   return `${basePrompt}
 
-${personalityPrompt}
-
-当前语言：${language === 'zh' ? '中文' : 'English'}`
+${personalityPrompt}`
 }
 
 // Function declarations for Gemini
