@@ -57,15 +57,15 @@ export const FocusTaskCard = memo(
     isBlue,
     isCartoon,
     focusedTaskId,
-    onToggle,
-    onStartFocus,
-    onRemove,
+    onToggleAction,
+    onStartFocusAction,
+    onRemoveAction,
     isEditing,
     editValue,
-    onEditStart,
-    onEditChange,
-    onEditSave,
-    onEditCancel,
+    onEditStartAction,
+    onEditChangeAction,
+    onEditSaveAction,
+    onEditCancelAction,
     isDragging,
     variant = 'default',
   }: {
@@ -75,15 +75,15 @@ export const FocusTaskCard = memo(
     isBlue: boolean
     isCartoon: boolean
     focusedTaskId?: string | null
-    onToggle: (id: string) => void
-    onStartFocus?: (task: string, id: string) => void
-    onRemove: (id: string) => void
+    onToggleAction: (id: string) => void
+    onStartFocusAction?: (task: string, id: string) => void
+    onRemoveAction: (id: string) => void
     isEditing?: boolean
     editValue?: string
-    onEditStart?: (id: string, content: string) => void
-    onEditChange?: (value: string) => void
-    onEditSave?: (id: string) => void
-    onEditCancel?: () => void
+    onEditStartAction?: (id: string, content: string) => void
+    onEditChangeAction?: (value: string) => void
+    onEditSaveAction?: (id: string) => void
+    onEditCancelAction?: () => void
     isDragging?: boolean
     variant?: 'default' | 'reward'
   }) => {
@@ -101,10 +101,10 @@ export const FocusTaskCard = memo(
     const handleKeyDown = (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
         e.preventDefault()
-        onEditSave?.(item.id)
+        onEditSaveAction?.(item.id)
       } else if (e.key === 'Escape') {
         e.preventDefault()
-        onEditCancel?.()
+        onEditCancelAction?.()
       }
     }
 
@@ -138,7 +138,7 @@ export const FocusTaskCard = memo(
         {variant !== 'reward' && (
           <button
             onClick={() => {
-              if (!isEditing) onToggle(item.id)
+              if (!isEditing) onToggleAction(item.id)
             }}
             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
               item.completed
@@ -172,8 +172,8 @@ export const FocusTaskCard = memo(
             ref={inputRef}
             type="text"
             value={editValue}
-            onChange={(e) => onEditChange?.(e.target.value)}
-            onBlur={() => onEditSave?.(item.id)}
+            onChange={(e) => onEditChangeAction?.(e.target.value)}
+            onBlur={() => onEditSaveAction?.(item.id)}
             onKeyDown={handleKeyDown}
             className="flex-1 border-none bg-transparent p-0 text-sm text-gray-700 shadow-none ring-0 outline-none focus:border-none focus:shadow-none focus:ring-0 focus:outline-none dark:text-gray-300"
             onClick={(e) => e.stopPropagation()}
@@ -194,7 +194,7 @@ export const FocusTaskCard = memo(
               }`}
               onDoubleClick={(e) => {
                 e.stopPropagation()
-                onEditStart?.(item.id, item.content)
+                onEditStartAction?.(item.id, item.content)
               }}
             >
               {item.content}
@@ -207,11 +207,11 @@ export const FocusTaskCard = memo(
           <div
             className={`${variant === 'reward' ? 'flex' : 'flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100'}`}
           >
-            {onStartFocus && !item.completed && (
+            {onStartFocusAction && !item.completed && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  onStartFocus(item.content, item.id)
+                  onStartFocusAction(item.content, item.id)
                 }}
                 className={`flex items-center justify-center rounded-lg transition-colors ${
                   variant === 'reward'
@@ -244,7 +244,7 @@ export const FocusTaskCard = memo(
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  onRemove(item.id)
+                  onRemoveAction(item.id)
                 }}
                 className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
                 title="Delete"
@@ -262,14 +262,14 @@ FocusTaskCard.displayName = 'FocusTaskCard'
 
 export const FocusStation = ({
   cols = 1,
-  onStartFocus,
+  onStartFocusAction,
   focusedTaskId,
-  onTaskComplete,
+  onTaskCompleteAction,
 }: {
   cols?: number
-  onStartFocus?: (task: string, id: string) => void
+  onStartFocusAction?: (task: string, id: string) => void
   focusedTaskId?: string | null
-  onTaskComplete?: () => void
+  onTaskCompleteAction?: () => void
 }) => {
   const { uiStyle } = useThemeColor()
   const isWarm = uiStyle === 'warm'
@@ -467,8 +467,8 @@ export const FocusStation = ({
     (id: string) => {
       const currentItems = itemsRef.current
       const itemToToggle = currentItems.find((t) => t.id === id)
-      if (itemToToggle && !itemToToggle.completed && onTaskComplete) {
-        onTaskComplete()
+      if (itemToToggle && !itemToToggle.completed && onTaskCompleteAction) {
+        onTaskCompleteAction()
       }
 
       setItems((prev) => {
@@ -479,7 +479,7 @@ export const FocusStation = ({
         return [...active, ...completed]
       })
     },
-    [onTaskComplete]
+    [onTaskCompleteAction]
   )
 
   const removeItemStable = useCallback((id: string) => {
@@ -565,15 +565,15 @@ export const FocusStation = ({
                   isBlue={isBlue}
                   isCartoon={isCartoon}
                   focusedTaskId={focusedTaskId}
-                  onToggle={toggleItemStable}
-                  onStartFocus={onStartFocus}
-                  onRemove={removeItemStable}
+                  onToggleAction={toggleItemStable}
+                  onStartFocusAction={onStartFocusAction}
+                  onRemoveAction={removeItemStable}
                   isEditing={editingId === item.id}
                   editValue={editingId === item.id ? editValue : ''}
-                  onEditStart={handleEditStart}
-                  onEditChange={handleEditChange}
-                  onEditSave={handleEditSave}
-                  onEditCancel={handleEditCancel}
+                  onEditStartAction={handleEditStart}
+                  onEditChangeAction={handleEditChange}
+                  onEditSaveAction={handleEditSave}
+                  onEditCancelAction={handleEditCancel}
                   isDragging={isDragging}
                 />
               ))}

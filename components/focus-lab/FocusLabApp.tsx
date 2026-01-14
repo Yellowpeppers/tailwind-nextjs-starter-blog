@@ -2925,9 +2925,9 @@ const ScratchCard = ({
           <div className="absolute inset-0 z-0 flex items-center justify-center p-4">
             <FocusTaskCard
               item={targetTask}
-              onToggle={() => {}}
-              onRemove={() => {}}
-              onStartFocus={onStartFocus}
+              onToggleAction={() => {}}
+              onRemoveAction={() => {}}
+              onStartFocusAction={onStartFocus}
               variant="reward"
               isWarm={isWarm}
               isGreen={isGreen}
@@ -3039,9 +3039,9 @@ const ToDoCard = ({
           >
             <FocusStation
               cols={cols}
-              onStartFocus={onStartFocus}
+              onStartFocusAction={onStartFocus}
               focusedTaskId={focusedTaskId}
-              onTaskComplete={onTaskComplete}
+              onTaskCompleteAction={onTaskComplete}
             />
           </motion.div>
         )}
@@ -4272,7 +4272,7 @@ const TimerWidget = ({
                             : isCartoon
                               ? 'rounded-lg bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none dark:bg-white dark:text-black dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
                               : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/25 rounded-full'
-                    } w-full px-4 py-2 text-sm font-extrabold text-white shadow-lg transition-all active:scale-95 sm:flex-1`}
+                    } w-full px-4 py-2 text-sm font-extrabold text-white shadow-lg transition-all active:scale-95`}
                   >
                     {t.focusLab.widgets.timer.continueFocus || 'One more round'}
                   </button>
@@ -4813,10 +4813,10 @@ const BrainDumpCard = memo(
     t,
     isEditing,
     editValue,
-    onEditStart,
-    onEditChange,
-    onEditSave,
-    onEditCancel,
+    onEditStartAction,
+    onEditChangeAction,
+    onEditSaveAction,
+    onEditCancelAction,
     isDragging,
   }: {
     item: BrainDumpItem
@@ -4827,10 +4827,10 @@ const BrainDumpCard = memo(
     t: any
     isEditing?: boolean
     editValue?: string
-    onEditStart?: (id: string, text: string, column: 'left' | 'right') => void
-    onEditChange?: (value: string) => void
-    onEditSave?: (id: string, column: 'left' | 'right') => void
-    onEditCancel?: () => void
+    onEditStartAction?: (id: string, text: string, column: 'left' | 'right') => void
+    onEditChangeAction?: (value: string) => void
+    onEditSaveAction?: (id: string, column: 'left' | 'right') => void
+    onEditCancelAction?: () => void
     isDragging?: boolean
   }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -4847,15 +4847,18 @@ const BrainDumpCard = memo(
     }, [isEditing])
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Enter') {
         e.preventDefault()
-        onEditCancel?.()
+        onEditSaveAction?.(item.id, column)
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        onEditCancelAction?.()
       }
       // Note: Enter creates new line in textarea, so we don't save on Enter
     }
 
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onEditChange?.(e.target.value)
+      onEditChangeAction?.(e.target.value)
       // Auto-resize
       e.target.style.height = 'auto'
       e.target.style.height = e.target.scrollHeight + 'px'
@@ -4892,7 +4895,7 @@ const BrainDumpCard = memo(
               ref={textareaRef}
               value={editValue}
               onChange={handleTextareaChange}
-              onBlur={() => onEditSave?.(item.id, column)}
+              onBlur={() => onEditSaveAction?.(item.id, column)}
               onKeyDown={handleKeyDown}
               className="w-full resize-none border-none bg-transparent p-0 text-xs leading-relaxed font-medium text-gray-800 shadow-none ring-0 outline-none focus:border-none focus:shadow-none focus:ring-0 focus:outline-none dark:text-gray-200"
               rows={1}
@@ -4903,7 +4906,7 @@ const BrainDumpCard = memo(
               className="text-xs leading-relaxed font-medium whitespace-pre-wrap text-gray-800 select-none dark:text-gray-200"
               onDoubleClick={(e) => {
                 e.stopPropagation()
-                onEditStart?.(item.id, item.text || '', column)
+                onEditStartAction?.(item.id, item.text, column)
               }}
             >
               {item.text}
@@ -5358,10 +5361,10 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
                   t={t}
                   isEditing={editingId === item.id}
                   editValue={editingId === item.id ? editValue : ''}
-                  onEditStart={handleEditStart}
-                  onEditChange={handleEditChange}
-                  onEditSave={handleEditSave}
-                  onEditCancel={handleEditCancel}
+                  onEditStartAction={handleEditStart}
+                  onEditChangeAction={handleEditChange}
+                  onEditSaveAction={handleEditSave}
+                  onEditCancelAction={handleEditCancel}
                   isDragging={isDragging}
                 />
               ))}
@@ -5378,10 +5381,10 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
                   t={t}
                   isEditing={editingId === item.id}
                   editValue={editingId === item.id ? editValue : ''}
-                  onEditStart={handleEditStart}
-                  onEditChange={handleEditChange}
-                  onEditSave={handleEditSave}
-                  onEditCancel={handleEditCancel}
+                  onEditStartAction={handleEditStart}
+                  onEditChangeAction={handleEditChange}
+                  onEditSaveAction={handleEditSave}
+                  onEditCancelAction={handleEditCancel}
                   isDragging={isDragging}
                 />
               ))}
