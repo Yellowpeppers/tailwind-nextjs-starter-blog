@@ -233,7 +233,7 @@ export const FocusTaskCard = memo(
                 {variant === 'reward' ? (
                   <span className="flex items-center gap-2">
                     <span className="icon-[solar--play-circle-outline] h-6 w-6" />
-                    {t.focusLab.widgets.todo.startFocus || 'Start Focus'}
+                    {t.focusLab.widgets.todo.startFocus}{' '}
                   </span>
                 ) : (
                   <TargetIcon className="h-4 w-4" />

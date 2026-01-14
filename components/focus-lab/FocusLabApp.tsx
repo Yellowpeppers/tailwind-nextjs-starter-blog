@@ -3003,7 +3003,8 @@ const ToDoCard = ({
                 ? 'border-2 border-transparent text-black hover:border-black hover:bg-white hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
                 : 'bg-white text-gray-400 ring-gray-100 hover:bg-gray-50 hover:text-gray-600 dark:bg-gray-900 dark:text-gray-500 dark:ring-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300'
           }`}
-          title="Flip to Scratch Card"
+          aria-label={t.focusLab.widgets.todo.flipToScratch || 'Flip to Scratch Card'}
+          title={t.focusLab.widgets.todo.flipToScratch || 'Flip to Scratch Card'}
         >
           <MoreHorizontalIcon className="h-5 w-5" />
         </button>
@@ -3577,6 +3578,7 @@ const TimerWidget = ({
 
   // Zen Mode State
   const [isZenMode, setIsZenMode] = useState(false)
+  const [zenFocus, setZenFocus] = useState<'task' | 'timer'>('task')
 
   // Timer Core State
   const [timeLeft, setTimeLeft] = useState(timerPresets.focus.duration) // Seconds. Countdown: remaining. Stopwatch: elapsed.
@@ -4297,42 +4299,73 @@ const TimerWidget = ({
                 <button
                   onClick={() => setIsZenMode(false)}
                   className="absolute top-6 right-6 rounded-full p-3 text-white/60 transition-all hover:bg-white/10 hover:text-white"
-                  aria-label="Exit Zen Mode"
+                  aria-label={t.focusLab.widgets.timer.zenMode?.exit || 'Exit Zen Mode'}
                 >
                   <span className="icon-[solar--close-circle-linear] text-3xl" />
                 </button>
 
-                {/* Task Name */}
-                {focusedTask && (
-                  <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="mb-8 max-w-[80%] text-center text-2xl font-medium text-white/60"
-                  >
-                    {focusedTask.text}
-                  </motion.p>
-                )}
+                {/* Timer & Task Groups - Click to Swap */}
+                <div className="flex w-full flex-col items-center justify-center gap-8">
+                  {zenFocus === 'task' ? (
+                    <>
+                      {/* Secondary: Timer */}
+                      <motion.div
+                        layoutId="zen-timer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setZenFocus('timer')
+                        }}
+                        className={`focuslab-numeric cursor-pointer text-3xl font-medium tracking-widest transition-opacity hover:opacity-100 ${isCompleted ? 'text-green-400' : 'text-white/40'}`}
+                      >
+                        {isCompleted ? t.focusLab.widgets.timer.congratulations || '🎉' : display}
+                      </motion.div>
 
-                {/* Large Timer Display */}
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-                  className={`focuslab-numeric text-[12rem] leading-none font-black tracking-tight ${
-                    isCompleted
-                      ? 'text-green-400'
-                      : isWarm
-                        ? 'text-[#C27B4A]'
-                        : isGreen
-                          ? 'text-[#7A9F7A]'
-                          : isBlue
-                            ? 'text-[#5B84B1]'
-                            : 'text-white'
-                  }`}
-                >
-                  {isCompleted ? t.focusLab.widgets.timer.congratulations || '🎉' : display}
-                </motion.div>
+                      {/* Primary: Task */}
+                      {focusedTask && (
+                        <motion.p
+                          layoutId="zen-task"
+                          className="max-w-[80%] cursor-default text-center text-6xl leading-tight font-bold text-white"
+                        >
+                          {focusedTask.text}
+                        </motion.p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Secondary: Task */}
+                      {focusedTask && (
+                        <motion.p
+                          layoutId="zen-task"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setZenFocus('task')
+                          }}
+                          className="max-w-[80%] cursor-pointer text-center text-2xl font-medium text-white/50 transition-opacity hover:text-white/80"
+                        >
+                          {focusedTask.text}
+                        </motion.p>
+                      )}
+
+                      {/* Primary: Timer */}
+                      <motion.div
+                        layoutId="zen-timer"
+                        className={`focuslab-numeric text-9xl leading-none font-black tracking-tight ${
+                          isCompleted
+                            ? 'text-green-400'
+                            : isWarm
+                              ? 'text-[#C27B4A]'
+                              : isGreen
+                                ? 'text-[#7A9F7A]'
+                                : isBlue
+                                  ? 'text-[#5B84B1]'
+                                  : 'text-white'
+                        }`}
+                      >
+                        {isCompleted ? t.focusLab.widgets.timer.congratulations || '🎉' : display}
+                      </motion.div>
+                    </>
+                  )}
+                </div>
 
                 {/* Status Text */}
                 <motion.p
@@ -4342,13 +4375,13 @@ const TimerWidget = ({
                   className="mt-6 text-lg text-white/40"
                 >
                   {isCompleted
-                    ? 'Session Complete!'
+                    ? t.focusLab.widgets.timer.zenMode?.sessionComplete || 'Session Complete!'
                     : isRunning
                       ? isFlipped
                         ? t.focusLab.widgets.timer.recording || 'Recording time...'
-                        : 'Stay focused'
+                        : t.focusLab.widgets.timer.zenMode?.stayFocused || 'Stay focused'
                       : isPaused
-                        ? 'Paused'
+                        ? t.focusLab.widgets.timer.zenMode?.paused || 'Paused'
                         : timerState === 'idle'
                           ? t.focusLab.widgets.timer.ready || 'Ready to start'
                           : ''}

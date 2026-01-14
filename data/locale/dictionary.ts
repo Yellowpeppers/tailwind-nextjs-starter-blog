@@ -207,6 +207,12 @@ export const dictionary = {
           done: 'Done',
           ready: 'Ready to start',
           recording: 'Recording time...',
+          zenMode: {
+            sessionComplete: 'Session Complete!',
+            stayFocused: 'Stay focused',
+            paused: 'Paused',
+            exit: 'Exit Zen Mode',
+          },
           decisionPrompt: {
             continueFocus: 'Continue Focus',
             plusFive: '+5m',
@@ -290,6 +296,8 @@ export const dictionary = {
           emptySubtitle: 'Add a task to get started',
           focusTooltip: 'Focus on this task',
           startFocus: 'Start Focus',
+          flipToScratch: 'Flip to Scratch Card',
+          flipToList: 'Flip to List',
         },
         goal: {
           title: 'Daily Goal',
@@ -1295,6 +1303,12 @@ export const dictionary = {
           done: '又完成了一次专注',
           ready: '准备开始',
           recording: '正在记录',
+          zenMode: {
+            sessionComplete: '专注完成！',
+            stayFocused: '保持专注',
+            paused: '已暂停',
+            exit: '退出禅模式',
+          },
           decisionPrompt: {
             continueFocus: '继续专注',
             plusFive: '再来5m',
@@ -1375,6 +1389,9 @@ export const dictionary = {
           emptyTitle: '暂无任务',
           emptySubtitle: '添加任务开始新的一天',
           focusTooltip: '专注此任务',
+          startFocus: '开始专注',
+          flipToScratch: '切换至刮刮卡',
+          flipToList: '切换至列表',
         },
         goal: {
           title: '每日目标',
