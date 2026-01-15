@@ -3413,6 +3413,26 @@ const SonicShieldWidget = ({
     return () => window.removeEventListener('bubu-sound-control', handleBuBuSoundControl)
   }, [allSounds, isSoundEnabled, updateSettings, activeTracks])
 
+  // BuBu: Listen for timer control events (specifically for setting the focused task)
+  useEffect(() => {
+    const handleBuBuTimerTaskControl = (event: Event) => {
+      const detail = (event as CustomEvent).detail as {
+        duration?: number
+        mode?: string
+        taskContent?: string
+      }
+      if (detail.taskContent) {
+        setFocusedTask({
+          text: detail.taskContent,
+          id: `bubu-task-${Date.now()}`,
+          timestamp: Date.now(),
+        })
+      }
+    }
+    window.addEventListener('bubu-timer-control', handleBuBuTimerTaskControl)
+    return () => window.removeEventListener('bubu-timer-control', handleBuBuTimerTaskControl)
+  }, [])
+
   // Sync Audio Elements
   useEffect(() => {
     Object.values(activeTracks).forEach((track) => {

@@ -23,7 +23,7 @@ export type ChatMessage = {
       | string[]
       | string
       | { oldContent: string; newContent: string }
-      | { duration?: number; mode?: string }
+      | { duration?: number; mode?: string; taskContent?: string }
       | { action: string; sound?: string; volume?: number }
     status: 'pending' | 'confirmed' | 'cancelled'
   }
@@ -45,7 +45,7 @@ export type BuBuAction = {
     | string[]
     | string
     | { oldContent: string; newContent: string }
-    | { duration?: number; mode?: string }
+    | { duration?: number; mode?: string; taskContent?: string }
     | { action: string; sound?: string; volume?: number }
 }
 

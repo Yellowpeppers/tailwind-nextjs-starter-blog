@@ -68,7 +68,7 @@ const getBasePrompt = (language: string) => {
 - 用户**想添加**新的具体任务（今天、明天、要做某事）→ 调用 add_tasks
 - 用户**想记录**新想法、灵感、未来计划 → 调用 add_idea  
 - 用户**想修改**任务或想法内容 → 调用 update_task 或 update_idea
-- 用户**想开始**专注、休息、番茄钟 → 调用 start_pomodoro
+- 用户**想开始**专注、休息、番茄钟 → 调用 start_pomodoro。如果用户指定了具体的任务（或者说"随便选一个"），请从【未完成任务】列表中提取任务内容，并通过 taskContent 参数传入。
 - 用户**想播放/暂停**背景音、白噪音 → 调用 control_ambience
 - 用户**想完成**任务 → 调用 complete_task
 - 用户**想取消完成**任务 → 调用 uncomplete_task
@@ -339,9 +339,14 @@ const BUBU_FUNCTIONS = [
           type: SchemaType.STRING,
           description: '模式：focus (专注), short (短休), long (长休)。',
         },
+        taskContent: {
+          type: SchemaType.STRING,
+          description:
+            '要专注的任务内容。如果用户指定了任务（或请求随机选择），请在此填入任务文本。',
+        },
         reply: {
           type: SchemaType.STRING,
-          description: 'BuBu 的回复。确认开始计时，如"好的，开始 25 分钟专注！保持专注哦！"',
+          description: 'BuBu 的回复。如"好的，为您开启任务：[任务名]"。',
         },
       },
       required: ['reply'],
@@ -708,6 +713,7 @@ export async function POST(request: Request) {
             payload: {
               duration: args.duration,
               mode: args.mode,
+              taskContent: args.taskContent,
             },
           },
           remaining: rateLimit.remaining - 1,
