@@ -126,7 +126,7 @@ function buildSystemPrompt(personality: string, language: string, context?: any)
 
     const completedTaskList =
       completedTasks
-        .slice(0, 5)
+        .slice(0, 10)
         .map((t: FocusTask) => `- ${t.content}`)
         .join('\n') || '暂无'
 
