@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface TypewriterProps {
   text: string
@@ -8,21 +8,32 @@ interface TypewriterProps {
 
 export const Typewriter = ({ text, speed = 30, onComplete }: TypewriterProps) => {
   const [displayedText, setDisplayedText] = useState('')
+  const indexRef = useRef(0)
+  const onCompleteRef = useRef(onComplete)
+
+  // Keep onComplete ref up to date
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
 
   useEffect(() => {
-    let i = 0
+    // Reset when text changes
+    indexRef.current = 0
+    setDisplayedText('')
+
     const timer = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText((prev) => prev + text.charAt(i))
-        i++
+      if (indexRef.current < text.length) {
+        const nextChar = text.charAt(indexRef.current)
+        setDisplayedText((prev) => prev + nextChar)
+        indexRef.current++
       } else {
         clearInterval(timer)
-        onComplete?.()
+        onCompleteRef.current?.()
       }
     }, speed)
 
     return () => clearInterval(timer)
-  }, [text, speed, onComplete])
+  }, [text, speed])
 
   return <>{displayedText}</>
 }
