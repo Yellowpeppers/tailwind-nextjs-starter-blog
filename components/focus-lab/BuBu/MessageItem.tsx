@@ -87,7 +87,10 @@ const MessageItem = memo(
             {message.action && message.action.status === 'pending' && (
               <div className="border-primary-200 bg-primary-50/50 dark:border-primary-800 dark:bg-primary-900/20 mt-1 rounded-xl border-2 p-3">
                 <div className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {message.action.type === 'add_tasks' ? '📝 任务预览：' : '💡 想法：'}
+                  {message.action.type === 'add_tasks' && '📝 任务预览：'}
+                  {message.action.type === 'add_idea' && '💡 想法：'}
+                  {message.action.type === 'complete_task' && '✅ 标记完成：'}
+                  {message.action.type === 'delete_task' && '🗑️ 删除任务：'}
                 </div>
 
                 {/* Tasks list */}
@@ -117,6 +120,14 @@ const MessageItem = memo(
                   </div>
                 )}
 
+                {/* Complete/Delete task preview */}
+                {(message.action.type === 'complete_task' ||
+                  message.action.type === 'delete_task') && (
+                  <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                    {message.action.payload as string}
+                  </div>
+                )}
+
                 {/* Confirmation buttons */}
                 <div className="flex gap-2">
                   <button
@@ -124,7 +135,10 @@ const MessageItem = memo(
                     className="bg-primary-500 hover:bg-primary-600 flex-1 rounded-lg py-2 text-sm font-medium text-white"
                   >
                     <Check className="mr-1 inline h-4 w-4" />
-                    {message.action.type === 'add_tasks' ? '添加到任务列表' : '添加到想法本'}
+                    {message.action.type === 'add_tasks' && '添加到任务列表'}
+                    {message.action.type === 'add_idea' && '添加到想法本'}
+                    {message.action.type === 'complete_task' && '确认完成'}
+                    {message.action.type === 'delete_task' && '确认删除'}
                   </button>
                   <button
                     onClick={() => onCancelAction(message.id)}
@@ -139,10 +153,11 @@ const MessageItem = memo(
             {/* Confirmed state */}
             {message.action && message.action.status === 'confirmed' && (
               <div className="mt-1 text-xs text-green-600 dark:text-green-400">
-                ✓ 已添加{' '}
-                {message.action.type === 'add_tasks'
-                  ? `${(message.action.payload as string[]).length} 个任务`
-                  : '想法'}
+                {message.action.type === 'add_tasks' &&
+                  `✓ 已添加 ${(message.action.payload as string[]).length} 个任务`}
+                {message.action.type === 'add_idea' && '✓ 已添加想法'}
+                {message.action.type === 'complete_task' && '✓ 已标记完成'}
+                {message.action.type === 'delete_task' && '✓ 已删除'}
               </div>
             )}
           </div>

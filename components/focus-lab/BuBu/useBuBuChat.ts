@@ -212,6 +212,42 @@ export const useBuBuChat = () => {
           }
 
           console.log('[BuBu] Added idea to Brain Dump')
+        } else if (message.action.type === 'complete_task') {
+          // Mark task as completed
+          const taskContent = message.action.payload as string
+          const currentItems = await readStationStorage(user?.id)
+
+          // Find and mark the task as completed
+          const updatedItems = currentItems.map((item) =>
+            item.content === taskContent ? { ...item, completed: true } : item
+          )
+
+          // Save to storage
+          await saveStationItems(updatedItems, user)
+
+          // Trigger sync event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('focus-station-sync'))
+          }
+
+          console.log(`[BuBu] Marked task as completed: ${taskContent}`)
+        } else if (message.action.type === 'delete_task') {
+          // Delete task from list
+          const taskContent = message.action.payload as string
+          const currentItems = await readStationStorage(user?.id)
+
+          // Filter out the task
+          const updatedItems = currentItems.filter((item) => item.content !== taskContent)
+
+          // Save to storage
+          await saveStationItems(updatedItems, user)
+
+          // Trigger sync event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('focus-station-sync'))
+          }
+
+          console.log(`[BuBu] Deleted task: ${taskContent}`)
         }
 
         // Update message status to confirmed

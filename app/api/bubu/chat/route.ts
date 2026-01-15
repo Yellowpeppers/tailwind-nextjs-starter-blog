@@ -217,6 +217,42 @@ const BUBU_FUNCTIONS = [
       required: ['idea', 'reply'],
     },
   },
+  {
+    name: 'complete_task',
+    description: '用户想要标记某个任务为已完成。根据上下文中的任务列表匹配任务。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        taskContent: {
+          type: SchemaType.STRING,
+          description: '要标记完成的任务内容（需要精确匹配用户任务列表中的内容）',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。告知用户任务已完成，可适当鼓励',
+        },
+      },
+      required: ['taskContent', 'reply'],
+    },
+  },
+  {
+    name: 'delete_task',
+    description: '用户想要删除某个任务。根据上下文中的任务列表匹配任务。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        taskContent: {
+          type: SchemaType.STRING,
+          description: '要删除的任务内容（需要精确匹配用户任务列表中的内容）',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。确认任务已删除',
+        },
+      },
+      required: ['taskContent', 'reply'],
+    },
+  },
 ]
 
 // Types
@@ -422,6 +458,36 @@ export async function POST(request: Request) {
           action: {
             type: 'add_idea',
             payload: args.idea,
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'complete_task') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'complete_task',
+            payload: args.taskContent,
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'delete_task') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'delete_task',
+            payload: args.taskContent,
           },
           remaining: rateLimit.remaining - 1,
         },

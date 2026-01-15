@@ -116,9 +116,10 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
     }
   }, [transcript, resetTranscript])
 
-  const handleSend = () => {
-    if (!inputValue.trim() || isLoading) return
-    sendMessage(inputValue.trim())
+  const handleSend = (quickMessage?: string) => {
+    const messageToSend = quickMessage || inputValue.trim()
+    if (!messageToSend || isLoading) return
+    sendMessage(messageToSend)
     setInputValue('')
     // Reset height manually after send
     if (inputRef.current) {
@@ -353,6 +354,23 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
             <div
               className={`shrink-0 border-gray-200 p-4 dark:border-gray-800 ${voiceError ? 'border-t-0' : 'border-t'}`}
             >
+              {/* Quick Commands */}
+              <div className="mb-3 flex flex-wrap gap-2">
+                {[
+                  { label: '📋 今日任务', message: '我现在有哪些任务？' },
+                  { label: '💪 加油打气', message: '给我一些鼓励吧！' },
+                  { label: '🍅 开始专注', message: '帮我开始一个番茄钟' },
+                ].map((cmd) => (
+                  <button
+                    key={cmd.label}
+                    onClick={() => handleSend(cmd.message)}
+                    disabled={isLoading}
+                    className="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:border-primary-700 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
+                  >
+                    {cmd.label}
+                  </button>
+                ))}
+              </div>
               <div className="flex gap-2">
                 {/* Voice Input Button */}
                 {isVoiceSupported && (
