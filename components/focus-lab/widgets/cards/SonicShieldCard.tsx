@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { CardShell } from '@/components/focus-lab/CardShell'
@@ -8,7 +8,7 @@ import { MoreHorizontalIcon } from '@/components/focus-lab/icons'
 import { useSoundSystem } from '@/components/focus-lab/hooks/useSoundSystem'
 import { SonicShieldWidget } from '@/components/focus-lab/widgets/SonicShieldWidget'
 
-export const SonicShieldCard = ({
+export const SonicShieldCard = memo(function SonicShieldCard({
   onDeleteAction,
   className,
   isFocused,
@@ -16,7 +16,7 @@ export const SonicShieldCard = ({
   onDeleteAction?: () => void
   className?: string
   isFocused?: boolean
-}) => {
+}) {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
   const isCartoon = uiStyle === 'cartoon'
@@ -56,4 +56,4 @@ export const SonicShieldCard = ({
       <SonicShieldWidget sound={sound} isFlipped={isFlipped} onFlip={setIsFlipped} />
     </CardShell>
   )
-}
+})

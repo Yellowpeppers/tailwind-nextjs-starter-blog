@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { CardShell } from '@/components/focus-lab/CardShell'
@@ -9,7 +9,7 @@ import { FocusedTaskState } from '@/components/focus-lab/types'
 import { useFocusTimer } from '@/components/focus-lab/hooks/useFocusTimer'
 import { TimerWidget } from '@/components/focus-lab/widgets/TimerWidget'
 
-export const TimerCard = ({
+export const TimerCard = memo(function TimerCard({
   onDeleteAction,
   className,
   focusedTask,
@@ -27,7 +27,7 @@ export const TimerCard = ({
   onSessionLoggedAction?: (minutes: number) => void
   onTimerCompleteAction?: (minutes: number) => void
   isFocused?: boolean
-}) => {
+}) {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
   const isCartoon = uiStyle === 'cartoon'
@@ -105,4 +105,4 @@ export const TimerCard = ({
       />
     </CardShell>
   )
-}
+})

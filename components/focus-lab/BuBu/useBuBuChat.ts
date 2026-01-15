@@ -428,10 +428,21 @@ export const useBuBuChat = ({
   }, [])
 
   // Clear conversation history
-  const clearHistory = useCallback(() => {
+  const clearHistory = useCallback(async () => {
     setMessages([])
     setError(null)
-  }, [])
+
+    if (user) {
+      try {
+        const { error } = await supabase.from('bubu_messages').delete().eq('user_id', user.id)
+
+        if (error) throw error
+      } catch (err) {
+        console.error('Failed to clear history from cloud:', err)
+        // We still cleared local state, so user sees it gone immediately
+      }
+    }
+  }, [user, supabase])
 
   // Retry last message
   const retry = useCallback(() => {

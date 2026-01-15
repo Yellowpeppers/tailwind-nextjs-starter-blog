@@ -62,6 +62,8 @@ import { debounce, uniq } from 'lodash'
 import isEqual from 'lodash/isEqual'
 import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
 import { useFocusTour } from '@/components/focus-lab/useFocusTour'
+import { useFocusLabLayout } from '@/components/focus-lab/hooks/useFocusLabLayout'
+import { useFocusLabStats } from '@/components/focus-lab/hooks/useFocusLabStats'
 import dynamic from 'next/dynamic'
 // Dynamic import for BuBu to reduce initial bundle size
 const BuBu = dynamic(() => import('@/components/focus-lab/BuBu').then((mod) => mod.BuBu), {
@@ -69,33 +71,15 @@ const BuBu = dynamic(() => import('@/components/focus-lab/BuBu').then((mod) => m
 })
 
 import {
-  SmileCircleIcon,
-  MagicIcon,
-  HandIcon,
-  HandPalmIcon,
-  PlayIcon,
-  PauseIcon,
-  ArrowLaunchIcon,
-  ArrowLeftIcon,
-  TrashIcon,
-  PlusIcon,
-  MoreHorizontalIcon,
-  CloseIcon,
-  XIcon,
   StatsIcon,
   CrownIcon,
   SettingsIcon,
   StarIcon,
-  EditIcon,
-  CheckIcon,
-  TransferIcon,
   LogoutIcon,
   HelpIcon,
 } from '@/components/focus-lab/icons'
 import {
   GreetingInfo,
-  SoundOption,
-  ActiveTrack,
   GridItem,
   LayoutPreset,
   FocusedTaskState,
@@ -137,6 +121,9 @@ import {
   FocusSidebarProfile,
 } from '@/components/focus-lab/components/SidebarComponents'
 import { WeChatGroupModal } from '@/components/focus-lab/modals/WeChatGroupModal'
+import { GoalSettingsModal } from '@/components/focus-lab/modals/GoalSettingsModal'
+import { FocusLabSettingsModal } from '@/components/focus-lab/modals/FocusLabSettingsModal'
+import { ResetConfirmModal } from '@/components/focus-lab/modals/ResetConfirmModal'
 
 // Migrated Cards
 import { SonicShieldCard } from '@/components/focus-lab/widgets/cards/SonicShieldCard'
@@ -193,6 +180,7 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
   const { user } = useAuth()
   const { t, language: lang } = useTranslation()
+  const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
   const displayName = user
     ? user.user_metadata?.full_name ||
       user.email?.split('@')[0] ||
@@ -206,7 +194,7 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
     }
   }, [uiStyle, theme, setTheme])
   const isFocusMode = false
-  const [isLayoutLocked, setIsLayoutLocked] = useState(true)
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isTipOpen, setIsTipOpen] = useState(true)
   const [showGroupModal, setShowGroupModal] = useState(false)
@@ -220,11 +208,18 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
   const [greeting, setGreeting] = useState<GreetingInfo>(() => computeGreeting(lang, displayName))
   const [viewportWidth, setViewportWidth] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
-  const [activePreset, setActivePreset] = useState<LayoutPreset>('desktop')
-  const [layoutsByPreset, setLayoutsByPreset] =
-    useState<Record<LayoutPreset, GridItem[]>>(DEFAULT_LAYOUTS)
-  const [hiddenByPreset, setHiddenByPreset] =
-    useState<Record<LayoutPreset, Set<string>>>(EMPTY_HIDDEN)
+  // Hooks Integration: Layout
+  const { state: layoutState, actions: layoutActions } = useFocusLabLayout({
+    settings,
+    updateSettings,
+    isSettingsLoaded,
+  })
+  const { layoutsByPreset, activePreset, hiddenByPreset, isLayoutLocked, columns } = layoutState
+  const {
+    setActivePreset,
+    handleResetLayout: performResetLayoutAction,
+    setIsLayoutLocked,
+  } = layoutActions
   const [layoutKey, setLayoutKey] = useState(0)
 
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -257,8 +252,6 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
       ? '升级会员'
       : 'Upgrade'
 
-  const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
-
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showPricingModal, setShowPricingModal] = useState(false)
   const [showWeChatModal, setShowWeChatModal] = useState(false)
@@ -284,18 +277,44 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
 
   /* Handlers moved below */
 
-  const [dailyGoalHours, setDailyGoalHours] = useState(4.5)
-  const [dailyTaskGoal, setDailyTaskGoal] = useState(5)
-  const [tempGoalHours, setTempGoalHours] = useState('4.5')
-  const [tempTaskGoal, setTempTaskGoal] = useState('5')
+  // Hooks Integration: Stats
   const [showGoalModal, setShowGoalModal] = useState(false)
-  const hasHydratedGoals = useRef(false)
-  const prevGoalRef = useRef<{ hours?: number; tasks?: number }>({})
-  const [tasksCompletedToday, setTasksCompletedToday] = useState(0)
-  const hasHydratedLayout = useRef(false)
-  const skipLayoutEvent = useRef(false)
-  const [streak, setStreak] = useState(0)
-  const lastResetTime = useRef(0) // 追踪最后一次重置的时间戳
+
+  const {
+    state: statsState,
+    actions: statsActions,
+    hasHydratedGoals,
+  } = useFocusLabStats({
+    userId: user?.id,
+    settings,
+    updateSettings,
+  })
+
+  const {
+    todayMinutes,
+    tasksCompletedToday: todayCompletedCount,
+    tasksCompletedToday, // Expose raw name too just in case
+    dailyGoalHours,
+    dailyTaskGoal,
+    tempGoalHours,
+    tempTaskGoal,
+    currentProgressHours,
+    progressPercentage,
+    taskProgressPercentage,
+    rewardUnlocked,
+    streak,
+  } = statsState
+
+  const {
+    setDailyGoalHours,
+    setDailyTaskGoal,
+    setTempGoalHours,
+    setTempTaskGoal,
+    handleGoalSave: saveGoals,
+    refreshStats: refreshTodayProgress,
+  } = statsActions
+
+  const lastResetTime = useRef(0)
 
   const { startTour, destroyTour } = useFocusTour() // Initialize tour hook
 
@@ -305,21 +324,6 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
       destroyTour()
     }
   }, [showAuthModal, destroyTour])
-
-  const pendingImmediateSave = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncePersistLayout = useMemo(
-    () =>
-      debounce((nextLayouts: Record<LayoutPreset, GridItem[]>) => {
-        updateSettings('focus_lab.layout', {
-          desktop: nextLayouts.desktop,
-          triple: nextLayouts.triple,
-          double: nextLayouts.double,
-        })
-        updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
-        updateSettings('focus_lab.layout_saved_at', Date.now())
-      }, 300),
-    [updateSettings]
-  )
 
   // BuBu: Listen for timer control events (specifically for setting the focused task)
   useEffect(() => {
@@ -341,37 +345,18 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
     return () => window.removeEventListener('bubu-timer-control', handleBuBuTimerTaskControl)
   }, [])
 
-  // Real progress tracking
-  const [todayMinutes, setTodayMinutes] = useState(0)
-  const [todayCompletedCount, setTodayCompletedCount] = useState(0)
-  const refreshTodayProgress = useCallback(() => {
-    const minutes = getTodayFocusMinutes(user?.id)
-    setTodayMinutes(minutes)
-
-    const items = readStationStorage(user?.id)
-    const now = new Date()
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-
-    const taskCount = items.filter(
-      (item) =>
-        item.completed && typeof item.completed_at === 'number' && item.completed_at >= startOfDay
-    ).length
-    setTodayCompletedCount(taskCount)
-  }, [user?.id])
+  // Handlers Adapters (Hook Integration)
   const handleSessionLogged = useCallback(
     (mins: number) => {
-      setTodayMinutes((prev) => prev + mins)
       refreshTodayProgress()
-      setStreak(getStreak(user?.id))
     },
-
-    [refreshTodayProgress, user?.id]
+    [refreshTodayProgress]
   )
 
   const handleTaskComplete = useCallback(() => {
-    setTodayCompletedCount((prev) => prev + 1)
+    refreshTodayProgress()
     triggerEncouragement()
-  }, [triggerEncouragement])
+  }, [triggerEncouragement, refreshTodayProgress])
 
   const handleTimerComplete = useCallback(
     (minutes: number) => {
@@ -419,103 +404,21 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
     }
   }
 
-  // Fetch today's progress on mount and interval
-  useEffect(() => {
-    refreshTodayProgress()
-    setStreak(getStreak(user?.id))
-    // Poll every minute to update chart
-    const interval = setInterval(() => {
-      refreshTodayProgress()
-      setStreak(getStreak(user?.id))
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [refreshTodayProgress, user?.id])
-
   useEffect(() => {
     setGreeting(computeGreeting(lang, displayName))
     const interval = setInterval(() => setGreeting(computeGreeting(lang, displayName)), 60000)
     return () => clearInterval(interval)
   }, [lang, displayName])
 
-  // Hydrate goals from settings
-  useEffect(() => {
-    const storedHours = settings.focus_lab?.stats?.goal_hours
-    const storedTasks = settings.focus_lab?.stats?.goal_tasks
-
-    if (typeof storedHours === 'number' && storedHours !== prevGoalRef.current.hours) {
-      if (Math.abs(storedHours - dailyGoalHours) > 0.01) {
-        setDailyGoalHours(storedHours)
-      }
-      prevGoalRef.current.hours = storedHours
-    }
-    if (typeof storedTasks === 'number' && storedTasks !== prevGoalRef.current.tasks) {
-      if (storedTasks !== dailyTaskGoal) {
-        setDailyTaskGoal(storedTasks)
-      }
-      prevGoalRef.current.tasks = storedTasks
-    }
-
-    if (storedHours !== undefined || storedTasks !== undefined) {
-      hasHydratedGoals.current = true
-    }
-  }, [
-    settings.focus_lab?.stats?.goal_hours,
-    settings.focus_lab?.stats?.goal_tasks,
-    dailyGoalHours,
-    dailyTaskGoal,
-  ])
-
   // Track completed tasks from Focus Station (today)
   useEffect(() => {
-    const dayStart = (() => {
-      const now = new Date()
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-    })()
+    // Sync logic handled by hook + event listener
+    const handler = () => refreshTodayProgress()
+    window.addEventListener(STATION_SYNC_EVENT, handler)
+    return () => window.removeEventListener(STATION_SYNC_EVENT, handler)
+  }, [refreshTodayProgress])
 
-    const computeToday = (items: FocusItem[]) => {
-      const done = items.filter((item) => {
-        if (!item.completed) return false
-        // FocusItem 没有时间戳，先按今日列表全部算；若后续扩展 updated_at 可替换
-        if (item.created_at) return new Date(item.created_at).getTime() >= dayStart
-        return true
-      })
-      setTasksCompletedToday(done.length)
-    }
-
-    const syncFromLocal = () => {
-      const items = readStationStorage(user?.id)
-      computeToday(items)
-    }
-
-    const syncFromCloud = async () => {
-      if (!user) return
-      const cloudItems = await fetchCloudItems(user)
-      if (cloudItems) computeToday(cloudItems)
-    }
-
-    syncFromLocal()
-    syncFromCloud()
-
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<FocusItem[]>).detail
-      if (Array.isArray(detail)) {
-        computeToday(detail)
-      } else {
-        syncFromLocal()
-      }
-    }
-    window.addEventListener(STATION_SYNC_EVENT, handler as EventListener)
-    return () => window.removeEventListener(STATION_SYNC_EVENT, handler as EventListener)
-  }, [user?.id, user])
-
-  const currentProgressHours = todayMinutes / 60
-  const progressPercentage =
-    dailyGoalHours > 0 ? Math.min((todayMinutes / (dailyGoalHours * 60)) * 100, 100) : 0
-  const taskProgressPercentage =
-    dailyTaskGoal > 0 ? Math.min((tasksCompletedToday / dailyTaskGoal) * 100, 100) : 0
-  const isGoalReached = dailyGoalHours > 0 && currentProgressHours >= dailyGoalHours
-  const isTaskGoalReached = dailyTaskGoal > 0 && tasksCompletedToday >= dailyTaskGoal
-  const rewardUnlocked = isGoalReached || isTaskGoalReached
+  // Stats computed values provided by Hook
   const { burst: triggerCelebration, preload: preloadCelebration } = useCelebration()
   const formatHours = (value: number) => (Math.round(value * 10) / 10).toFixed(1)
   const renderGreetingText = (size: 'mobile' | 'desktop' = 'desktop') => (
@@ -571,44 +474,16 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
   // Prefill modal inputs when opened
   useEffect(() => {
     if (showGoalModal) {
-      // 拉取最新任务完成数
-      if (user) {
-        fetchCloudItems(user).then((items) => {
-          if (!items) return
-          const done = items.filter((i) => i.completed)
-          setTasksCompletedToday(done.length)
-        })
-      }
+      refreshTodayProgress()
       setTempGoalHours(dailyGoalHours.toString())
       setTempTaskGoal(dailyTaskGoal.toString())
       preloadCelebration()
     }
-  }, [showGoalModal, dailyGoalHours, dailyTaskGoal, user, preloadCelebration])
+  }, [showGoalModal, dailyGoalHours, dailyTaskGoal, preloadCelebration, refreshTodayProgress])
 
   const handleGoalModalSave = () => {
-    const hoursVal = Math.max(0.5, parseFloat(tempGoalHours) || dailyGoalHours)
-    const tasksVal = Math.max(0, Math.round(parseFloat(tempTaskGoal) || dailyTaskGoal))
-    setDailyGoalHours(hoursVal)
-    setDailyTaskGoal(tasksVal)
-
-    // Manual persistence to avoid infinite loops
-    updateSettings('focus_lab.stats.goal_hours', hoursVal)
-    updateSettings('focus_lab.stats.goal_tasks', tasksVal)
-    // Update ref immediately so hydration doesn't overwrite it
-    prevGoalRef.current.hours = hoursVal
-    prevGoalRef.current.tasks = tasksVal
-
+    saveGoals()
     setShowGoalModal(false)
-    if (
-      (hoursVal > 0 && currentProgressHours >= hoursVal) ||
-      (tasksVal > 0 && tasksCompletedToday >= tasksVal)
-    ) {
-      // Check if already celebrated to avoid spamming
-      if (hasHydratedGoals.current && !hasCelebratedRef.current) {
-        triggerCelebration({ variant: 'fireworks', spread: 110, particleCount: 140 })
-        hasCelebratedRef.current = true
-      }
-    }
   }
 
   const handlePreviewCelebration = () => {
@@ -878,179 +753,30 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
     }
   }, [isFocusMode])
 
-  useEffect(() => {
-    // 布局设置同步：从 settings 加载各断点布局，未保存或损坏/版本不匹配时回退默认并写回
-    if (!isSettingsLoaded || !settings || !settings.focus_lab || hasHydratedLayout.current === true)
-      return
-
-    const defaults: Record<LayoutPreset, GridItem[]> = {
-      desktop: cloneLayout(GRID_PRESETS.desktop.layout),
-      triple: cloneLayout(GRID_PRESETS.triple.layout),
-      double: cloneLayout(GRID_PRESETS.double.layout),
-    }
-
-    const emptyHidden: Record<LayoutPreset, Set<string>> = {
-      desktop: new Set(),
-      triple: new Set(),
-      double: new Set(),
-    }
-
-    const storedVersion = settings.focus_lab.layout_version
-    const forceDefaults = storedVersion !== LAYOUT_VERSION
-
-    const nextLayouts: Record<LayoutPreset, GridItem[]> = { ...defaults }
-    let shouldPersistLayout = false
-
-    ;(['desktop', 'triple', 'double'] as LayoutPreset[]).forEach((preset) => {
-      const saved = settings.focus_lab?.layout?.[preset]
-      const collapsed = isCollapsedLayout(saved)
-      const invalid = !isLayoutValid(preset, saved)
-      if (forceDefaults || collapsed || invalid) {
-        nextLayouts[preset] = defaults[preset]
-        shouldPersistLayout = true
-      } else {
-        nextLayouts[preset] = mergeLayoutWithDefaults(preset, saved)
-      }
-    })
-
-    setLayoutsByPreset(nextLayouts)
-
-    const nextHidden: Record<LayoutPreset, Set<string>> = { ...emptyHidden }
-    ;(['desktop', 'triple', 'double'] as LayoutPreset[]).forEach((preset) => {
-      const hiddenArr = settings.focus_lab?.hidden_cards?.[preset]
-      if (Array.isArray(hiddenArr)) {
-        nextHidden[preset] = new Set(hiddenArr.filter(Boolean))
-      }
-    })
-    setHiddenByPreset(nextHidden)
-
-    if (shouldPersistLayout || forceDefaults) {
-      updateSettings('focus_lab.layout', {
-        desktop: nextLayouts.desktop,
-        triple: nextLayouts.triple,
-        double: nextLayouts.double,
-      })
-      updateSettings('focus_lab.hidden_cards', {
-        desktop: [],
-        triple: [],
-        double: [],
-      })
-      updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
-      updateSettings('focus_lab.layout_saved_at', Date.now())
-    }
-
-    hasHydratedLayout.current = true
-  }, [isSettingsLoaded, settings, updateSettings])
-
-  useEffect(() => {
-    if (!hasHydratedLayout.current) return
-    debouncePersistLayout(layoutsByPreset)
-    return () => {
-      debouncePersistLayout.flush()
-    }
-  }, [layoutsByPreset, debouncePersistLayout])
-
-  // 持久化隐藏卡片状态（避免在 render 阶段直接调用 updateSettings）
-  useEffect(() => {
-    if (!hasHydratedLayout.current) return
-    const toArray = (set: Set<string>) => Array.from(set || [])
-    updateSettings('focus_lab.hidden_cards', {
-      desktop: toArray(hiddenByPreset.desktop),
-      triple: toArray(hiddenByPreset.triple),
-      double: toArray(hiddenByPreset.double),
-    })
-    updateSettings('focus_lab.layout_saved_at', Date.now())
-  }, [hiddenByPreset, updateSettings])
-
-  const handleLayoutChange = useCallback(
-    (preset: LayoutPreset, newLayout: GridItem[]) => {
-      // 在重置后 500ms 内忽略所有布局变化回调，防止 RGL 的初始化回调覆盖默认布局
-      const timeSinceReset = Date.now() - lastResetTime.current
-      if (timeSinceReset < 500) {
-        return
-      }
-      if (skipLayoutEvent.current) {
-        skipLayoutEvent.current = false
-        return
-      }
-      // 取消之前的持久化，避免旧布局在重置后覆盖新值
-      debouncePersistLayout.cancel()
-      setLayoutsByPreset((prev) => {
-        const merged = mergeLayoutWithDefaults(preset, newLayout)
-        const next = { ...prev, [preset]: merged }
-        if (hasHydratedLayout.current) {
-          // 统一通过节流函数持久化，避免在 render 阶段触发 setState 警告
-          debouncePersistLayout(next)
-          // 同步写一份立即保存，避免用户快速刷新导致丢失（异步执行规避 render 警告）
-          if (pendingImmediateSave.current) clearTimeout(pendingImmediateSave.current)
-          pendingImmediateSave.current = setTimeout(() => {
-            updateSettings('focus_lab.layout', next)
-            updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
-            updateSettings('focus_lab.layout_saved_at', Date.now())
-            pendingImmediateSave.current = null
-          }, 0)
-        }
-        return next
-      })
-    },
-    [debouncePersistLayout, updateSettings]
-  )
-
-  const handleRemoveItem = useCallback((preset: LayoutPreset, id: string) => {
-    setLayoutsByPreset((prev) => {
-      const nextLayout = prev[preset]?.filter((item) => item.id !== id) || []
-      const next = { ...prev, [preset]: nextLayout }
-      return next
-    })
-  }, [])
+  // Adapter Handlers
 
   const handleResetLayout = useCallback(() => {
-    // 先取消未决的保存，避免旧布局反写
-    debouncePersistLayout.cancel()
-    if (pendingImmediateSave.current) {
-      clearTimeout(pendingImmediateSave.current)
-      pendingImmediateSave.current = null
-    }
-    skipLayoutEvent.current = true
-    const nextLayouts: Record<LayoutPreset, GridItem[]> = {
-      desktop: cloneLayout(GRID_PRESETS.desktop.layout),
-      triple: cloneLayout(GRID_PRESETS.triple.layout),
-      double: cloneLayout(GRID_PRESETS.double.layout),
-    }
-    setLayoutsByPreset(nextLayouts)
-    const nextHidden: Record<LayoutPreset, Set<string>> = {
-      desktop: new Set(),
-      triple: new Set(),
-      double: new Set(),
-    }
-    setHiddenByPreset(nextHidden)
-    // 记录重置时间，防止 RGL 的回调覆盖默认布局
-    lastResetTime.current = Date.now()
-    // 增加 layoutKey 强制 ResponsiveGridLayout 重新挂载，使其采用新布局
-    setLayoutKey((k) => k + 1)
-    // 立即持久化新的默认布局，确保刷新后也是最新
-    updateSettings('focus_lab.layout', nextLayouts)
-    updateSettings('focus_lab.hidden_cards', {
-      desktop: [],
-      triple: [],
-      double: [],
-    })
-    updateSettings('focus_lab.layout_version', LAYOUT_VERSION)
-    updateSettings('focus_lab.layout_saved_at', Date.now())
-  }, [debouncePersistLayout, updateSettings])
+    performResetLayoutAction()
+    // Force remount RGL
+    setLayoutKey((prev) => prev + 1)
+    setShowResetConfirm(false)
+  }, [performResetLayoutAction])
 
-  const handleToggleHidden = (preset: LayoutPreset, id: string) => {
-    setHiddenByPreset((prev) => {
-      const current = new Set(prev[preset] || [])
-      if (current.has(id)) {
-        current.delete(id)
-      } else {
-        current.add(id)
-      }
-      const next = { ...prev, [preset]: current }
-      return next
-    })
-  }
+  const handleLayoutChange = layoutActions.handleLayoutChange
+  const handleToggleHidden = layoutActions.handleToggleHidden
+
+  const handleRemoveItem = useCallback(
+    (preset: LayoutPreset, id: string) => {
+      const current = layoutsByPreset[preset] || []
+      const next = current.filter((item) => item.id !== id)
+      layoutActions.handleLayoutChange(preset, next)
+    },
+    [layoutsByPreset, layoutActions]
+  )
+
+  const hiddenCards = useMemo(() => {
+    return hiddenByPreset[activePreset] || new Set()
+  }, [hiddenByPreset, activePreset])
 
   const activePresetConfig = GRID_PRESETS[activePreset]
   const backgroundColumnWidth = Math.max(
@@ -1080,190 +806,21 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showGoalModal && (
-          <motion.div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowGoalModal(false)}
-            role="dialog"
-            aria-modal="true"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.94, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 10 }}
-              className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white p-0 shadow-2xl dark:bg-gray-900"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-gray-50 p-6 px-8 dark:border-gray-800/50">
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
-                    {t.focusLab.widgets.goal.modalTitle}
-                  </h2>
-                  <p className="mt-1 text-sm font-medium text-gray-400">
-                    {t.focusLab.widgets.goal.modalSubtitle}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2">
-                {/* Left Column: Settings */}
-                <div className="flex flex-col justify-center gap-12 border-b border-gray-50 p-8 md:border-r md:border-b-0 dark:border-gray-800/50">
-                  <div className="space-y-12">
-                    {/* Goal 1: Hours */}
-                    <div className="group">
-                      <div className="mb-5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="icon-[solar--clock-circle-bold-duotone] text-primary-500 text-2xl" />
-                          <label className="text-sm font-black tracking-widest text-gray-400 uppercase">
-                            {t.focusLab.widgets.goal.hours}
-                          </label>
-                        </div>
-                        <span className="text-primary-500 text-2xl font-black">
-                          {tempGoalHours}h
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="12"
-                        step="0.5"
-                        value={tempGoalHours}
-                        onChange={(e) => setTempGoalHours(e.target.value)}
-                        className="accent-primary-500 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-100 dark:bg-gray-800"
-                      />
-                      <div className="mt-4 flex items-center justify-between text-xs font-bold text-gray-400 uppercase opacity-60">
-                        <span>
-                          {t.focusLab.widgets.goal.current}: {formatHours(currentProgressHours)}h
-                        </span>
-                        <span>
-                          {t.focusLab.widgets.goal.progress}:{' '}
-                          {Math.min(100, Math.round(progressPercentage))}%
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Goal 2: Tasks */}
-                    <div className="group">
-                      <div className="mb-5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="icon-[solar--checklist-minimalistic-bold-duotone] text-2xl text-emerald-500" />
-                          <label className="text-sm font-black tracking-widest text-gray-400 uppercase">
-                            {t.focusLab.widgets.goal.tasks}
-                          </label>
-                        </div>
-                        <span className="text-2xl font-black text-emerald-500">{tempTaskGoal}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="20"
-                        step="1"
-                        value={tempTaskGoal}
-                        onChange={(e) => setTempTaskGoal(e.target.value)}
-                        className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-100 accent-emerald-500 dark:bg-gray-800"
-                      />
-                      <div className="mt-4 flex items-center justify-between text-xs font-bold text-gray-400 uppercase opacity-60">
-                        <span>
-                          {t.focusLab.widgets.goal.completed}: {tasksCompletedToday}
-                        </span>
-                        <span>
-                          {t.focusLab.widgets.goal.progress}:{' '}
-                          {Math.min(100, Math.round(taskProgressPercentage))}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column: Status & Reward */}
-                <div className="bg-gray-50/50 p-6 dark:bg-gray-900/50">
-                  <div className="flex h-full flex-col gap-4">
-                    {/* Streak Bento Card */}
-                    <div className="flex flex-1 flex-col items-center justify-center rounded-3xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
-                      <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-900/20"
-                      >
-                        <span className="icon-[solar--fire-bold-duotone] text-4xl text-orange-500" />
-                      </motion.div>
-                      <div className="text-center">
-                        <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase">
-                          {t.focusLab.widgets.goal.streak}
-                        </div>
-                        <div className="text-4xl font-black text-gray-900 dark:text-white">
-                          {streak}{' '}
-                          <span className="text-base font-bold text-gray-400">
-                            {streak === 1
-                              ? t.focusLab.widgets.goal.streakDay
-                              : t.focusLab.widgets.goal.streakDays}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Reward Bento Card */}
-                    <div
-                      className={cn(
-                        'group relative flex flex-1 items-center gap-4 overflow-hidden rounded-3xl border p-5 transition-all duration-500',
-                        rewardUnlocked
-                          ? 'border-amber-100 bg-amber-50/30 dark:border-amber-900/30 dark:bg-amber-900/10'
-                          : 'border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-800/50'
-                      )}
-                    >
-                      <div className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-2xl dark:bg-gray-800">
-                        <span
-                          className={cn(
-                            'transition-transform duration-500 group-hover:scale-110',
-                            rewardUnlocked
-                              ? 'icon-[solar--magic-stick-3-bold-duotone] text-amber-500'
-                              : 'icon-[solar--box-linear] text-gray-400'
-                          )}
-                        />
-                      </div>
-                      <div className="relative z-10">
-                        <div className="text-[10px] font-black tracking-[0.2em] text-gray-400 uppercase">
-                          {t.focusLab.widgets.goal.reward}
-                        </div>
-                        <div className="text-sm font-black text-gray-900 dark:text-white">
-                          {rewardUnlocked
-                            ? t.focusLab.widgets.goal.rewardUnlocked
-                            : t.focusLab.widgets.goal.rewardLocked}
-                        </div>
-                      </div>
-
-                      {/* Decal background icon */}
-                      <span className="icon-[solar--medal-ribbons-star-bold] absolute -right-2 -bottom-2 text-6xl text-gray-100 opacity-20 dark:text-gray-800" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-3 bg-gray-50/50 p-6 px-8 dark:bg-gray-900/50">
-                <button
-                  onClick={() => setShowGoalModal(false)}
-                  className="rounded-full px-5 py-2 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                >
-                  {t.auth.profile.cancel}
-                </button>
-                <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
-                <button
-                  onClick={handleGoalModalSave}
-                  className="bg-primary-500 shadow-primary-500/30 hover:bg-primary-600 rounded-full px-10 py-3 text-sm font-black text-white shadow-lg transition-all active:scale-95"
-                >
-                  {t.focusLab.widgets.goal.save}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <GoalSettingsModal
+        isOpen={showGoalModal}
+        onClose={() => setShowGoalModal(false)}
+        tempGoalHours={tempGoalHours}
+        tempTaskGoal={tempTaskGoal}
+        onTempGoalHoursChange={setTempGoalHours}
+        onTempTaskGoalChange={setTempTaskGoal}
+        currentProgressHours={currentProgressHours}
+        progressPercentage={progressPercentage}
+        tasksCompletedToday={tasksCompletedToday}
+        taskProgressPercentage={taskProgressPercentage}
+        streak={streak}
+        rewardUnlocked={rewardUnlocked}
+        onSave={handleGoalModalSave}
+      />
       <AnimatePresence>
         {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
       </AnimatePresence>
@@ -1281,403 +838,18 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
         }
       />
 
-      {/* Settings Modal - Simple inline implementation for now */}
-      <AnimatePresence>
-        {showSettingsModal && (
-          <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowSettingsModal(false)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Escape' && setShowSettingsModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="no-scrollbar relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="mb-4 text-xl font-bold dark:text-white">
-                {t.focusLab.settings?.title || 'Settings'}
-              </h2>
-
-              <div className="space-y-4">
-                {/* Dark Mode */}
-                <div
-                  className={`flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800 ${uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' || uiStyle === 'cartoon' ? 'opacity-50' : ''}`}
-                >
-                  <span className="font-medium dark:text-gray-200">
-                    {t.focusLab.settings?.darkMode || 'Dark Mode'}
-                  </span>
-                  <button
-                    disabled={
-                      uiStyle === 'warm' ||
-                      uiStyle === 'green' ||
-                      uiStyle === 'blue' ||
-                      uiStyle === 'cartoon'
-                    }
-                    onClick={() => {
-                      if (
-                        uiStyle !== 'warm' &&
-                        uiStyle !== 'green' &&
-                        uiStyle !== 'blue' &&
-                        uiStyle !== 'cartoon'
-                      ) {
-                        setTheme(theme === 'dark' ? 'light' : 'dark')
-                      }
-                    }}
-                    className={`rounded-md bg-gray-200 px-3 py-1.5 text-sm transition-colors dark:bg-gray-700 ${uiStyle === 'warm' || uiStyle === 'green' || uiStyle === 'blue' || uiStyle === 'cartoon' ? 'cursor-not-allowed opacity-50' : ''}`}
-                  >
-                    {uiStyle === 'warm' ||
-                    uiStyle === 'green' ||
-                    uiStyle === 'blue' ||
-                    uiStyle === 'cartoon'
-                      ? 'Light Only'
-                      : theme === 'dark'
-                        ? t.focusLab.settings?.on || 'On'
-                        : t.focusLab.settings?.off || 'Off'}
-                  </button>
-                </div>
-
-                {/* Hide Card Headers */}
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                  <span className="font-medium dark:text-gray-200">
-                    {t.focusLab.settings?.hideHeaders || 'Hide Card Headers'}
-                  </span>
-                  <button
-                    onClick={() =>
-                      updateSettings(
-                        'focus_lab.hide_headers',
-                        !(settings.focus_lab?.hide_headers ?? false)
-                      )
-                    }
-                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.hide_headers ?? false) ? (uiStyle === 'warm' ? 'bg-[#F5F2EC] font-bold text-[#C27B4A]' : uiStyle === 'green' ? 'bg-[#F8F9F7] font-bold text-[#7A9F7A]' : uiStyle === 'blue' ? 'bg-[#E0EEF8] font-bold text-[#5B84B1]' : uiStyle === 'cartoon' ? 'border border-black bg-[#FFF8E7] font-bold text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-primary-100 text-primary-700 font-bold') : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
-                  >
-                    {(settings.focus_lab?.hide_headers ?? false)
-                      ? t.focusLab.settings?.on || 'On'
-                      : t.focusLab.settings?.off || 'Off'}
-                  </button>
-                </div>
-
-                {/* Notifications */}
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                  <span className="font-medium dark:text-gray-200">
-                    {t.focusLab.settings?.notifications || 'Notifications'}
-                  </span>
-                  <button
-                    onClick={handleToggleNotifications}
-                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${notificationsEnabled ? (uiStyle === 'warm' ? 'bg-[#F5F2EC] font-bold text-[#C27B4A]' : uiStyle === 'green' ? 'bg-[#F8F9F7] font-bold text-[#7A9F7A]' : uiStyle === 'blue' ? 'bg-[#E0EEF8] font-bold text-[#5B84B1]' : uiStyle === 'cartoon' ? 'border border-black bg-[#FFF8E7] font-bold text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-primary-100 text-primary-700 font-bold') : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
-                  >
-                    {notificationsEnabled
-                      ? t.focusLab.settings?.on || 'On'
-                      : t.focusLab.settings?.off || 'Off'}
-                  </button>
-                </div>
-
-                {/* Sound Effects */}
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                  <span className="font-medium dark:text-gray-200">
-                    {t.focusLab.settings?.soundEffects || 'Sound Effects'}
-                  </span>
-                  <button
-                    onClick={() =>
-                      updateSettings(
-                        'focus_lab.sound.enabled',
-                        !(settings.focus_lab?.sound?.enabled ?? true)
-                      )
-                    }
-                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${(settings.focus_lab?.sound?.enabled ?? true) ? (uiStyle === 'warm' ? 'bg-[#F5F2EC] font-bold text-[#C27B4A]' : uiStyle === 'green' ? 'bg-[#F8F9F7] font-bold text-[#7A9F7A]' : uiStyle === 'blue' ? 'bg-[#E0EEF8] font-bold text-[#5B84B1]' : uiStyle === 'cartoon' ? 'border border-black bg-[#FFF8E7] font-bold text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-primary-100 text-primary-700 font-bold') : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}
-                  >
-                    {(settings.focus_lab?.sound?.enabled ?? true)
-                      ? t.focusLab.settings?.on || 'On'
-                      : t.focusLab.settings?.off || 'Off'}
-                  </button>
-                </div>
-
-                {/* Custom Incentives */}
-                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="font-medium dark:text-gray-200">
-                      {lang === 'zh' ? '自定义激励语' : 'Personalized Incentives'}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {lang === 'zh' ? '每行一条' : 'One per line'}
-                    </span>
-                  </div>
-                  <textarea
-                    className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border-gray-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                    rows={4}
-                    placeholder={
-                      lang === 'zh' ? '输入你的专属激励语...' : 'Enter your custom messages...'
-                    }
-                    value={settings.focus_lab?.incentives?.custom_messages?.join('\n') ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      // Split by newline, but verify we don't save empty string if input is empty
-                      const lines = val ? val.split('\n') : []
-                      updateSettings('focus_lab.incentives.custom_messages', lines)
-                    }}
-                  />
-                </div>
-
-                {/* Layout Customization */}
-                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium dark:text-gray-200">
-                        {t.focusLab.controls.customizeLayout || 'Customize Layout'}
-                      </div>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {t.focusLab.controls.widgetVisibility || 'Show/Hide Cards'}
-                      </p>
-                    </div>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          setShowCustomizeMenu(!showCustomizeMenu)
-                        }}
-                        ref={customizeButtonRef}
-                        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm transition-all active:scale-95 ${
-                          showCustomizeMenu
-                            ? uiStyle === 'warm'
-                              ? 'bg-[#F5F2EC] text-[#C27B4A]'
-                              : uiStyle === 'green'
-                                ? 'bg-[#F8F9F7] text-[#7A9F7A]'
-                                : uiStyle === 'blue'
-                                  ? 'bg-[#E0EEF8] text-[#5B84B1]'
-                                  : uiStyle === 'cartoon'
-                                    ? 'border border-black bg-[#FFF8E7] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
-                                    : 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                            : 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <span className="icon-[solar--widget-4-line-duotone] text-lg" />
-                        {t.focusLab.controls.customizeLayout || 'Customize'}
-                      </button>
-
-                      <AnimatePresence>
-                        {showCustomizeMenu && (
-                          <motion.div
-                            ref={customizeMenuRef}
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="absolute top-full right-0 z-50 mt-2 w-64 rounded-xl border border-gray-100 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900"
-                          >
-                            <div className="flex flex-col gap-1">
-                              <h4 className="mb-1 border-b border-gray-100 px-3 py-2 text-xs font-bold tracking-wider text-gray-500 uppercase dark:border-gray-800">
-                                {t.focusLab.controls.widgetVisibility || 'Show/Hide Cards'}
-                              </h4>
-                              {GRID_PRESETS[activePreset].layout.map((defaultItem) => {
-                                const hiddenSet = hiddenByPreset[activePreset] || new Set()
-                                const isActive = !hiddenSet.has(defaultItem.id)
-
-                                const idMap: Record<string, string> = {
-                                  sonic: 'sonicShield',
-                                  timer: 'timer',
-                                  brain: 'brainDump',
-                                  todo: 'todo',
-                                  breaker: 'taskBreaker',
-                                  dopamine: 'dopamineMenu',
-                                }
-                                const translationKey = idMap[defaultItem.id] || defaultItem.id
-                                // @ts-ignore
-                                const widgetTitle =
-                                  t.focusLab.widgets[translationKey]?.title || defaultItem.id
-
-                                return (
-                                  <button
-                                    key={defaultItem.id}
-                                    onClick={() => {
-                                      handleToggleHidden(activePreset, defaultItem.id)
-                                    }}
-                                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                                      isActive
-                                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
-                                        : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
-                                    }`}
-                                  >
-                                    <span>{widgetTitle}</span>
-                                    {isActive && (
-                                      <svg
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                        className="text-primary-600 dark:text-primary-400 h-4 w-4"
-                                      >
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                    )}
-                                  </button>
-                                )
-                              })}
-
-                              <div className="my-1 h-px bg-gray-100 dark:bg-gray-800" />
-
-                              <button
-                                onClick={() => {
-                                  setShowCustomizeMenu(false)
-                                  setShowResetConfirm(true)
-                                }}
-                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                              >
-                                <span className="icon-[solar--restart-bold] text-sm" />
-                                {t.focusLab.controls.resetLayout}
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Visual Style */}
-                <div className="mb-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-                  <span className="mb-3 block font-medium dark:text-gray-200">Visual Style</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
-                        setUiStyle('modern')
-                        updateSettings('theme.style', 'modern')
-                      }}
-                      className={cn(
-                        'flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-all',
-                        uiStyle === 'modern'
-                          ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/20 dark:text-primary-300'
-                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      Modern
-                    </button>
-                    <button
-                      onClick={() => {
-                        setUiStyle('warm')
-                        updateSettings('theme.style', 'warm')
-                      }}
-                      className={cn(
-                        'flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-all',
-                        uiStyle === 'warm'
-                          ? 'border-amber-500 bg-[#FDFBF7] text-[#8C502B]'
-                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      Warm
-                    </button>
-                    <button
-                      onClick={() => {
-                        setUiStyle('green')
-                        updateSettings('theme.style', 'green')
-                      }}
-                      className={cn(
-                        'flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-all',
-                        uiStyle === 'green'
-                          ? 'border-[#7A9F7A] bg-[#F8F9F7] text-[#7A9F7A]'
-                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      Green
-                    </button>
-                    <button
-                      onClick={() => {
-                        setUiStyle('cartoon')
-                        updateSettings('theme.style', 'cartoon')
-                      }}
-                      className={cn(
-                        'flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-all',
-                        uiStyle === 'cartoon'
-                          ? 'border-black bg-[#FFF8E7] text-black shadow-[2px_2px_0px_0px_#000000] dark:border-white dark:bg-[#2A2A2A] dark:text-white dark:shadow-[2px_2px_0px_0px_#FFFFFF]'
-                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      Cartoon
-                    </button>
-                    <button
-                      onClick={() => {
-                        setUiStyle('blue')
-                        updateSettings('theme.style', 'blue')
-                      }}
-                      className={cn(
-                        'flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-all',
-                        uiStyle === 'blue'
-                          ? 'border-[#5B84B1] bg-[#E0EEF8] text-[#5B84B1]'
-                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      Blue
-                    </button>
-                  </div>
-                  {/* Light mode only hint for non-Modern styles */}
-                  {(uiStyle === 'warm' ||
-                    uiStyle === 'green' ||
-                    uiStyle === 'blue' ||
-                    uiStyle === 'cartoon') && (
-                    <p className="mt-2 text-xs text-gray-400">
-                      {lang === 'zh'
-                        ? '此风格仅支持浅色模式'
-                        : 'This style only supports light mode'}
-                    </p>
-                  )}
-                </div>
-
-                {/* Theme Color (Only visible in Modern style) */}
-                <AnimatePresence>
-                  {uiStyle === 'modern' && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
-                    >
-                      <span className="mb-3 block font-medium dark:text-gray-200">
-                        {t.focusLab.settings?.themeColor || 'Theme Color'}
-                      </span>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[
-                          { name: 'pink', color: '#db2777', label: 'Pink' },
-                          { name: 'blue', color: '#0B1F3B', label: 'Deep Navy Blue' },
-                          { name: 'green', color: '#0F6B61', label: 'Cool Ink Green' },
-                          { name: 'yellow', color: '#C6A15B', label: 'Champagne Gold' },
-                          { name: 'violet', color: '#3B3A82', label: 'Misty Indigo' },
-                          { name: 'orange', color: '#B85C4A', label: 'Terracotta Orange' },
-                          { name: 'red', color: '#7A8F86', label: 'Sage Green' },
-                          { name: 'slate', color: '#1F2933', label: 'Graphite Gray' },
-                        ].map(({ name, color, label }) => (
-                          <button
-                            key={name}
-                            onClick={() => {
-                              setThemeColor(name as ThemeColor)
-                              updateSettings('theme.color', name)
-                            }}
-                            className={`h-8 w-full rounded-md ring-2 ring-offset-2 ring-offset-white transition-all hover:scale-105 dark:ring-offset-gray-800 ${
-                              themeColor === name
-                                ? 'scale-105 ring-gray-400 dark:ring-gray-400'
-                                : 'opacity-80 ring-transparent hover:opacity-100'
-                            }`}
-                            style={{ backgroundColor: color }}
-                            title={label}
-                            aria-label={`Set theme to ${label}`}
-                          ></button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <button
-                onClick={() => setShowSettingsModal(false)}
-                className="mt-6 w-full rounded-lg bg-gray-100 py-2 font-semibold transition hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <FocusLabSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        settings={settings}
+        updateSettings={updateSettings}
+        notificationsEnabled={notificationsEnabled}
+        onToggleNotifications={handleToggleNotifications}
+        activePreset={activePreset}
+        hiddenByPreset={hiddenByPreset}
+        onToggleHidden={handleToggleHidden}
+        onResetLayout={() => setShowResetConfirm(true)}
+      />
 
       {/* Pricing Modal */}
       <WeChatGroupModal isOpen={showWeChatModal} onClose={() => setShowWeChatModal(false)} />
@@ -1955,54 +1127,11 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
         </main>
         {/* End of Main Area */}
       </div>
-      {/* Reset Confirmation Modal */}
-      <AnimatePresence>
-        {showResetConfirm && (
-          <div className="fixed inset-0 z-[260] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowResetConfirm(false)}
-              className="absolute inset-0 bg-black/20 backdrop-blur-sm dark:bg-black/40"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Escape' && setShowResetConfirm(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800"
-            >
-              <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">
-                {t.focusLab.controls.resetLayout || 'Reset Layout?'}
-              </h3>
-              <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-                {t.focusLab.controls.resetConfirm ||
-                  'This will restore the default layout arrangement. Your custom changes will be lost.'}
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  {t.focusLab.common?.cancel || 'Cancel'}
-                </button>
-                <button
-                  onClick={() => {
-                    handleResetLayout()
-                    setShowResetConfirm(false)
-                  }}
-                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
-                >
-                  {t.focusLab.controls.resetLayout || 'Reset'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ResetConfirmModal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={handleResetLayout}
+      />
 
       {/* Encouragement Toast */}
       {/* Encouragement Toast */}

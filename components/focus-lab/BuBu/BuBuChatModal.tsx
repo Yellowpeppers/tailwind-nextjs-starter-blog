@@ -2,7 +2,7 @@
 
 import { Menu, Transition } from '@headlessui/react'
 import { useState, useRef, useEffect, Fragment } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { X, Trash2, Send, ChevronDown, Check } from 'lucide-react'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { useTranslation } from '@/context/LanguageContext'
@@ -21,6 +21,7 @@ interface BuBuChatModalProps {
 export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
+  const dragControls = useDragControls()
 
   // Theme helpers
   const isCartoon = uiStyle === 'cartoon'
@@ -194,12 +195,28 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
     }
   }
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+
   const handleClearWithConfirm = () => {
     if (messages.length === 0) return
-    if (confirm(t.bubu?.confirmClear || '确定要清空对话吗？')) {
-      clearHistory()
-    }
+    setShowClearConfirm(true)
   }
+
+  const handleConfirmClear = () => {
+    clearHistory()
+    setShowClearConfirm(false)
+  }
+
+  // Determine styles for confirmation box based on theme
+  const confirmBoxStyle = isCartoon
+    ? 'border-2 border-black bg-white text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+    : isWarm
+      ? 'bg-[#FDFCF8] border border-[#ECE8E0] shadow-lg'
+      : isGreen
+        ? 'bg-[#FCFDFB] border border-[#E2E8E2] shadow-lg'
+        : isBlue
+          ? 'bg-[#F5FAFF] border border-[#D1E3F3] shadow-lg'
+          : 'bg-white shadow-xl dark:bg-gray-800 border border-gray-100 dark:border-gray-700'
 
   // Render individual message logic moved to MessageItem component
 
@@ -230,25 +247,85 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop (desktop only) */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[90] hidden bg-black/40 backdrop-blur-sm md:block"
-          />
-
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, x: '-50%', y: 'calc(-50% + 20px)' }}
+            animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
+            exit={{ opacity: 0, scale: 0.95, x: '-50%', y: 'calc(-50% + 20px)' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed inset-0 z-[100] flex h-full w-full flex-col md:top-1/2 md:left-1/2 md:h-[600px] md:max-h-[80vh] md:w-[420px] md:-translate-x-1/2 md:-translate-y-1/2 ${containerStyle}`}
+            drag
+            dragListener={false}
+            dragControls={dragControls}
+            dragMomentum={false}
+            dragElastic={0}
+            className={`fixed inset-0 z-[200] flex h-full w-full flex-col md:top-1/2 md:right-auto md:bottom-auto md:left-1/2 md:h-[600px] md:max-h-[80vh] md:w-[420px] ${containerStyle}`}
           >
+            {/* Confirmation Overlay */}
+            <AnimatePresence>
+              {showClearConfirm && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-50 flex items-center justify-center rounded-xl bg-white/80 p-6 backdrop-blur-sm dark:bg-black/80"
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className={`flex w-full max-w-sm flex-col gap-4 overflow-hidden rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800 ${confirmBoxStyle}`}
+                  >
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                          isCartoon
+                            ? 'border-2 border-black bg-yellow-100 text-yellow-600'
+                            : isWarm
+                              ? 'bg-orange-100 text-orange-600'
+                              : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                        }`}
+                      >
+                        <Trash2 className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        {t.bubu?.confirmClear || '确定要清空对话吗？'}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        清空后，所有聊天记录将无法恢复。
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowClearConfirm(false)}
+                        className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                          isCartoon
+                            ? 'border-2 border-black bg-white hover:bg-gray-50 active:translate-y-[2px]'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {t.common?.cancel || '取消'}
+                      </button>
+                      <button
+                        onClick={handleConfirmClear}
+                        className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all ${
+                          isCartoon
+                            ? 'border-2 border-black bg-red-500 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-red-600 active:translate-y-[2px] active:shadow-none'
+                            : 'bg-red-500 shadow-sm hover:bg-red-600'
+                        }`}
+                      >
+                        确认清空
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             {/* Header */}
-            <div className={`flex shrink-0 items-center justify-between px-6 py-4 ${headerBorder}`}>
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              className={`flex shrink-0 cursor-move items-center justify-between px-6 py-4 ${headerBorder}`}
+            >
               <Menu as="div" className="relative inline-block text-left">
                 <div>
                   <Menu.Button className="group flex cursor-pointer items-center gap-3 rounded-lg py-1 pr-2 transition-colors outline-none hover:bg-black/5 dark:hover:bg-white/10">
@@ -311,7 +388,7 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
                   onClick={handleClearWithConfirm}
                   disabled={messages.length === 0}
                   className="rounded-lg p-2 text-gray-400 hover:bg-black/5 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-white/10"
-                  title="新对话"
+                  title="清空对话"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -325,50 +402,52 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
             </div>
 
             {/* Messages area */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              {messages.length === 0 ? (
-                <WelcomeMessage />
-              ) : (
-                <>
-                  {messages.map((msg, index) => (
-                    <MessageItem
-                      key={msg.id}
-                      message={msg}
-                      isLastMessage={index === messages.length - 1}
-                      onRemoveTask={removeTaskFromPreview}
-                      onConfirmAction={confirmAction}
-                      onCancelAction={cancelAction}
-                    />
-                  ))}
+            <div className="relative flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                {messages.length === 0 ? (
+                  <WelcomeMessage />
+                ) : (
+                  <>
+                    {messages.map((msg, index) => (
+                      <MessageItem
+                        key={msg.id}
+                        message={msg}
+                        isLastMessage={index === messages.length - 1}
+                        onRemoveTask={removeTaskFromPreview}
+                        onConfirmAction={confirmAction}
+                        onCancelAction={cancelAction}
+                      />
+                    ))}
 
-                  {/* Loading indicator */}
-                  {isLoading && (
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                      >
-                        💭
-                      </motion.div>
-                      <span className="text-sm">BuBu 正在思考...</span>
-                    </div>
-                  )}
+                    {/* Loading indicator */}
+                    {isLoading && (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                        >
+                          💭
+                        </motion.div>
+                        <span className="text-sm">BuBu 正在思考...</span>
+                      </div>
+                    )}
 
-                  {/* Error state */}
-                  {error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
-                      <div className="text-sm text-red-600 dark:text-red-400">❌ {error}</div>
-                      <button
-                        onClick={retry}
-                        className="mt-2 text-sm text-red-500 underline hover:text-red-600"
-                      >
-                        重试
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-              <div ref={messagesEndRef} />
+                    {/* Error state */}
+                    {error && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+                        <div className="text-sm text-red-600 dark:text-red-400">❌ {error}</div>
+                        <button
+                          onClick={retry}
+                          className="mt-2 text-sm text-red-500 underline hover:text-red-600"
+                        >
+                          重试
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {/* Voice Permission Error Banner - Persistent */}

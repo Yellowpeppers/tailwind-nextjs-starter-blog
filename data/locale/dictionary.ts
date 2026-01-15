@@ -832,6 +832,7 @@ export const dictionary = {
     common: {
       loading: 'Loading...',
       error: 'Something went wrong',
+      cancel: 'Cancel',
     },
 
     tools: {
@@ -1898,6 +1899,7 @@ export const dictionary = {
     common: {
       loading: '加载中...',
       error: '出错了',
+      cancel: '取消',
     },
     auth: {
       loginTitle: '登录以查看统计数据',

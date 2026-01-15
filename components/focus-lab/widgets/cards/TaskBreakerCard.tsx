@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { CardShell } from '@/components/focus-lab/CardShell'
 import { useTaskBreaker } from '@/components/focus-lab/hooks/useTaskBreaker'
 import { TaskBreakerWidget } from '@/components/focus-lab/widgets/TaskBreakerWidget'
 
-export const TaskBreakerCard = ({
+export const TaskBreakerCard = memo(function TaskBreakerCard({
   onDeleteAction,
   className,
   isFocused,
@@ -15,7 +15,7 @@ export const TaskBreakerCard = ({
   onDeleteAction?: () => void
   className?: string
   isFocused?: boolean
-}) => {
+}) {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
   const [isResultView, setIsResultView] = useState(false)
@@ -34,4 +34,4 @@ export const TaskBreakerCard = ({
       <TaskBreakerWidget taskBreaker={taskBreaker} uiStyle={uiStyle} isResultView={isResultView} />
     </CardShell>
   )
-}
+})

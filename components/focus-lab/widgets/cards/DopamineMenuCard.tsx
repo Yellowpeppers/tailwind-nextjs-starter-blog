@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { CardShell } from '@/components/focus-lab/CardShell'
@@ -8,7 +8,7 @@ import { MoreHorizontalIcon } from '@/components/focus-lab/icons'
 import { useDopamineSystem } from '@/components/focus-lab/hooks/useDopamineSystem'
 import { DopamineMenuWidget } from '@/components/focus-lab/widgets/DopamineMenuWidget'
 
-export const DopamineMenuCard = ({
+export const DopamineMenuCard = memo(function DopamineMenuCard({
   onDeleteAction,
   className,
   isFocused,
@@ -18,7 +18,7 @@ export const DopamineMenuCard = ({
   className?: string
   isFocused?: boolean
   cols?: number
-}) => {
+}) {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
   const isCartoon = uiStyle === 'cartoon'
@@ -65,4 +65,4 @@ export const DopamineMenuCard = ({
       />
     </CardShell>
   )
-}
+})

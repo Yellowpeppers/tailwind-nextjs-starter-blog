@@ -33,7 +33,7 @@ export const BuBuFloatingButton = ({ onClick, hasNewFeature = true }: BuBuFloati
   return (
     <motion.button
       onClick={onClick}
-      className={`fixed right-6 bottom-6 z-[100] flex h-16 w-16 items-center justify-center rounded-full transition-all duration-200 sm:right-4 sm:bottom-20 md:right-6 md:bottom-6 ${getButtonStyles()} `}
+      className={`fixed right-6 bottom-6 z-[190] flex h-16 w-16 items-center justify-center rounded-full transition-all duration-200 sm:right-4 sm:bottom-20 md:right-6 md:bottom-6 ${getButtonStyles()} `}
       whileHover={{ scale: uiStyle === 'cartoon' ? 1 : 1.1 }}
       whileTap={{ scale: 0.95 }}
       initial={{ scale: 0, opacity: 0 }}

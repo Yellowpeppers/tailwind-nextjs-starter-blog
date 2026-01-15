@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
@@ -10,7 +10,7 @@ import { ScratchCard } from '@/components/focus-lab/components/ScratchCard'
 import { useToDoManager } from '@/components/focus-lab/hooks/useToDoManager'
 import { MoreHorizontalIcon } from '@/components/focus-lab/icons'
 
-export const ToDoCard = ({
+export const ToDoCard = memo(function ToDoCard({
   cols,
   onDeleteAction,
   className,
@@ -26,7 +26,7 @@ export const ToDoCard = ({
   onStartFocusAction?: (task: string, id: string) => void
   focusedTaskId?: string | null
   onTaskCompleteAction?: () => void
-}) => {
+}) {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
   const [isFlipped, setIsFlipped] = useState(false)
@@ -123,4 +123,4 @@ export const ToDoCard = ({
       </AnimatePresence>
     </CardShell>
   )
-}
+})

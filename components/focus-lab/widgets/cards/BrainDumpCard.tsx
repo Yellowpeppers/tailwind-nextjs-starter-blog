@@ -1,12 +1,13 @@
 'use client'
 
+import { memo } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { CardShell } from '@/components/focus-lab/CardShell'
 import { useBrainDump } from '@/components/focus-lab/hooks/useBrainDump'
 import { BrainDumpWidget } from '@/components/focus-lab/widgets/BrainDumpWidget'
 
-export const BrainDumpCard = ({
+export const BrainDumpCard = memo(function BrainDumpCard({
   onDeleteAction,
   className,
   isFocused,
@@ -14,7 +15,7 @@ export const BrainDumpCard = ({
   onDeleteAction?: () => void
   className?: string
   isFocused?: boolean
-}) => {
+}) {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
 
@@ -31,4 +32,4 @@ export const BrainDumpCard = ({
       <BrainDumpWidget brainDump={brainDump} uiStyle={uiStyle} />
     </CardShell>
   )
-}
+})
