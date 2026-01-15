@@ -91,6 +91,7 @@ const MessageItem = memo(
                   {message.action.type === 'add_idea' && '💡 想法：'}
                   {message.action.type === 'complete_task' && '✅ 标记完成：'}
                   {message.action.type === 'delete_task' && '🗑️ 删除任务：'}
+                  {message.action.type === 'uncomplete_task' && '↩️ 标记为未完成：'}
                 </div>
 
                 {/* Tasks list */}
@@ -120,9 +121,10 @@ const MessageItem = memo(
                   </div>
                 )}
 
-                {/* Complete/Delete task preview - supports array */}
+                {/* Complete/Delete/Uncomplete task preview - supports array */}
                 {(message.action.type === 'complete_task' ||
-                  message.action.type === 'delete_task') && (
+                  message.action.type === 'delete_task' ||
+                  message.action.type === 'uncomplete_task') && (
                   <ul className="mb-3 space-y-1 text-sm text-gray-600 dark:text-gray-400">
                     {(Array.isArray(message.action.payload)
                       ? message.action.payload
@@ -144,6 +146,7 @@ const MessageItem = memo(
                     {message.action.type === 'add_idea' && '添加到想法本'}
                     {message.action.type === 'complete_task' && '确认完成'}
                     {message.action.type === 'delete_task' && '确认删除'}
+                    {message.action.type === 'uncomplete_task' && '确认撤销完成'}
                   </button>
                   <button
                     onClick={() => onCancelAction(message.id)}
@@ -163,6 +166,7 @@ const MessageItem = memo(
                 {message.action.type === 'add_idea' && '✓ 已添加想法'}
                 {message.action.type === 'complete_task' && '✓ 已标记完成'}
                 {message.action.type === 'delete_task' && '✓ 已删除'}
+                {message.action.type === 'uncomplete_task' && '✓ 已标记为未完成'}
               </div>
             )}
           </div>

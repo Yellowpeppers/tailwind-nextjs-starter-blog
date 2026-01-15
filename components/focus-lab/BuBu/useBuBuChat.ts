@@ -133,8 +133,8 @@ export const useBuBuChat = () => {
                 completed: t.completed,
               }))
               const safeIdeas = {
-                left: (ideas.left || []).map((i) => ({ content: i.content })),
-                right: (ideas.right || []).map((i) => ({ content: i.content })),
+                left: (ideas.left || []).map((i) => ({ content: i.text })),
+                right: (ideas.right || []).map((i) => ({ content: i.text })),
               }
 
               console.log('[useBuBuChat] Context loaded:', {
@@ -266,6 +266,25 @@ export const useBuBuChat = () => {
           }
 
           console.log(`[BuBu] Deleted ${tasksToDelete.length} task(s)`)
+        } else if (message.action.type === 'uncomplete_task') {
+          // Mark tasks as uncompleted (supports array)
+          const tasksToUncomplete = message.action.payload as string[]
+          const currentItems = await readStationStorage(user?.id)
+
+          // Find and mark the tasks as uncompleted
+          const updatedItems = currentItems.map((item) =>
+            tasksToUncomplete.includes(item.content) ? { ...item, completed: false } : item
+          )
+
+          // Save to storage
+          await saveStationItems(updatedItems, user)
+
+          // Trigger sync event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('focus-station-sync'))
+          }
+
+          console.log(`[BuBu] Marked ${tasksToUncomplete.length} task(s) as uncompleted`)
         }
 
         // Update message status to confirmed

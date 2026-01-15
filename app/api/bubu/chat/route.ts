@@ -113,16 +113,22 @@ function buildSystemPrompt(personality: string, language: string, context?: any)
     const taskCount = context.tasks?.length || 0
     const ideaCount = (context.ideas?.left?.length || 0) + (context.ideas?.right?.length || 0)
 
-    // Format tasks for AI (limit to first 10 to give better context)
-    // FocusItem has: content (not text), completed (not status)
-    const taskList =
-      context.tasks
-        ?.slice(0, 10)
-        .map((t: FocusTask) => {
-          const status = t.completed ? '✓ 已完成' : '待办'
-          return `- ${t.content} (${status})`
-        })
-        .join('\n') || '暂无任务'
+    // Separate pending and completed tasks
+    const pendingTasks = context.tasks?.filter((t: FocusTask) => !t.completed) || []
+    const completedTasks = context.tasks?.filter((t: FocusTask) => t.completed) || []
+
+    // Format tasks for AI
+    const pendingTaskList =
+      pendingTasks
+        .slice(0, 10)
+        .map((t: FocusTask) => `- ${t.content}`)
+        .join('\n') || '暂无待办任务'
+
+    const completedTaskList =
+      completedTasks
+        .slice(0, 5)
+        .map((t: FocusTask) => `- ${t.content}`)
+        .join('\n') || '暂无'
 
     // Format ideas for AI
     const ideaList =
@@ -132,22 +138,28 @@ function buildSystemPrompt(personality: string, language: string, context?: any)
         .join('\n') || '暂无想法'
 
     console.log('[BuBu API] Context received:', {
-      taskCount,
+      pendingCount: pendingTasks.length,
+      completedCount: completedTasks.length,
       ideaCount,
-      sampleTask: context.tasks?.[0],
     })
 
     contextPrompt = `
 ---
-📊 **用户当前状态** (实时数据，你可以直接使用这些信息回答用户):
+📊 **用户当前状态** (实时数据，必须使用这些信息回答用户):
 
-**待办清单 (共 ${taskCount} 项):**
-${taskList}
+**📋 未完成的任务 (共 ${pendingTasks.length} 项):**
+${pendingTaskList}
 
-**注意力中转站想法 (共 ${ideaCount} 项):**
+**✅ 已完成的任务 (共 ${completedTasks.length} 项):**
+${completedTaskList}
+
+**💡 注意力中转站想法 (共 ${ideaCount} 项):**
 ${ideaList}
 
-*重要：当用户询问"有哪些任务"或"我的待办"时，直接告诉他们上面的任务列表内容！不要说你不知道！*
+*重要指令：*
+- 当用户问"有哪些任务"或"我的待办"时，告诉他们"未完成的任务"列表内容！
+- 当用户问"已完成"时，告诉他们"已完成的任务"列表！
+- 如果用户想标记为"未完成"，调用 uncomplete_task 函数！
 `
   }
 
@@ -253,6 +265,26 @@ const BUBU_FUNCTIONS = [
         reply: {
           type: SchemaType.STRING,
           description: 'BuBu 的回复。确认任务已删除，如果是多个任务，说明删除了几个。',
+        },
+      },
+      required: ['tasks', 'reply'],
+    },
+  },
+  {
+    name: 'uncomplete_task',
+    description:
+      '用户想要将已完成的任务重新标记为"未完成"状态。当用户说"标记为未完成"、"取消完成"、"重新做"时使用。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        tasks: {
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING },
+          description: '要标记为未完成的任务内容列表（需要精确匹配已完成任务列表中的内容）',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。确认任务已重新标记为未完成。',
         },
       },
       required: ['tasks', 'reply'],
@@ -492,6 +524,21 @@ export async function POST(request: Request) {
           reply: args.reply,
           action: {
             type: 'delete_task',
+            payload: args.tasks,
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'uncomplete_task') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'uncomplete_task',
             payload: args.tasks,
           },
           remaining: rateLimit.remaining - 1,
