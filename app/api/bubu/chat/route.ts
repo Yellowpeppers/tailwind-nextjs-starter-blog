@@ -67,6 +67,7 @@ const getBasePrompt = (language: string) => {
 - 用户**询问**"有哪些任务/想法"、"我的待办是什么" → 调用 chat_only，直接告诉用户上下文中的任务/想法列表
 - 用户**想添加**新的具体任务（今天、明天、要做某事）→ 调用 add_tasks
 - 用户**想记录**新想法、灵感、未来计划 → 调用 add_idea  
+- 用户**想修改**任务或想法内容 → 调用 update_task 或 update_idea
 - 用户**想完成**任务 → 调用 complete_task
 - 用户**想取消完成**任务 → 调用 uncomplete_task
 - 用户**想删除**任务 → 调用 delete_task
@@ -253,6 +254,50 @@ const BUBU_FUNCTIONS = [
         },
       },
       required: ['ideas', 'reply'],
+    },
+  },
+  {
+    name: 'update_task',
+    description: '用户想要修改某个任务的内容。需要指定旧任务内容和新内容。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        oldContent: {
+          type: SchemaType.STRING,
+          description: '要修改的任务原始内容（精确匹配）',
+        },
+        newContent: {
+          type: SchemaType.STRING,
+          description: '修改后的任务新内容',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。确认任务修改意图，如"帮你把【旧】改成【新】好吗？"',
+        },
+      },
+      required: ['oldContent', 'newContent', 'reply'],
+    },
+  },
+  {
+    name: 'update_idea',
+    description: '用户想要修改某个想法的内容。需要指定旧想法内容和新内容。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        oldContent: {
+          type: SchemaType.STRING,
+          description: '要修改的想法原始内容（精确匹配）',
+        },
+        newContent: {
+          type: SchemaType.STRING,
+          description: '修改后的想法新内容',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。确认想法修改意图。',
+        },
+      },
+      required: ['oldContent', 'newContent', 'reply'],
     },
   },
   {
@@ -536,6 +581,42 @@ export async function POST(request: Request) {
           action: {
             type: 'delete_idea',
             payload: args.ideas,
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'update_task') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'update_task',
+            payload: {
+              oldContent: args.oldContent,
+              newContent: args.newContent,
+            },
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'update_idea') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'update_idea',
+            payload: {
+              oldContent: args.oldContent,
+              newContent: args.newContent,
+            },
           },
           remaining: rateLimit.remaining - 1,
         },

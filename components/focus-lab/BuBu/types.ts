@@ -15,7 +15,9 @@ export type ChatMessage = {
       | 'delete_task'
       | 'uncomplete_task'
       | 'delete_idea'
-    payload: string[] | string
+      | 'update_task'
+      | 'update_idea'
+    payload: string[] | string | { oldContent: string; newContent: string }
     status: 'pending' | 'confirmed' | 'cancelled'
   }
 }
@@ -28,7 +30,9 @@ export type BuBuAction = {
     | 'delete_task'
     | 'uncomplete_task'
     | 'delete_idea'
-  payload: string[] | string
+    | 'update_task'
+    | 'update_idea'
+  payload: string[] | string | { oldContent: string; newContent: string }
 }
 
 export type BuBuApiRequest = {

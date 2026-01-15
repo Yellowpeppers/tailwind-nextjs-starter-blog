@@ -93,6 +93,9 @@ const MessageItem = memo(
                   {message.action.type === 'delete_task' && '🗑️ 删除任务：'}
                   {message.action.type === 'uncomplete_task' && '↩️ 标记为未完成：'}
                   {message.action.type === 'delete_idea' && '🗑️ 删除想法：'}
+                  {(message.action.type === 'update_task' ||
+                    message.action.type === 'update_idea') &&
+                    '✏️ 修改内容：'}
                 </div>
 
                 {/* Tasks list */}
@@ -137,6 +140,20 @@ const MessageItem = memo(
                   </ul>
                 )}
 
+                {/* Update task/idea preview */}
+                {(message.action.type === 'update_task' ||
+                  message.action.type === 'update_idea') && (
+                  <div className="mb-3 space-y-2 text-sm">
+                    <div className="text-gray-500 line-through">
+                      {(message.action.payload as { oldContent: string }).oldContent}
+                    </div>
+                    <div className="text-gray-500">↓</div>
+                    <div className="text-gray-800 dark:text-gray-200">
+                      {(message.action.payload as { newContent: string }).newContent}
+                    </div>
+                  </div>
+                )}
+
                 {/* Confirmation buttons */}
                 <div className="flex gap-2">
                   <button
@@ -150,6 +167,9 @@ const MessageItem = memo(
                     {message.action.type === 'delete_task' && '确认删除'}
                     {message.action.type === 'uncomplete_task' && '确认撤销完成'}
                     {message.action.type === 'delete_idea' && '确认删除想法'}
+                    {(message.action.type === 'update_task' ||
+                      message.action.type === 'update_idea') &&
+                      '确认修改'}
                   </button>
                   <button
                     onClick={() => onCancelAction(message.id)}
@@ -171,6 +191,8 @@ const MessageItem = memo(
                 {message.action.type === 'delete_task' && '✓ 已删除'}
                 {message.action.type === 'uncomplete_task' && '✓ 已标记为未完成'}
                 {message.action.type === 'delete_idea' && '✓ 已删除想法'}
+                {(message.action.type === 'update_task' || message.action.type === 'update_idea') &&
+                  '✓ 已修改'}
               </div>
             )}
           </div>

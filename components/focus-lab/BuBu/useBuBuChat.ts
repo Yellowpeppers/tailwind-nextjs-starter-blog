@@ -305,6 +305,49 @@ export const useBuBuChat = () => {
           }
 
           console.log(`[BuBu] Deleted ${ideasToDelete.length} idea(s)`)
+        } else if (message.action.type === 'update_task') {
+          // Update a task content
+          const { oldContent, newContent } = message.action.payload as {
+            oldContent: string
+            newContent: string
+          }
+          const currentItems = await readStationStorage(user?.id)
+
+          // Find and update the task
+          const updatedItems = currentItems.map((item) =>
+            item.content === oldContent ? { ...item, content: newContent } : item
+          )
+
+          await saveStationItems(updatedItems, user)
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('focus-station-sync'))
+          }
+          console.log(`[BuBu] Updated task: "${oldContent}" -> "${newContent}"`)
+        } else if (message.action.type === 'update_idea') {
+          // Update an idea content
+          const { oldContent, newContent } = message.action.payload as {
+            oldContent: string
+            newContent: string
+          }
+          const currentState = await readBrainDumpStorage(user?.id)
+
+          // Update in both columns
+          const updatedState = {
+            left: currentState.left.map((i) =>
+              i.text === oldContent ? { ...i, text: newContent } : i
+            ),
+            right: currentState.right.map((i) =>
+              i.text === oldContent ? { ...i, text: newContent } : i
+            ),
+          }
+
+          await saveBrainDump(updatedState, user)
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('brain-dump-sync'))
+          }
+          console.log(`[BuBu] Updated idea: "${oldContent}" -> "${newContent}"`)
         }
 
         // Update message status to confirmed
