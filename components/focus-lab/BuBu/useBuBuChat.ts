@@ -217,13 +217,13 @@ export const useBuBuChat = () => {
 
           console.log('[BuBu] Added idea to Brain Dump')
         } else if (message.action.type === 'complete_task') {
-          // Mark task as completed
-          const taskContent = message.action.payload as string
+          // Mark tasks as completed (supports array)
+          const tasksToComplete = message.action.payload as string[]
           const currentItems = await readStationStorage(user?.id)
 
-          // Find and mark the task as completed
+          // Find and mark the tasks as completed
           const updatedItems = currentItems.map((item) =>
-            item.content === taskContent ? { ...item, completed: true } : item
+            tasksToComplete.includes(item.content) ? { ...item, completed: true } : item
           )
 
           // Save to storage
@@ -234,14 +234,14 @@ export const useBuBuChat = () => {
             window.dispatchEvent(new CustomEvent('focus-station-sync'))
           }
 
-          console.log(`[BuBu] Marked task as completed: ${taskContent}`)
+          console.log(`[BuBu] Marked ${tasksToComplete.length} task(s) as completed`)
         } else if (message.action.type === 'delete_task') {
-          // Delete task from list
-          const taskContent = message.action.payload as string
+          // Delete tasks from list (supports array)
+          const tasksToDelete = message.action.payload as string[]
           const currentItems = await readStationStorage(user?.id)
 
-          // Filter out the task
-          const updatedItems = currentItems.filter((item) => item.content !== taskContent)
+          // Filter out the tasks
+          const updatedItems = currentItems.filter((item) => !tasksToDelete.includes(item.content))
 
           // Save to storage
           await saveStationItems(updatedItems, user)
@@ -251,7 +251,7 @@ export const useBuBuChat = () => {
             window.dispatchEvent(new CustomEvent('focus-station-sync'))
           }
 
-          console.log(`[BuBu] Deleted task: ${taskContent}`)
+          console.log(`[BuBu] Deleted ${tasksToDelete.length} task(s)`)
         }
 
         // Update message status to confirmed

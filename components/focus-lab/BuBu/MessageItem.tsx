@@ -120,12 +120,17 @@ const MessageItem = memo(
                   </div>
                 )}
 
-                {/* Complete/Delete task preview */}
+                {/* Complete/Delete task preview - supports array */}
                 {(message.action.type === 'complete_task' ||
                   message.action.type === 'delete_task') && (
-                  <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                    {message.action.payload as string}
-                  </div>
+                  <ul className="mb-3 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                    {(Array.isArray(message.action.payload)
+                      ? message.action.payload
+                      : [message.action.payload]
+                    ).map((task, i) => (
+                      <li key={i}>• {task}</li>
+                    ))}
+                  </ul>
                 )}
 
                 {/* Confirmation buttons */}

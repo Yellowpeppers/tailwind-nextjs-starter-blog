@@ -219,38 +219,43 @@ const BUBU_FUNCTIONS = [
   },
   {
     name: 'complete_task',
-    description: '用户想要标记某个任务为已完成。根据上下文中的任务列表匹配任务。',
+    description:
+      '用户想要标记一个或多个任务为已完成。根据上下文中的任务列表匹配任务。可以同时完成多个任务。',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        taskContent: {
-          type: SchemaType.STRING,
-          description: '要标记完成的任务内容（需要精确匹配用户任务列表中的内容）',
+        tasks: {
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING },
+          description: '要标记完成的任务内容列表（每个需要精确匹配用户任务列表中的内容）',
         },
         reply: {
           type: SchemaType.STRING,
-          description: 'BuBu 的回复。告知用户任务已完成，可适当鼓励',
+          description:
+            'BuBu 的回复。告知用户任务已完成，可适当鼓励。如果是多个任务，说明完成了几个。',
         },
       },
-      required: ['taskContent', 'reply'],
+      required: ['tasks', 'reply'],
     },
   },
   {
     name: 'delete_task',
-    description: '用户想要删除某个任务。根据上下文中的任务列表匹配任务。',
+    description:
+      '用户想要删除一个或多个任务。根据上下文中的任务列表匹配任务。可以同时删除多个任务。',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        taskContent: {
-          type: SchemaType.STRING,
-          description: '要删除的任务内容（需要精确匹配用户任务列表中的内容）',
+        tasks: {
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING },
+          description: '要删除的任务内容列表（每个需要精确匹配用户任务列表中的内容）',
         },
         reply: {
           type: SchemaType.STRING,
-          description: 'BuBu 的回复。确认任务已删除',
+          description: 'BuBu 的回复。确认任务已删除，如果是多个任务，说明删除了几个。',
         },
       },
-      required: ['taskContent', 'reply'],
+      required: ['tasks', 'reply'],
     },
   },
 ]
@@ -472,7 +477,7 @@ export async function POST(request: Request) {
           reply: args.reply,
           action: {
             type: 'complete_task',
-            payload: args.taskContent,
+            payload: args.tasks,
           },
           remaining: rateLimit.remaining - 1,
         },
@@ -487,7 +492,7 @@ export async function POST(request: Request) {
           reply: args.reply,
           action: {
             type: 'delete_task',
-            payload: args.taskContent,
+            payload: args.tasks,
           },
           remaining: rateLimit.remaining - 1,
         },
