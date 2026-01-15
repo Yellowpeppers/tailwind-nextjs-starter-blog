@@ -3333,6 +3333,70 @@ const SonicShieldWidget = ({
     })
   }
 
+  // BuBu: Listen for sound control events
+  useEffect(() => {
+    const handleBuBuSoundControl = (event: Event) => {
+      const detail = (event as CustomEvent).detail as {
+        action: string
+        sound?: string
+        volume?: number
+      }
+      console.log('[SoundWidget] Received BuBu command:', detail)
+
+      if (detail.action === 'stop' || detail.action === 'pause') {
+        // Stop specific sound or all sounds
+        if (detail.sound) {
+          // Try to match sound name or ID
+          const targetSound = allSounds.find(
+            (s) => s.name.toLowerCase() === detail.sound?.toLowerCase() || s.id === detail.sound
+          )
+          if (targetSound) {
+            setActiveTracks((prev) => {
+              const next = { ...prev }
+              delete next[targetSound.id]
+              return next
+            })
+          }
+        } else {
+          // Stop all
+          setActiveTracks({})
+          updateSettings('focus_lab.sound.enabled', false)
+        }
+      } else if (detail.action === 'play') {
+        // Play specific sound
+        if (!detail.sound) return // Must specify sound to play
+
+        // Enable master sound if disabled
+        if (!isSoundEnabled) {
+          updateSettings('focus_lab.sound.enabled', true)
+        }
+
+        const targetSound = allSounds.find(
+          (s) => s.name.toLowerCase() === detail.sound?.toLowerCase() || s.id === detail.sound
+        )
+        // If not exact match, try partial match
+        const bestMatch =
+          targetSound ||
+          allSounds.find((s) => s.name.toLowerCase().includes(detail.sound!.toLowerCase()))
+
+        if (bestMatch) {
+          setActiveTracks((prev) => ({
+            ...prev,
+            [bestMatch.id]: { id: bestMatch.id, volume: detail.volume || 0.5, isPlaying: true },
+          }))
+        }
+      } else if (detail.action === 'volume') {
+        // Adjust master volume or specific track
+        if (detail.volume !== undefined) {
+          updateMasterVolume(detail.volume)
+        }
+      }
+    }
+
+    window.addEventListener('bubu-sound-control', handleBuBuSoundControl)
+    return () => window.removeEventListener('bubu-sound-control', handleBuBuSoundControl)
+  }, [allSounds, isSoundEnabled, updateSettings])
+
   // Sync Audio Elements
   useEffect(() => {
     Object.values(activeTracks).forEach((track) => {
@@ -3674,6 +3738,75 @@ const TimerWidget = ({
     if (!hasHydratedCustom.current) hasHydratedCustom.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSettingsLoaded, settings.focus_lab?.timer?.custom_duration])
+
+  // BuBu: Listen for timer control events
+  useEffect(() => {
+    const handleBuBuTimerControl = (event: Event) => {
+      const detail = (event as CustomEvent).detail as {
+        duration?: number
+        mode?: string
+      }
+      console.log('[TimerWidget] Received BuBu command:', detail)
+
+      // Ensure we are on Countdown mode (Front)
+      if (isFlipped) {
+        onFlip(false)
+      }
+
+      // Handle Mode & Duration
+      if (detail.mode) {
+        if (detail.mode.toLowerCase().includes('short')) setActivePreset('short')
+        else if (detail.mode.toLowerCase().includes('long')) setActivePreset('long')
+        else setActivePreset('focus')
+      }
+
+      if (detail.duration) {
+        // If specific duration requested, use Custom (Long) preset logic hack or just modify customMinutes
+        // For simplicity, let's update customMinutes and switch to 'long' if it's a custom time
+        // Or if it matches standard presets, switch to them.
+
+        if (detail.duration === 5) setActivePreset('short')
+        else if (detail.duration === 25) setActivePreset('focus')
+        else {
+          setActivePreset('long')
+          setCustomMinutes(detail.duration)
+          setIsCustomChanged(true) // trigger save
+        }
+      }
+
+      // Start the timer
+      // We need to wait for state updates to propagate, so we use a small timeout or just call start logic directly
+      // However, startTimer depends on current state.
+      // Let's force a start in next tick.
+      setTimeout(() => {
+        const playClickSound = () => {
+          const audio = new Audio('/static/sounds/click.mp3')
+          audio.volume = 0.5
+          audio.play().catch(() => {})
+        }
+        playClickSound()
+
+        // Reset and Start
+        hasLoggedRef.current = false
+        setStartTime(Date.now())
+        setTimerState('focusing')
+
+        // Set TimeLeft based on the just-set values (need to duplicate logic here because state update implies re-render)
+        // Actually, since we are inside the event handler, state updates won't be reflected immediately in 'activePreset' var.
+        // So we must calculate d manually here.
+
+        let d = 25 * 60
+        if (detail.mode?.includes('short') || detail.duration === 5) d = 5 * 60
+        else if (detail.duration && detail.duration !== 25) d = detail.duration * 60
+
+        setTimeLeft(d)
+        setTotalAllocatedDuration(d)
+      }, 100)
+    }
+
+    window.addEventListener('bubu-timer-control', handleBuBuTimerControl)
+    return () => window.removeEventListener('bubu-timer-control', handleBuBuTimerControl)
+  }, [isFlipped, onFlip])
 
   // Persist custom duration to settings/Supabase when user changes it
   useEffect(() => {

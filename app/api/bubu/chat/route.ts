@@ -68,6 +68,8 @@ const getBasePrompt = (language: string) => {
 - 用户**想添加**新的具体任务（今天、明天、要做某事）→ 调用 add_tasks
 - 用户**想记录**新想法、灵感、未来计划 → 调用 add_idea  
 - 用户**想修改**任务或想法内容 → 调用 update_task 或 update_idea
+- 用户**想开始**专注、休息、番茄钟 → 调用 start_pomodoro
+- 用户**想播放/暂停**背景音、白噪音 → 调用 control_ambience
 - 用户**想完成**任务 → 调用 complete_task
 - 用户**想取消完成**任务 → 调用 uncomplete_task
 - 用户**想删除**任务 → 调用 delete_task
@@ -298,6 +300,54 @@ const BUBU_FUNCTIONS = [
         },
       },
       required: ['oldContent', 'newContent', 'reply'],
+    },
+  },
+  {
+    name: 'start_pomodoro',
+    description: '用户想要开始专注计时或休息。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        duration: {
+          type: SchemaType.NUMBER,
+          description: '专注/休息时长（分钟）。如果没有明确指定，默认为 25。',
+        },
+        mode: {
+          type: SchemaType.STRING,
+          description: '模式：focus (专注), short (短休), long (长休)。',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。确认开始计时，如"好的，开始 25 分钟专注！保持专注哦！"',
+        },
+      },
+      required: ['reply'],
+    },
+  },
+  {
+    name: 'control_ambience',
+    description: '用户想要控制白噪音/背景音效（播放、暂停、停止）。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        action: {
+          type: SchemaType.STRING,
+          description: '动作：play (播放), pause (暂停), stop (停止), volume (调整音量)。',
+        },
+        sound: {
+          type: SchemaType.STRING,
+          description: '声音名称（如：rain, fire, wind, forest, coffee）。如果是停止所有，可为空。',
+        },
+        volume: {
+          type: SchemaType.NUMBER,
+          description: '音量值 (0-1)。仅在 action 为 volume 时需要。',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。如"已为您播放雨声"、"音乐已停止"。',
+        },
+      },
+      required: ['action', 'reply'],
     },
   },
   {
@@ -616,6 +666,43 @@ export async function POST(request: Request) {
             payload: {
               oldContent: args.oldContent,
               newContent: args.newContent,
+            },
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'start_pomodoro') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'start_pomodoro',
+            payload: {
+              duration: args.duration,
+              mode: args.mode,
+            },
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'control_ambience') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'control_ambience',
+            payload: {
+              action: args.action,
+              sound: args.sound,
+              volume: args.volume,
             },
           },
           remaining: rateLimit.remaining - 1,

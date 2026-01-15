@@ -348,6 +348,26 @@ export const useBuBuChat = () => {
             window.dispatchEvent(new CustomEvent('brain-dump-sync'))
           }
           console.log(`[BuBu] Updated idea: "${oldContent}" -> "${newContent}"`)
+        } else if (message.action.type === 'start_pomodoro') {
+          // Dispatch timer control event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('bubu-timer-control', {
+                detail: message.action.payload,
+              })
+            )
+          }
+          console.log('[BuBu] Dispatched timer control event:', message.action.payload)
+        } else if (message.action.type === 'control_ambience') {
+          // Dispatch ambience control event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('bubu-sound-control', {
+                detail: message.action.payload,
+              })
+            )
+          }
+          console.log('[BuBu] Dispatched sound control event:', message.action.payload)
         }
 
         // Update message status to confirmed

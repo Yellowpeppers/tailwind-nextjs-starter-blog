@@ -17,7 +17,14 @@ export type ChatMessage = {
       | 'delete_idea'
       | 'update_task'
       | 'update_idea'
-    payload: string[] | string | { oldContent: string; newContent: string }
+      | 'start_pomodoro'
+      | 'control_ambience'
+    payload:
+      | string[]
+      | string
+      | { oldContent: string; newContent: string }
+      | { duration?: number; mode?: string }
+      | { action: string; sound?: string; volume?: number }
     status: 'pending' | 'confirmed' | 'cancelled'
   }
 }
@@ -32,7 +39,14 @@ export type BuBuAction = {
     | 'delete_idea'
     | 'update_task'
     | 'update_idea'
-  payload: string[] | string | { oldContent: string; newContent: string }
+    | 'start_pomodoro'
+    | 'control_ambience'
+  payload:
+    | string[]
+    | string
+    | { oldContent: string; newContent: string }
+    | { duration?: number; mode?: string }
+    | { action: string; sound?: string; volume?: number }
 }
 
 export type BuBuApiRequest = {
