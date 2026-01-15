@@ -2034,6 +2034,9 @@ const SonicShieldCard = ({
   const isCartoon = uiStyle === 'cartoon'
   const [isFlipped, setIsFlipped] = useState(false)
 
+  // Use the extracted hook
+  const sound = useSoundSystem()
+
   return (
     <CardShell
       title={t.focusLab.widgets.sonicShield.title}
@@ -2062,7 +2065,7 @@ const SonicShieldCard = ({
         </button>
       }
     >
-      <SonicShieldWidget_Inline isFlipped={isFlipped} onFlip={setIsFlipped} />
+      <SonicShieldWidget sound={sound} isFlipped={isFlipped} onFlip={setIsFlipped} />
     </CardShell>
   )
 }
@@ -2172,6 +2175,9 @@ const TaskBreakerCard = ({
   const { uiStyle } = useThemeColor()
   const [isResultView, setIsResultView] = useState(false)
 
+  // Use the extracted hook
+  const taskBreaker = useTaskBreaker((isResult) => setIsResultView(isResult))
+
   return (
     <CardShell
       title={t.focusLab.widgets.taskBreaker.title}
@@ -2180,11 +2186,7 @@ const TaskBreakerCard = ({
       isFocused={isFocused}
       variant={isResultView ? 'default' : 'ai-assistant'}
     >
-      <TaskBreakerWidget_Inline
-        uiStyle={uiStyle}
-        isResultView={isResultView}
-        onViewChange={setIsResultView}
-      />
+      <TaskBreakerWidget taskBreaker={taskBreaker} uiStyle={uiStyle} isResultView={isResultView} />
     </CardShell>
   )
 }
@@ -2200,6 +2202,10 @@ const BrainDumpCardWidget = ({
 }) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
+
+  // Use the extracted hook
+  const brainDump = useBrainDump()
+
   return (
     <CardShell
       title={t.focusLab.widgets.brainDump.title}
@@ -2207,7 +2213,7 @@ const BrainDumpCardWidget = ({
       className={className}
       isFocused={isFocused}
     >
-      <BrainDumpWidget_Inline uiStyle={uiStyle} />
+      <BrainDumpWidget brainDump={brainDump} uiStyle={uiStyle} />
     </CardShell>
   )
 }
@@ -2539,6 +2545,9 @@ const DopamineMenuCard = ({
   const { uiStyle } = useThemeColor()
   const [isFlipped, setIsFlipped] = useState(false)
 
+  // Use the extracted hook
+  const dopamine = useDopamineSystem()
+
   return (
     <CardShell
       title={t.focusLab.widgets.dopamineMenu.title}
@@ -2568,7 +2577,8 @@ const DopamineMenuCard = ({
         </button>
       }
     >
-      <DopamineMenuWidget_Inline
+      <DopamineMenuWidget
+        dopamine={dopamine}
         cols={cols}
         isFlipped={isFlipped}
         onFlip={setIsFlipped}
