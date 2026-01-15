@@ -81,11 +81,6 @@ const AutoConfirmCard = ({
           {message.action?.type === 'start_pomodoro' && '⏱️ 开启专注：'}
           {message.action?.type === 'control_ambience' && '🎵 播放声音：'}
         </div>
-        {isLastMessage && timeLeft > 0 && (
-          <div className="text-primary-600 dark:text-primary-400 text-xs font-normal">
-            {isPaused ? '⏸ 已暂停' : `${timeLeft}秒后自动执行`}
-          </div>
-        )}
       </div>
 
       {/* Tasks list */}
