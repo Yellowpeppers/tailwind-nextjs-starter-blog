@@ -68,530 +68,97 @@ const BuBu = dynamic(() => import('@/components/focus-lab/BuBu').then((mod) => m
   ssr: false,
 })
 
-// --- Icons ---
-const SmileCircleIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--smile-circle-outline] ${className}`} />
-)
+import {
+  SmileCircleIcon,
+  MagicIcon,
+  HandIcon,
+  HandPalmIcon,
+  PlayIcon,
+  PauseIcon,
+  ArrowLaunchIcon,
+  ArrowLeftIcon,
+  TrashIcon,
+  PlusIcon,
+  MoreHorizontalIcon,
+  CloseIcon,
+  XIcon,
+  StatsIcon,
+  CrownIcon,
+  SettingsIcon,
+  StarIcon,
+  EditIcon,
+  CheckIcon,
+  TransferIcon,
+  LogoutIcon,
+  HelpIcon,
+} from '@/components/focus-lab/icons'
+import {
+  GreetingInfo,
+  SoundOption,
+  ActiveTrack,
+  GridItem,
+  LayoutPreset,
+  FocusedTaskState,
+} from '@/components/focus-lab/types'
+import {
+  getSecondsUntilTarget,
+  playClickSound,
+  computeGreeting,
+  mergeLayoutWithDefaults,
+  isCollapsedLayout,
+  isLayoutValid,
+  cloneLayout,
+  getLayoutStorageKey,
+  normalizeLayout,
+} from '@/components/focus-lab/utils'
+import {
+  SOUND_LIBRARY,
+  INITIAL_LAYOUT,
+  TRIPLE_LAYOUT,
+  DOUBLE_LAYOUT,
+  GRID_PRESETS,
+  LAYOUT_VERSION,
+  SIDEBAR_BTN_BASE,
+  COL_WIDTH,
+  ROW_HEIGHT,
+  GAP,
+  GRID_WIDTH_DESKTOP,
+  CONTROL_BUTTON_BASE,
+  INCENTIVE_MESSAGES,
+  DEFAULT_LAYOUTS,
+  EMPTY_HIDDEN,
+} from '@/components/focus-lab/constants'
+import { SegmentedControl } from '@/components/focus-lab/components/SegmentedControl'
+import { SoundVisualizer } from '@/components/focus-lab/components/SoundVisualizer'
+import {
+  SidebarLabel,
+  FocusSidebarAction,
+  FocusSidebarBrand,
+  FocusSidebarProfile,
+} from '@/components/focus-lab/components/SidebarComponents'
+import { WeChatGroupModal } from '@/components/focus-lab/modals/WeChatGroupModal'
 
-const MagicIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--magic-stick-3-outline] ${className}`} />
-)
+// Extracted Widgets (for future migration - currently using _Inline versions)
 
-const HandIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--hand-shake-linear] ${className}`} />
-)
+import { SonicShieldWidget } from '@/components/focus-lab/widgets/SonicShieldWidget'
 
-const HandPalmIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--hand-shake-linear] ${className}`} />
-)
+import { TimerWidget } from '@/components/focus-lab/widgets/TimerWidget'
 
-const PlayIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--play-bold] ${className}`} />
-)
+import { BrainDumpWidget } from '@/components/focus-lab/widgets/BrainDumpWidget'
 
-const PauseIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--pause-bold] ${className}`} />
-)
+import { TaskBreakerWidget } from '@/components/focus-lab/widgets/TaskBreakerWidget'
 
-const ArrowLaunchIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--arrow-right-up-outline] ${className}`} />
-)
+import { DopamineMenuWidget } from '@/components/focus-lab/widgets/DopamineMenuWidget'
 
-const ArrowLeftIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--arrow-left-outline] ${className}`} />
-)
+// Extracted Hooks (for future migration - currently using inline state)
 
-const TrashIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--trash-bin-minimalistic-outline] ${className}`} />
-)
+import { useSoundSystem } from '@/components/focus-lab/hooks/useSoundSystem'
 
-const PlusIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--add-circle-outline] ${className}`} />
-)
+import { useBrainDump } from '@/components/focus-lab/hooks/useBrainDump'
 
-const MoreHorizontalIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--menu-dots-bold] ${className}`} />
-)
+import { useTaskBreaker } from '@/components/focus-lab/hooks/useTaskBreaker'
 
-const CloseIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--close-circle-outline] ${className}`} />
-)
-
-const XIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--close-circle-outline] ${className}`} />
-)
-
-const StatsIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--chart-2-bold-duotone] ${className}`} />
-)
-
-const CrownIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--crown-bold-duotone] ${className}`} />
-)
-
-const SettingsIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--settings-bold-duotone] ${className}`} />
-)
-
-const StarIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--star-bold-duotone] ${className}`} />
-)
-
-const EditIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--pen-2-bold-duotone] ${className}`} />
-)
-
-const CheckIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--check-circle-bold-duotone] ${className}`} />
-)
-
-const TransferIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--transfer-horizontal-bold-duotone] ${className}`} />
-)
-
-const LogoutIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--logout-2-bold-duotone] ${className}`} />
-)
-
-const HelpIcon = ({ className }: { className?: string }) => (
-  <span className={`icon-[solar--question-circle-bold-duotone] ${className}`} />
-)
-
-// --- Shared Components ---
-// --- Helper Functions ---
-
-// --- Helper Functions ---
-
-const getSecondsUntilTarget = (timeStr: string) => {
-  if (!timeStr) return 0
-  const [hours, minutes] = timeStr.split(':').map((value) => parseInt(value, 10))
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0
-  const now = new Date()
-  const target = new Date()
-  target.setHours(hours, minutes, 0, 0)
-  if (target <= now) {
-    target.setDate(target.getDate() + 1)
-  }
-  return Math.max(Math.round((target.getTime() - now.getTime()) / 1000), 0)
-}
-
-const playClickSound = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-  const oscillator = audioContext.createOscillator()
-  const gainNode = audioContext.createGain()
-
-  oscillator.type = 'sine'
-  oscillator.frequency.setValueAtTime(800, audioContext.currentTime) // High pitch beep
-  oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1) // Drop pitch
-
-  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
-
-  oscillator.connect(gainNode)
-  gainNode.connect(audioContext.destination)
-
-  oscillator.start()
-  oscillator.stop(audioContext.currentTime + 0.1)
-}
-
-// --- Shared Components ---
-
-const SegmentedControl = <T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (value: T) => void
-}) => {
-  return (
-    <div className="bg-primary-50 dark:bg-primary-950/30 flex h-8 w-full min-w-max rounded-lg p-1">
-      {options.map((option) => {
-        const isActive = value === option.value
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={`relative flex-1 rounded-md px-3 text-xs font-bold tracking-wider whitespace-nowrap uppercase transition-all ${
-              isActive
-                ? 'text-primary-600 dark:text-primary-400 dark:bg-primary-800/40 bg-white shadow-sm'
-                : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
-            }`}
-          >
-            {option.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-// --- Data & Types ---
-
-type SoundOption = {
-  id: string
-  name: string
-  path: string
-  detail: string
-}
-
-const SOUND_LIBRARY: SoundOption[] = []
-
-type GreetingInfo = {
-  title: string
-  subtitle: string
-  iconClass: string
-  emoji: string
-}
-
-const computeGreeting = (lang: string, userName?: string): GreetingInfo => {
-  const hour = new Date().getHours()
-  const isMorning = hour >= 5 && hour < 12
-  const isAfternoon = hour >= 12 && hour < 18
-  // Removed Evening as per request, merged into Night/Afternoon partition
-
-  const nameSuffix = userName ? `, ${userName}` : ''
-
-  if (isMorning) {
-    return {
-      title: (lang === 'zh' ? '早上好' : 'Good Morning') + nameSuffix,
-      subtitle: lang === 'zh' ? '开启今天的专注旅程吧' : "Let's start fresh today",
-      iconClass: 'icon-[solar--sunrise-bold-duotone]',
-      emoji: '☀️',
-    }
-  }
-  if (isAfternoon) {
-    return {
-      title: (lang === 'zh' ? '下午好' : 'Good Afternoon') + nameSuffix,
-      subtitle: lang === 'zh' ? '保持节奏，继续推进' : 'Keep the momentum going',
-      iconClass: 'icon-[solar--sun-2-bold-duotone]',
-      emoji: '🌤️',
-    }
-  }
-  // Night (18:00 - 05:00)
-  return {
-    title: (lang === 'zh' ? '晚安' : 'Good Night') + nameSuffix,
-    subtitle: lang === 'zh' ? '好好休息，明天见' : 'Rest well and recharge',
-    iconClass: 'icon-[solar--moon-stars-bold-duotone]',
-    emoji: '🌙',
-  }
-}
-
-const SoundVisualizer = ({ activeCount, uiStyle }: { activeCount: number; uiStyle?: UIStyle }) => {
-  const isWarm = uiStyle === 'warm'
-  const isGreen = uiStyle === 'green'
-  const isBlue = uiStyle === 'blue'
-  const isCartoon = uiStyle === 'cartoon'
-
-  if (activeCount === 0) {
-    return (
-      <div className="flex h-12 items-center justify-center gap-1 opacity-30" aria-hidden="true">
-        <div className="h-1 w-12 rounded-full bg-gray-300 dark:bg-gray-600" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex h-12 items-center justify-center gap-1" aria-hidden="true">
-      {Array.from({ length: 10 }).map((_, index) => (
-        <motion.div
-          key={index}
-          className={`${isWarm ? 'bg-[#C27B4A]/80' : isGreen ? 'bg-[#7A9F7A]/80' : isBlue ? 'bg-[#5B84B1]/80' : isCartoon ? 'bg-black/80 dark:bg-white/80' : 'bg-primary-500/80'} w-1.5 rounded-full`}
-          animate={{
-            height: [12, 32 + Math.random() * 16, 12],
-            opacity: [0.5, 1, 0.5],
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 0.8 + Math.random() * 0.5,
-            delay: index * 0.05,
-            ease: 'easeInOut',
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
-type ActiveTrack = {
-  id: string
-  volume: number
-  isPlaying: boolean
-}
-
-// --- Widget Card Component ---
-
-// --- Grid System ---
-
-type GridItem = {
-  id: string
-  x: number
-  y: number
-  w: number
-  h: number
-  minW?: number
-  minH?: number
-}
-
-const INITIAL_LAYOUT: GridItem[] = [
-  // 第一行：白噪音（3x3）、多巴胺（3x3）、任务拆解（4x5）、右侧 Attention Hub（6x9）
-  { id: 'sonic', x: 0, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
-  { id: 'dopamine', x: 3, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
-  { id: 'breaker', x: 6, y: 0, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'brain', x: 10, y: 0, w: 6, h: 9, minW: 3, minH: 3 },
-
-  // 第二行：Today’s Tasks（6x6）、Focus Timer（4x4）
-  { id: 'todo', x: 0, y: 3, w: 6, h: 6, minW: 3, minH: 3 },
-  { id: 'timer', x: 6, y: 5, w: 4, h: 4, minW: 3, minH: 3 },
-]
-
-const TRIPLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
-  { id: 'dopamine', x: 3, y: 0, w: 3, h: 3, minW: 3, minH: 3 },
-  { id: 'breaker', x: 6, y: 0, w: 3, h: 5, minW: 3, minH: 5 },
-  { id: 'brain', x: 9, y: 0, w: 3, h: 9, minW: 3, minH: 3 },
-  { id: 'todo', x: 0, y: 3, w: 6, h: 6, minW: 3, minH: 3 },
-  { id: 'timer', x: 6, y: 5, w: 3, h: 4, minW: 3, minH: 3 },
-]
-
-const DOUBLE_LAYOUT: GridItem[] = [
-  { id: 'sonic', x: 0, y: 0, w: 4, h: 3, minW: 3, minH: 3 },
-  { id: 'dopamine', x: 4, y: 0, w: 4, h: 3, minW: 3, minH: 3 },
-  { id: 'breaker', x: 0, y: 3, w: 4, h: 5, minW: 3, minH: 5 },
-  { id: 'brain', x: 4, y: 3, w: 4, h: 9, minW: 3, minH: 3 },
-  { id: 'todo', x: 0, y: 8, w: 4, h: 6, minW: 3, minH: 3 },
-  { id: 'timer', x: 4, y: 12, w: 4, h: 4, minW: 3, minH: 3 },
-]
-
-type LayoutPreset = 'desktop' | 'triple' | 'double'
-
-const GRID_PRESETS: Record<LayoutPreset, { columns: number; layout: GridItem[] }> = {
-  desktop: { columns: 16, layout: INITIAL_LAYOUT },
-  triple: { columns: 12, layout: TRIPLE_LAYOUT },
-  double: { columns: 8, layout: DOUBLE_LAYOUT },
-}
-const LAYOUT_VERSION = 'focuslab-layout-v10'
-
-const mergeLayoutWithDefaults = (preset: LayoutPreset, incoming: GridItem[] | null | undefined) => {
-  const defaults = GRID_PRESETS[preset].layout
-  const map = new Map<string, GridItem>()
-  defaults.forEach((d) => map.set(d.id, { ...d }))
-  if (Array.isArray(incoming)) {
-    incoming.forEach((item) => {
-      if (!item || !item.id) return
-      const target = map.get(item.id)
-      if (!target) return
-      const defMinW = target.minW
-      const defMinH = target.minH
-      map.set(item.id, {
-        ...target,
-        x: Number.isFinite(item.x) ? item.x : target.x,
-        y: Number.isFinite(item.y) ? item.y : target.y,
-        w: Number.isFinite(item.w) ? item.w : target.w,
-        h: Number.isFinite(item.h) ? item.h : target.h,
-        // 统一使用最新默认最小值，避免旧缓存把 minH/minW 锁大
-        minW: defMinW ?? item.minW ?? target.minW,
-        minH: defMinH ?? item.minH ?? target.minH,
-      })
-    })
-  }
-  return Array.from(map.values())
-}
-
-const isCollapsedLayout = (items: GridItem[] | null | undefined) => {
-  if (!Array.isArray(items) || items.length === 0) return true
-  return items.every((i) => (i?.x ?? 0) === 0 && (i?.y ?? 0) === 0)
-}
-
-const isLayoutValid = (preset: LayoutPreset, items: GridItem[] | null | undefined) => {
-  if (!Array.isArray(items)) return false
-  const defaults = GRID_PRESETS[preset].layout
-  const maxCols = GRID_PRESETS[preset].columns
-  const maxY = 40 // 防止异常极大位移导致回到原点或全部重叠
-  if (items.length !== defaults.length) return false
-
-  const allowedIds = new Set(defaults.map((d) => d.id))
-  return items.every((item) => {
-    if (!item || !allowedIds.has(item.id)) return false
-    const { x, y, w, h } = item
-    if (![x, y, w, h].every(Number.isFinite)) return false
-    if (x < 0 || y < 0 || w <= 0 || h <= 0) return false
-    if (x + w > maxCols) return false
-    if (y > maxY) return false
-    return true
-  })
-}
-
-const cloneLayout = (items: GridItem[]) => items.map((item) => ({ ...item }))
-
-const getLayoutStorageKey = (preset: LayoutPreset) => `focus-lab-layout-${preset}-v1`
-const SIDEBAR_BTN_BASE =
-  'group flex w-full min-h-[44px] items-center gap-3 rounded-2xl px-3 py-2.5 text-base font-semibold text-gray-700 transition-all hover:bg-white/90 hover:shadow-sm dark:text-gray-200 dark:hover:bg-white/5'
-
-type FocusedTaskState = { text: string; timestamp: number; id: string } | null
-
-const SidebarLabel = ({
-  show,
-  children,
-  delay = 0,
-}: {
-  show: boolean
-  children: ReactNode
-  delay?: number
-}) => (
-  <AnimatePresence initial={false}>
-    {show ? (
-      <motion.span
-        key="sidebar-label"
-        initial={{ opacity: 0, x: -6, width: 0 }}
-        animate={{ opacity: 1, x: 0, width: 'auto' }}
-        exit={{ opacity: 0, x: -6, width: 0 }}
-        transition={{ duration: 0.18, ease: 'easeOut', delay }}
-        className="inline-flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap"
-      >
-        {children}
-      </motion.span>
-    ) : null}
-  </AnimatePresence>
-)
-
-const FocusSidebarAction = ({
-  icon,
-  label,
-  onClick,
-  id,
-}: {
-  icon: ReactNode
-  label: string
-  onClick: () => void
-  id?: string
-}) => {
-  const { open, animate } = useSidebar()
-  return (
-    <button
-      id={id}
-      onClick={onClick}
-      className="group/sidebar flex w-full items-center justify-start gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-white/80 dark:hover:bg-white/10"
-    >
-      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-gray-600 transition-colors group-hover:text-gray-900 dark:text-gray-300">
-        {icon}
-      </span>
-      <motion.span
-        animate={{
-          display: animate ? (open ? 'inline-block' : 'none') : 'inline-block',
-          opacity: animate ? (open ? 1 : 0) : 1,
-        }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
-        className="inline-block text-sm whitespace-pre text-gray-800 transition duration-150 group-hover/sidebar:translate-x-1 dark:text-gray-100"
-      >
-        {label}
-      </motion.span>
-    </button>
-  )
-}
-
-const FocusSidebarBrand = () => {
-  const { open, animate } = useSidebar()
-  return (
-    <div className="group/sidebar flex h-12 items-center justify-start gap-3 rounded-xl px-3 py-1">
-      <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/static/images/focuslab-logo.svg"
-          alt="FocusLab Logo"
-          className="h-full w-full dark:invert"
-        />
-      </div>
-      <motion.div
-        animate={{
-          opacity: animate ? (open ? 1 : 0) : 1,
-          display: animate ? (open ? 'flex' : 'none') : 'flex',
-        }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
-        className="min-w-0 flex-col"
-      >
-        <span className="font-limelight truncate text-lg leading-tight font-bold text-gray-900 dark:text-gray-100">
-          Focus Lab
-        </span>
-        <span className="text-xs font-medium text-gray-400">Dashboard</span>
-      </motion.div>
-    </div>
-  )
-}
-
-const FocusSidebarProfile = ({
-  userName,
-  planLabel,
-  avatarUrl,
-  avatarColor,
-  isPro,
-  onClick,
-}: {
-  userName: string
-  planLabel: string
-  avatarUrl?: string
-  avatarColor?: string
-  isPro?: boolean
-  onClick?: () => void
-}) => {
-  const { open, animate } = useSidebar()
-  const initial = (userName.trim().charAt(0) || 'G').toUpperCase()
-  return (
-    <div className="border-t border-white/70 pt-3 pb-6 dark:border-white/10">
-      <button
-        type="button"
-        onClick={onClick}
-        className="group/sidebar flex h-12 w-full items-center justify-start gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-white/80 dark:hover:bg-white/10"
-      >
-        <div className="relative">
-          <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white shadow-inner ring-1 ring-black/5 dark:ring-white/10 ${
-              avatarUrl
-                ? 'bg-transparent'
-                : avatarColor === 'pink'
-                  ? 'bg-gradient-to-tr from-pink-500 to-rose-500'
-                  : avatarColor === 'emerald'
-                    ? 'bg-gradient-to-tr from-emerald-500 to-teal-500'
-                    : 'bg-gradient-to-tr from-indigo-500 to-purple-500'
-            }`}
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt="User"
-                className="h-full w-full object-cover object-center"
-              />
-            ) : (
-              <span className="leading-none">{initial}</span>
-            )}
-          </div>
-          {isPro ? (
-            <span className="absolute -right-1 -bottom-1 flex h-4 items-center gap-1 rounded-full bg-amber-400 px-1 text-[10px] font-extrabold text-amber-950 uppercase shadow ring-1 ring-amber-500/60">
-              <span className="icon-[solar--crown-bold] text-[11px]" aria-hidden="true" />
-              PRO
-            </span>
-          ) : null}
-        </div>
-        <motion.div
-          animate={{
-            opacity: animate ? (open ? 1 : 0) : 1,
-            display: animate ? (open ? 'flex' : 'none') : 'flex',
-          }}
-          transition={{ duration: 0.15, ease: 'easeOut' }}
-          className="min-w-0 flex-col text-left"
-        >
-          <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-            {userName}
-          </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">{planLabel}</span>
-        </motion.div>
-      </button>
-    </div>
-  )
-}
+import { useDopamineSystem } from '@/components/focus-lab/hooks/useDopamineSystem'
 
 const FocusLabMobileGrid = ({
   focusedTask,
@@ -633,138 +200,6 @@ const FocusLabMobileGrid = ({
       <DopamineMenuCard className="h-auto" />
     </div>
   )
-}
-
-const COL_WIDTH = 54
-const ROW_HEIGHT = 54
-const GAP = 22
-const GRID_WIDTH_DESKTOP = 16 * ROW_HEIGHT + (16 - 1) * GAP
-const CONTROL_BUTTON_BASE =
-  'relative flex h-12 px-5 min-w-[150px] items-center justify-center rounded-full border text-sm font-semibold transition-all text-center'
-
-const normalizeLayout = (
-  preset: LayoutPreset,
-  layout: GridItem[] | null | undefined,
-  options: { fillMissing?: boolean } = {}
-) => {
-  const fillMissing = options.fillMissing ?? true
-  const defaults = GRID_PRESETS[preset].layout
-  const safeList = Array.isArray(layout) ? layout : []
-
-  const byId = new Map<string, GridItem>()
-
-  safeList.forEach((item) => {
-    if (!item || !item.id) return
-    const def = defaults.find((d) => d.id === item.id)
-    const normalized: GridItem = {
-      ...def,
-      ...item,
-      x: Number.isFinite(item.x) ? item.x : (def?.x ?? 0),
-      y: Number.isFinite(item.y) ? item.y : (def?.y ?? 0),
-      w: Number.isFinite(item.w) ? item.w : (def?.w ?? 2),
-      h: Number.isFinite(item.h) ? item.h : (def?.h ?? 2),
-      minW: item.minW ?? def?.minW ?? 1,
-      minH: item.minH ?? def?.minH ?? 1,
-    }
-    byId.set(item.id, normalized)
-  })
-
-  if (fillMissing) {
-    defaults.forEach((def) => {
-      if (!byId.has(def.id)) {
-        byId.set(def.id, { ...def })
-      }
-    })
-  }
-
-  return Array.from(byId.values())
-}
-
-const WeChatGroupModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
-            onClick={onClose}
-          />
-          <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="pointer-events-auto relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-800"
-            >
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <XIcon className="h-5 w-5" />
-              </button>
-              <div className="flex flex-col items-center gap-4 text-center">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">加入微信交流群</h3>
-                <p className="space-y-1 text-sm text-gray-500 dark:text-gray-400">
-                  <span className="block">扫码加入 Focus Lab 官方交流群</span>
-                  <span className="block">获取更多使用技巧与内测福利</span>
-                </p>
-                <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/static/images/focuslab/qr/latest.jpg"
-                    alt="WeChat Group QR"
-                    className="h-64 w-64 object-cover"
-                  />
-                </div>
-                <p className="text-xs text-gray-400">扫码识别或截图保存识别</p>
-              </div>
-            </motion.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>
-  )
-}
-
-const DEFAULT_LAYOUTS: Record<LayoutPreset, GridItem[]> = {
-  desktop: cloneLayout(GRID_PRESETS.desktop.layout),
-  triple: cloneLayout(GRID_PRESETS.triple.layout),
-  double: cloneLayout(GRID_PRESETS.double.layout),
-}
-const EMPTY_HIDDEN: Record<LayoutPreset, Set<string>> = {
-  desktop: new Set(),
-  triple: new Set(),
-  double: new Set(),
-}
-
-const INCENTIVE_MESSAGES = {
-  zh: [
-    '太棒了！离目标更近了一步！',
-    '专注的你闪闪发光 ✨',
-    '今天的努力都算数！',
-    '干得漂亮！保持这个节奏！',
-    '效率满分！为你点赞 👍',
-    '你真的很自律！',
-    '坚持就是胜利，继续加油！',
-    '休息一下，整装待发！',
-    '已完成！成就感满满 🎉',
-    '你的进步肉眼可见！',
-  ],
-  en: [
-    'Great job! One step closer!',
-    "You're on fire today! 🔥",
-    'Focus looks good on you!',
-    'Well done! Keep the momentum.',
-    'Crushing it! 🚀',
-    'Proud of your progress!',
-    'Efficiency level: Expert!',
-    'Stay awesome!',
-    'Goal smashed! 🎉',
-    'Making it happen!',
-  ],
 }
 
 export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => {
@@ -2627,7 +2062,7 @@ const SonicShieldCard = ({
         </button>
       }
     >
-      <SonicShieldWidget isFlipped={isFlipped} onFlip={setIsFlipped} />
+      <SonicShieldWidget_Inline isFlipped={isFlipped} onFlip={setIsFlipped} />
     </CardShell>
   )
 }
@@ -2710,7 +2145,7 @@ const TimerCard = ({
       }
       className={className}
     >
-      <TimerWidget
+      <TimerWidget_Inline
         focusedTask={focusedTask}
         externalCommand={externalCommand}
         onCommandHandled={onCommandHandled}
@@ -2745,7 +2180,7 @@ const TaskBreakerCard = ({
       isFocused={isFocused}
       variant={isResultView ? 'default' : 'ai-assistant'}
     >
-      <TaskBreakerWidget
+      <TaskBreakerWidget_Inline
         uiStyle={uiStyle}
         isResultView={isResultView}
         onViewChange={setIsResultView}
@@ -2772,7 +2207,7 @@ const BrainDumpCardWidget = ({
       className={className}
       isFocused={isFocused}
     >
-      <BrainDumpWidget uiStyle={uiStyle} />
+      <BrainDumpWidget_Inline uiStyle={uiStyle} />
     </CardShell>
   )
 }
@@ -3133,7 +2568,7 @@ const DopamineMenuCard = ({
         </button>
       }
     >
-      <DopamineMenuWidget
+      <DopamineMenuWidget_Inline
         cols={cols}
         isFlipped={isFlipped}
         onFlip={setIsFlipped}
@@ -3179,7 +2614,7 @@ const timerPresets: Record<TimerPreset, { label: string; duration: number }> = {
   long: { label: 'Long Break · 15m', duration: 15 * 60 },
 }
 
-const SonicShieldWidget = ({
+const SonicShieldWidget_Inline = ({
   isFlipped,
   onFlip,
 }: {
@@ -3660,7 +3095,7 @@ const SonicShieldWidget = ({
   )
 }
 
-const TimerWidget = ({
+const TimerWidget_Inline = ({
   onTimerComplete,
   onSessionLogged,
   focusedTask,
@@ -4682,7 +4117,7 @@ const TimerWidget = ({
   )
 }
 
-const TaskBreakerWidget = ({
+const TaskBreakerWidget_Inline = ({
   uiStyle,
   isResultView,
   onViewChange,
@@ -5127,7 +4562,7 @@ const BrainDumpCard = memo(
 )
 BrainDumpCard.displayName = 'BrainDumpCard'
 
-const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
+const BrainDumpWidget_Inline = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
   const isBlue = uiStyle === 'blue'
@@ -5638,7 +5073,7 @@ const BrainDumpWidget = ({ uiStyle }: { uiStyle?: UIStyle }) => {
   )
 }
 
-const DopamineMenuWidget = ({
+const DopamineMenuWidget_Inline = ({
   cols = 6,
   isFlipped,
   onFlip,
