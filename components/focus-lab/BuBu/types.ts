@@ -56,6 +56,10 @@ export type BuBuApiRequest = {
   language?: 'zh' | 'en'
   userId?: string
   isPro?: boolean
+  stats?: {
+    todayMinutes: number
+    completedTaskCount: number
+  }
 }
 
 export type BuBuApiResponse =

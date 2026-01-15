@@ -14,7 +14,11 @@ import {
 } from '@/components/focus-lab/brainDumpStorage'
 import type { ChatMessage, PersonalityType, BuBuApiResponse, BuBuAction } from './types'
 
-export const useBuBuChat = () => {
+export const useBuBuChat = ({
+  stats,
+}: {
+  stats?: { todayMinutes: number; completedTaskCount: number }
+} = {}) => {
   const { language } = useTranslation()
   const { user } = useAuth()
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -59,19 +63,18 @@ export const useBuBuChat = () => {
             role: msg.role as 'user' | 'assistant',
             content: msg.content,
             timestamp: new Date(msg.created_at).getTime(),
-            action: msg.action,
+            action: msg.action as ChatMessage['action'], // Cast action back
           }))
           setMessages(history)
         }
       } catch (err) {
-        console.error('Failed to load chat history:', err)
+        console.error('Failed to load messages:', err)
         // Ensure error doesn't break the UI, just log it
       }
     }
 
     loadMessages()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+  }, [user, supabase])
 
   // Save message to Supabase
   const saveMessageToCloud = useCallback(
@@ -86,11 +89,11 @@ export const useBuBuChat = () => {
           action,
         })
       } catch (err) {
-        console.error('Failed to save message to cloud:', err)
+        console.error('Failed to save message:', err)
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user]
+
+    [user, supabase]
   )
 
   // Send message to BuBu API
@@ -122,6 +125,7 @@ export const useBuBuChat = () => {
             })),
             personality,
             language,
+            stats, // Pass stats to API
             // Add Context Awareness - only extract serializable fields
             context: await (async () => {
               const tasks = await readStationStorage(user?.id)

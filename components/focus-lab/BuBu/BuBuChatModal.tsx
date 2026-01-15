@@ -15,9 +15,10 @@ import type { ChatMessage } from './types'
 interface BuBuChatModalProps {
   isOpen: boolean
   onClose: () => void
+  stats?: { todayMinutes: number; completedTaskCount: number }
 }
 
-export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
+export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
   const [inputValue, setInputValue] = useState('')
@@ -36,7 +37,7 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
     removeTaskFromPreview,
     clearHistory,
     retry,
-  } = useBuBuChat()
+  } = useBuBuChat({ stats })
 
   // Personality options configuration
   const personalities = [

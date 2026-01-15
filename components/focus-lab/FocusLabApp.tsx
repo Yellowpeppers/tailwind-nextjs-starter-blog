@@ -922,6 +922,7 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
 
   // Real progress tracking
   const [todayMinutes, setTodayMinutes] = useState(0)
+  const [todayCompletedCount, setTodayCompletedCount] = useState(0)
   const refreshTodayProgress = useCallback(() => {
     const minutes = getTodayFocusMinutes(user?.id)
     setTodayMinutes(minutes)
@@ -937,6 +938,7 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
   )
 
   const handleTaskComplete = useCallback(() => {
+    setTodayCompletedCount((prev) => prev + 1)
     triggerEncouragement()
   }, [triggerEncouragement])
 
@@ -2567,6 +2569,8 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
           onClose={() => setEncouragementMessage(null)}
         />
       )}
+      {/* BuBu AI Assistant */}
+      <BuBu stats={{ todayMinutes, completedTaskCount: todayCompletedCount }} />
     </>
   )
 }
@@ -5933,8 +5937,6 @@ const DopamineMenuWidget = ({
           </motion.div>
         )}
       </AnimatePresence>
-      {/* BuBu AI Assistant */}
-      <BuBu />
     </div>
   )
 }

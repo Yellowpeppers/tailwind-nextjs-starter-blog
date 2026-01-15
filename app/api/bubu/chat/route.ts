@@ -110,8 +110,15 @@ Important rules:
 }
 
 // Build complete system prompt
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildSystemPrompt(personality: string, language: string, context?: any): string {
+
+function buildSystemPrompt(
+  personality: string,
+  language: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context?: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  stats?: any
+): string {
   const basePrompt = getBasePrompt(language)
   // Default to 'gentle' if personality key is invalid or missing
   const personalityPrompt =
@@ -171,11 +178,26 @@ function buildSystemPrompt(personality: string, language: string, context?: any)
       pendingCount: pendingTasks.length,
       completedCount: completedTasks.length,
       ideaCount,
+      stats,
     })
+
+    let statsPrompt = ''
+    if (stats) {
+      statsPrompt = `
+**🏆 今日成就 (Today's Achievement):**
+- ⏳ **今日专注总时长**: ${stats.todayMinutes || 0} 分钟
+- ✅ **本次会话完成任务**: ${stats.completedTaskCount || 0} 个
+> 指导原则：
+> - 如果专注 > 180 分钟：请以此为由，语气中多一些"佩服"和"心疼"，提醒休息。
+> - 如果专注 < 30 分钟：语气以鼓励开始为主。
+`
+    }
 
     contextPrompt = `
 ---
 📊 **用户当前状态** (实时数据，必须使用这些信息回答用户):
+
+${statsPrompt}
 
 **📋 未完成的任务 (共 ${pendingTasks.length} 项):**
 ${pendingTaskList}
@@ -457,6 +479,8 @@ type RequestBody = {
   isPro?: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context?: any // Allow context object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  stats?: any // Allow daily stats
 }
 
 // Simple in-memory rate limiting (TODO: use Redis in production)
@@ -502,6 +526,7 @@ export async function POST(request: Request) {
       userId,
       isPro = false,
       context, // Extract context
+      stats, // Extract stats
     } = body
 
     // Validate input
@@ -534,7 +559,7 @@ export async function POST(request: Request) {
     const trimmedHistory = history.slice(-HISTORY_LIMIT * 2)
 
     // Build system prompt
-    const systemPrompt = buildSystemPrompt(personality, language, context)
+    const systemPrompt = buildSystemPrompt(personality, language, context, stats)
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey)
