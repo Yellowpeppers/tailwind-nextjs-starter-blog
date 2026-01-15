@@ -143,9 +143,9 @@ function buildSystemPrompt(personality: string, language: string, context?: any)
     // Available sounds list
     const AVAILABLE_SOUNDS = [
       'rain (雨声)',
-      'fire/campfire (篝火)',
+      'campfire (篝火/火焰)',
       'wind (风声)',
-      'forest/insects (森林/昆虫)',
+      'insects (森林/昆虫)',
       'waves (海浪)',
       'thunder (雷声)',
       'summer-night (夏夜)',
@@ -702,7 +702,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         data: {
-          reply: args.reply,
+          reply: args.reply || '好的，正在为您启动番茄钟',
           action: {
             type: 'start_pomodoro',
             payload: {
@@ -720,7 +720,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         data: {
-          reply: args.reply,
+          reply: args.reply || '好的，正在为您调整声音',
           action: {
             type: 'control_ambience',
             payload: {
