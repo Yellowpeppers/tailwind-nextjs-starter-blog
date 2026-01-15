@@ -900,6 +900,26 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
     [updateSettings]
   )
 
+  // BuBu: Listen for timer control events (specifically for setting the focused task)
+  useEffect(() => {
+    const handleBuBuTimerTaskControl = (event: Event) => {
+      const detail = (event as CustomEvent).detail as {
+        duration?: number
+        mode?: string
+        taskContent?: string
+      }
+      if (detail.taskContent) {
+        setFocusedTask({
+          text: detail.taskContent,
+          id: `bubu-task-${Date.now()}`,
+          timestamp: Date.now(),
+        })
+      }
+    }
+    window.addEventListener('bubu-timer-control', handleBuBuTimerTaskControl)
+    return () => window.removeEventListener('bubu-timer-control', handleBuBuTimerTaskControl)
+  }, [])
+
   // Real progress tracking
   const [todayMinutes, setTodayMinutes] = useState(0)
   const refreshTodayProgress = useCallback(() => {
@@ -3408,30 +3428,9 @@ const SonicShieldWidget = ({
         }
       }
     }
-
     window.addEventListener('bubu-sound-control', handleBuBuSoundControl)
     return () => window.removeEventListener('bubu-sound-control', handleBuBuSoundControl)
   }, [allSounds, isSoundEnabled, updateSettings, activeTracks])
-
-  // BuBu: Listen for timer control events (specifically for setting the focused task)
-  useEffect(() => {
-    const handleBuBuTimerTaskControl = (event: Event) => {
-      const detail = (event as CustomEvent).detail as {
-        duration?: number
-        mode?: string
-        taskContent?: string
-      }
-      if (detail.taskContent) {
-        setFocusedTask({
-          text: detail.taskContent,
-          id: `bubu-task-${Date.now()}`,
-          timestamp: Date.now(),
-        })
-      }
-    }
-    window.addEventListener('bubu-timer-control', handleBuBuTimerTaskControl)
-    return () => window.removeEventListener('bubu-timer-control', handleBuBuTimerTaskControl)
-  }, [])
 
   // Sync Audio Elements
   useEffect(() => {
