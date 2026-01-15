@@ -122,12 +122,26 @@ export const useBuBuChat = () => {
             })),
             personality,
             language,
-            // Add Context Awareness
+            // Add Context Awareness - only extract serializable fields
             context: await (async () => {
               const tasks = await readStationStorage(user?.id)
               const ideas = await readBrainDumpStorage(user?.id)
-              console.log('[useBuBuChat] Context loaded:', { taskCount: tasks.length, ideas })
-              return { tasks, ideas }
+
+              // Only extract serializable fields to avoid circular references
+              const safeTasks = tasks.map((t) => ({
+                content: t.content,
+                completed: t.completed,
+              }))
+              const safeIdeas = {
+                left: (ideas.left || []).map((i) => ({ content: i.content })),
+                right: (ideas.right || []).map((i) => ({ content: i.content })),
+              }
+
+              console.log('[useBuBuChat] Context loaded:', {
+                taskCount: safeTasks.length,
+                ideas: safeIdeas,
+              })
+              return { tasks: safeTasks, ideas: safeIdeas }
             })(),
           }),
         })

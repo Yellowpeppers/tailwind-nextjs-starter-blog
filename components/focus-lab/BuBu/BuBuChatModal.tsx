@@ -116,7 +116,9 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
     }
   }, [transcript, resetTranscript])
 
-  const handleSend = (quickMessage?: string) => {
+  const handleSend = (quickMessageOrEvent?: string | React.MouseEvent) => {
+    // Ignore event objects, only accept string messages
+    const quickMessage = typeof quickMessageOrEvent === 'string' ? quickMessageOrEvent : undefined
     const messageToSend = quickMessage || inputValue.trim()
     if (!messageToSend || isLoading) return
     sendMessage(messageToSend)
