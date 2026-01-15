@@ -4,13 +4,15 @@ import { useAuth } from '@/context/AuthContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { readStationStorage, FocusItem } from '../focusStationStorage'
 import { TicketIcon } from '../icons'
+import { FocusTaskCard } from '../FocusStation'
 
 type ScratchCardProps = {
   onStartFocus?: (task: string, id: string) => void
   onFlipBack: () => void
+  className?: string
 }
 
-export const ScratchCard = ({ onStartFocus, onFlipBack }: ScratchCardProps) => {
+export const ScratchCard = ({ onStartFocus, onFlipBack, className }: ScratchCardProps) => {
   const { user } = useAuth()
   const { uiStyle } = useThemeColor()
   const isCartoon = uiStyle === 'cartoon'
@@ -155,78 +157,61 @@ export const ScratchCard = ({ onStartFocus, onFlipBack }: ScratchCardProps) => {
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-white dark:bg-gray-800">
-      {/* Revealed Content (Underneath) */}
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-        {targetTask ? (
-          <>
-            <div className="mb-4">
-              <TicketIcon className="h-10 w-10 text-yellow-500" />
-            </div>
-            <h3 className="mb-2 text-sm font-bold tracking-wider text-gray-400 uppercase">
-              Your Task
-            </h3>
-            <p
-              className={`line-clamp-4 text-2xl font-black ${isCartoon ? 'text-black dark:text-white' : 'text-gray-900 dark:text-white'}`}
-            >
-              {targetTask.content}
-            </p>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => onStartFocus?.(targetTask.content, targetTask.id)}
-                className={`rounded-lg px-6 py-3 text-sm font-bold text-white transition-all hover:scale-105 active:scale-95 ${
-                  isWarm ? 'bg-[#C27B4A]' : 'bg-primary-500 hover:bg-primary-600'
-                }`}
-              >
-                Let's do it!
-              </button>
-              <button
-                onClick={onFlipBack}
-                className="rounded-lg bg-gray-100 px-6 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              >
-                Skip
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center">
-            <span className="mb-2 text-4xl">😴</span>
-            <p className="text-gray-500">No tasks available</p>
-            <button
-              onClick={onFlipBack}
-              className="mt-4 rounded-lg bg-gray-100 px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-200"
-            >
-              Back
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Scratch Layer (Overlay) */}
-      <div
-        ref={containerRef}
-        role="button"
-        tabIndex={0}
-        className={`absolute inset-0 z-10 flex cursor-none items-center justify-center transition-opacity duration-700 ${
-          isRevealed ? 'pointer-events-none opacity-0' : 'opacity-100'
-        }`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-      >
-        <canvas ref={canvasRef} className="absolute inset-0 block touch-none" />
-
-        <div className="pointer-events-none absolute flex flex-col items-center">
-          <span className="text-4xl">✨</span>
-          <p
-            className={`mt-2 text-lg font-bold ${isCartoon ? 'text-white mix-blend-difference' : 'text-white'}`}
-          >
-            Scratch to Reveal
+    <div
+      className={`relative flex h-full w-full items-center justify-center overflow-hidden ${className ?? 'rounded-2xl'}`}
+    >
+      {!targetTask ? (
+        <div className="flex flex-col items-center">
+          <span className="mb-2 text-4xl">😴</span>
+          <p className="text-gray-500">
+            {t.focusLab.widgets.todo.emptyTitle || 'No tasks available'}
           </p>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="absolute inset-0 z-0 flex items-center justify-center p-4">
+            <FocusTaskCard
+              item={targetTask}
+              onToggleAction={() => {}}
+              onRemoveAction={() => {}}
+              onStartFocusAction={onStartFocus}
+              variant="reward"
+              isWarm={isWarm}
+              isGreen={uiStyle === 'green'}
+              isBlue={uiStyle === 'blue'}
+              isCartoon={isCartoon}
+            />
+          </div>
+
+          <div
+            ref={containerRef}
+            role="button"
+            tabIndex={0}
+            className={`absolute inset-0 z-10 flex cursor-none items-center justify-center transition-opacity duration-700 ${
+              isRevealed ? 'pointer-events-none invisible opacity-0' : 'visible opacity-100'
+            }`}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+          >
+            <canvas ref={canvasRef} className="absolute inset-0 block touch-none" />
+
+            <div className="pointer-events-none absolute flex flex-col items-center">
+              <span className="text-4xl">✨</span>
+              <p
+                className={`mt-2 text-lg font-bold ${
+                  isCartoon ? 'text-white mix-blend-difference' : 'text-white'
+                }`}
+              >
+                Scratch to Reveal
+              </p>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

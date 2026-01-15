@@ -197,7 +197,17 @@ export const useSoundSystem = () => {
       const shouldPlay = track.isPlaying && isSoundEnabled
 
       if (shouldPlay && audio.paused) {
-        audio.play().catch((e) => console.error(`Failed to play ${track.id}:`, e))
+        audio.play().catch((e) => {
+          if (e.name === 'NotAllowedError') {
+            console.warn(
+              `[SoundSystem] Auto-play blocked for ${track.id}. Waiting for user interaction.`
+            )
+            // Optional: You could add logic here to properly update state to "paused"
+            // or set a flag to retry on next global click.
+          } else {
+            console.error(`Failed to play ${track.id}:`, e)
+          }
+        })
       } else if (!shouldPlay && !audio.paused) {
         audio.pause()
       }

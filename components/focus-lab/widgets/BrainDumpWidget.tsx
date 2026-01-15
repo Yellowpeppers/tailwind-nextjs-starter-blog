@@ -6,7 +6,7 @@ import { useDragAndDrop } from '@formkit/drag-and-drop/react'
 import { animations } from '@formkit/drag-and-drop'
 import { isEqual } from 'lodash'
 import { BrainDumpItem } from '../brainDumpStorage'
-import { BrainDumpCard } from '../components/BrainDumpCard'
+import { BrainDumpStickyNote } from '../components/BrainDumpStickyNote'
 import { UseBrainDumpResult } from '../hooks/useBrainDump'
 import { TrashIcon, PlusIcon } from '../icons'
 
@@ -168,6 +168,7 @@ export const BrainDumpWidget = ({
   return (
     <div className="flex h-full min-w-0 flex-col gap-3">
       {/* Input Area */}
+      {/* Input Area */}
       <div className="flex min-w-0 shrink-0 gap-2">
         <div className="relative min-w-0 flex-1">
           <input
@@ -177,11 +178,9 @@ export const BrainDumpWidget = ({
             onKeyDown={handleKeyDown}
             onPaste={onPaste}
             placeholder={
-              lang === 'zh'
-                ? '想法、任务... (Cmd+Enter 添加, 支持粘贴图片)'
-                : 'Ideas, tasks... (Cmd+Enter to add, Paste image)'
+              lang === 'zh' ? '在这里输入文本或粘贴图片...' : 'Type text here or paste an image...'
             }
-            className={`w-full rounded-xl border py-2 pr-2 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
+            className={`w-full rounded-xl border py-2 pr-12 pl-4 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:outline-none dark:text-gray-100 ${
               isWarm
                 ? 'border-[#ECE8E0] bg-[#F5F2EC] focus:border-[#C27B4A] focus:bg-[#F5F2EC] focus:ring-[#C27B4A] dark:border-gray-700 dark:bg-gray-800'
                 : isGreen
@@ -194,34 +193,34 @@ export const BrainDumpWidget = ({
             }`}
           />
           {pendingImage && (
-            <div className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2 overflow-hidden rounded border border-gray-200 bg-white shadow-sm">
+            <div className="absolute top-1/2 right-12 z-10 h-6 w-6 -translate-y-1/2 overflow-hidden rounded border border-gray-200 bg-white shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={pendingImage} alt="Pending" className="h-full w-full object-cover" />
             </div>
           )}
+
+          <button
+            onClick={handleAddSubmit}
+            disabled={!inputValue.trim() && !pendingImage}
+            className={`${
+              isWarm
+                ? 'text-[#C27B4A] hover:bg-[#F5F2EC]'
+                : isGreen
+                  ? 'text-[#7A9F7A] hover:bg-[#F8F9F7]'
+                  : isBlue
+                    ? 'text-[#5B84B1] hover:bg-[#E0EEF8]'
+                    : isCartoon
+                      ? 'text-gray-400 hover:text-black dark:text-gray-500 dark:hover:text-white'
+                      : 'text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+            } absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1.5 transition-colors disabled:text-gray-300 dark:disabled:text-gray-600`}
+          >
+            <PlusIcon className="h-5 w-5" />
+          </button>
         </div>
 
         <button
-          onClick={handleAddSubmit}
-          disabled={!inputValue.trim() && !pendingImage}
-          className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 disabled:opacity-50 ${
-            isWarm
-              ? 'bg-[#C27B4A] text-white hover:bg-[#A6663E]'
-              : isGreen
-                ? 'bg-[#7A9F7A] text-white hover:bg-[#688868]'
-                : isBlue
-                  ? 'bg-[#5B84B1] text-white hover:bg-[#4A6E94]'
-                  : isCartoon
-                    ? 'border-2 border-black bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black dark:border-white dark:bg-white dark:text-black dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:hover:bg-black dark:hover:text-white'
-                    : 'bg-primary-500 hover:bg-primary-600 text-white'
-          }`}
-        >
-          <PlusIcon className="h-5 w-5" />
-        </button>
-
-        <button
           onClick={clearAll}
-          className={`hidden h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-red-50 hover:text-red-500 @sm:flex dark:hover:bg-red-900/20 dark:hover:text-red-400 ${
+          className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 ${
             isWarm
               ? 'border border-[#ECE8E0] bg-[#F5F2EC] text-gray-600'
               : isGreen
@@ -229,7 +228,7 @@ export const BrainDumpWidget = ({
                 : isBlue
                   ? 'text-[#5B84B1] hover:bg-[#E0EEF8] hover:text-[#4A6E94]'
                   : isCartoon
-                    ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-red-50 hover:text-red-500 dark:border-white dark:bg-gray-900 dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                    ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white dark:border-white dark:bg-black dark:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] dark:hover:bg-white dark:hover:text-black'
                     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
           }`}
           title={lang === 'en' ? 'Clear all' : '清空全部'}
@@ -243,7 +242,7 @@ export const BrainDumpWidget = ({
         <div className="grid h-full grid-cols-2 gap-4">
           <div ref={leftParent} className="flex min-h-full flex-col gap-3">
             {leftList.map((item) => (
-              <BrainDumpCard
+              <BrainDumpStickyNote
                 key={item.id}
                 item={item}
                 column="left"
@@ -261,7 +260,7 @@ export const BrainDumpWidget = ({
 
           <div ref={rightParent} className="flex min-h-full flex-col gap-3">
             {rightList.map((item) => (
-              <BrainDumpCard
+              <BrainDumpStickyNote
                 key={item.id}
                 item={item}
                 column="right"

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
 import { UIStyle } from '@/context/ThemeColorContext'
 import { UseDopamineSystemResult } from '../hooks/useDopamineSystem'
-import { TrashIcon, CheckIcon } from '../icons'
+import { TrashIcon, CheckIcon, SmileCircleIcon } from '../icons'
 import { playClickSound } from '../utils'
 
 export const DopamineMenuWidget = ({
@@ -171,47 +171,61 @@ export const DopamineMenuWidget = ({
           </motion.div>
         ) : (
           // FRONT: Main Spin View
+          // FRONT: Simple Card + Spinner Overlay
           <motion.div
             key="front"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex h-full flex-col items-center justify-center gap-4 text-center"
+            className="relative flex h-full flex-col"
           >
-            <div
-              className={`text-4xl transition-transform duration-200 ${isSpinning ? 'animate-bounce' : ''}`}
-            >
-              {isSpinning ? '🎲' : '🍩'}
-            </div>
+            {/* Edit Button moved to Header */}
 
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              {isSpinning ? (
-                <span className="animate-pulse">{selected || '...'}</span>
-              ) : (
-                t.focusLab.widgets.dopamineMenu.title
-              )}
-            </h3>
+            {isSpinning ? (
+              // Spinning State
+              <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                <div className="border-primary-200 border-t-primary-500 h-12 w-12 animate-spin rounded-full border-4" />
+                <p className="text-primary-600 dark:text-primary-400 animate-pulse text-lg font-bold">
+                  {selected || t.focusLab.widgets.dopamineMenu.spinning || 'Spinning...'}
+                </p>
+              </div>
+            ) : (
+              // Initial Simple State
+              <div className="flex h-full flex-col justify-between">
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 pt-0 text-center">
+                  <div
+                    className={`${isWarm ? 'bg-primary-100 text-[#C27B4A]' : isGreen ? 'bg-[#F8F9F7] text-[#7A9F7A]' : isBlue ? 'bg-[#E0EEF8] text-[#5B84B1]' : isCartoon ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'} mt-2 flex h-14 w-14 items-center justify-center rounded-full`}
+                  >
+                    <SmileCircleIcon className="h-9 w-9" />
+                  </div>
+                </div>
 
-            <button
-              onClick={() => {
-                playClickSound()
-                triggerSpin()
-              }}
-              disabled={options.length === 0}
-              className={`flex items-center gap-2 rounded-full px-6 py-2 text-sm font-bold text-white shadow-lg transition-all active:scale-95 disabled:opacity-50 ${
-                isWarm
-                  ? 'bg-[#C27B4A] shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
-                  : isGreen
-                    ? 'bg-[#7A9F7A] shadow-[#7A9F7A]/30 hover:bg-[#688868]'
-                    : isBlue
-                      ? 'bg-[#5B84B1] shadow-[#5B84B1]/30 hover:bg-[#4A6E94]'
-                      : isCartoon
-                        ? 'bg-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:bg-white dark:text-black dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
-                        : 'bg-primary-500 shadow-primary-500/30 hover:bg-primary-600'
-              }`}
-            >
-              {t.focusLab.widgets.dopamineMenu.spinButton || 'Spin!'}
-            </button>
+                <div className="w-full">
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => {
+                        playClickSound()
+                        triggerSpin()
+                      }}
+                      disabled={options.length === 0}
+                      className={`${
+                        isWarm
+                          ? 'rounded-lg bg-[#C27B4A] text-white shadow-[#C27B4A]/30 hover:bg-[#A6663E]'
+                          : isGreen
+                            ? 'h-10 flex-1 rounded-xl bg-[#7A9F7A] text-white shadow-lg shadow-[#7A9F7A]/25 hover:bg-[#688868] hover:shadow-[#7A9F7A]/40 focus:ring-2 focus:ring-[#7A9F7A] focus:ring-offset-2 dark:focus:ring-offset-2'
+                            : isBlue
+                              ? 'h-10 flex-1 rounded-xl bg-[#5B84B1] text-white shadow-lg shadow-[#5B84B1]/25 hover:bg-[#4A6E94] hover:shadow-[#5B84B1]/40 focus:ring-2 focus:ring-[#5B84B1] focus:ring-offset-2 dark:focus:ring-offset-2'
+                              : isCartoon
+                                ? 'h-10 flex-1 rounded-xl bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none dark:bg-white dark:text-black dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                                : 'bg-primary-500 shadow-primary-500/25 hover:bg-primary-600 hover:shadow-primary-500/40 focus:ring-primary-500 h-10 flex-1 rounded-xl text-white shadow-lg focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-2'
+                      } flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95 disabled:active:scale-100 dark:shadow-none`}
+                    >
+                      {t.focusLab.widgets.dopamineMenu.spinButton || 'Get Dopamine'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

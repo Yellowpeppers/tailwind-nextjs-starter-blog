@@ -6,14 +6,14 @@ import { TimerState, TimerPreset, TIMER_PRESETS, FocusedTaskState } from '../typ
 import { saveSession, syncFocusHistory } from '../focusStorage'
 
 type UseFocusTimerProps = {
-  activePreset?: TimerPreset
-  customMinutes?: number
+  isFlipped?: boolean
   onTimerComplete?: (minutes: number) => void
   onSessionLogged?: (minutes: number) => void
   focusedTask?: FocusedTaskState
 }
 
 export const useFocusTimer = ({
+  isFlipped = false,
   onTimerComplete,
   onSessionLogged,
   focusedTask,
@@ -30,6 +30,8 @@ export const useFocusTimer = ({
   const [zenFocus, setZenFocus] = useState<'task' | 'timer'>('task')
 
   // Internal Timer State
+  // Stopwatch mode: timeLeft = elapsed seconds (counting up)
+  // Countdown mode: timeLeft = remaining seconds (counting down)
   const [timeLeft, setTimeLeft] = useState(TIMER_PRESETS.focus.duration)
   const [timerState, setTimerState] = useState<TimerState>('idle')
   const [totalAllocatedDuration, setTotalAllocatedDuration] = useState(TIMER_PRESETS.focus.duration)
@@ -39,7 +41,8 @@ export const useFocusTimer = ({
   const startTime = useRef<number | null>(null)
   const hasLoggedRef = useRef(false)
   const prevCustomDurationRef = useRef<number | null>(null)
-  const hasHydratedCustom = useRef(false) // Track if we've loaded custom minutes from settings
+  const hasHydratedCustom = useRef(false)
+  const prevModeRef = useRef<'countdown' | 'stopwatch'>('countdown')
 
   /**
    * Helper: Check if timer is running/paused/completed
@@ -48,9 +51,10 @@ export const useFocusTimer = ({
   const isPaused = timerState === 'paused-focusing' || timerState === 'paused-break'
   const isCompleted = timerState === 'focus-completed' || timerState === 'break-completed'
 
+  const derivedMode = isFlipped ? 'stopwatch' : 'countdown'
+
   // Initialize Audio
   useEffect(() => {
-    // Only client-side
     if (typeof window !== 'undefined') {
       audioRef.current = new Audio('/static/sounds/alarm.mp3')
       audioRef.current.load()
@@ -102,11 +106,14 @@ export const useFocusTimer = ({
 
         const now = Date.now()
         // Determine resolved elapsed seconds
-        // Note: derivedMode logic was in component. Here we assume countdown unless stated otherwise.
-        // We might need to accept 'mode' as argument if we support Stopwatch.
-        // For now, let's assume standard countdown logic first.
-        // If we want to support Stopwatch, we need 'isStopwatch' state or prop.
-        const currentElapsed = Math.max(0, totalAllocatedDuration - timeLeft)
+        let currentElapsed = 0
+        if (derivedMode === 'countdown') {
+          currentElapsed = Math.max(0, totalAllocatedDuration - timeLeft)
+        } else {
+          // Stopwatch: timeLeft IS the elapsed time
+          currentElapsed = timeLeft
+        }
+
         const resolvedElapsedSeconds =
           typeof elapsedSeconds === 'number' ? elapsedSeconds : currentElapsed
 
@@ -135,35 +142,77 @@ export const useFocusTimer = ({
         console.error('Error recording session:', e)
       }
     },
-    [focusedTask?.text, onSessionLogged, timeLeft, totalAllocatedDuration, user]
+    [derivedMode, focusedTask?.text, onSessionLogged, timeLeft, totalAllocatedDuration, user]
   )
+
+  // Handle Mode Switching (Flip)
+  useEffect(() => {
+    if (prevModeRef.current === derivedMode) return
+    const previousMode = prevModeRef.current
+    prevModeRef.current = derivedMode
+
+    const isFocusActive =
+      timerState === 'focusing' ||
+      timerState === 'paused-focusing' ||
+      timerState === 'focus-completed'
+
+    if (isFocusActive) {
+      // Log session if switching modes while active
+      const elapsedSeconds =
+        previousMode === 'countdown' ? Math.max(0, totalAllocatedDuration - timeLeft) : timeLeft
+      finalizeSession({ elapsedSeconds, completed: false })
+    }
+
+    // Reset
+    hasLoggedRef.current = false
+    setTimerState('idle')
+    startTime.current = null
+
+    if (derivedMode === 'countdown') {
+      const d = activePreset === 'long' ? customMinutes * 60 : TIMER_PRESETS[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    } else {
+      // Stopwatch: start at 0
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [derivedMode, activePreset, customMinutes])
 
   // Timer Tick
   useEffect(() => {
     let interval: NodeJS.Timeout
     if (timerState === 'focusing' || timerState === 'break') {
       interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            playAlarmSound()
-            setTimerState(timerState === 'focusing' ? 'focus-completed' : 'break-completed')
-            return 0
-          }
-          return prev - 1
-        })
+        if (derivedMode === 'countdown') {
+          setTimeLeft((prev) => {
+            if (prev <= 1) {
+              playAlarmSound()
+              setTimerState(timerState === 'focusing' ? 'focus-completed' : 'break-completed')
+              return 0
+            }
+            return prev - 1
+          })
+        } else {
+          // Stopwatch: Count Up
+          setTimeLeft((prev) => prev + 1)
+        }
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [timerState, playAlarmSound])
+  }, [timerState, derivedMode, playAlarmSound])
 
   // Completion Effect
   useEffect(() => {
     if (timerState === 'focus-completed') {
-      finalizeSession({ completed: true, elapsedSeconds: totalAllocatedDuration })
-      const minutes = Math.floor(totalAllocatedDuration / 60)
-      if (onTimerComplete) onTimerComplete(minutes)
+      if (derivedMode === 'countdown') {
+        finalizeSession({ completed: true, elapsedSeconds: totalAllocatedDuration })
+        const minutes = Math.floor(totalAllocatedDuration / 60)
+        if (onTimerComplete) onTimerComplete(minutes)
+      }
     }
-  }, [timerState, totalAllocatedDuration, finalizeSession, onTimerComplete])
+  }, [timerState, totalAllocatedDuration, finalizeSession, onTimerComplete, derivedMode])
 
   // -- Actions --
   const startTimer = useCallback(() => {
@@ -183,34 +232,58 @@ export const useFocusTimer = ({
     if (timerState === 'focus-completed') {
       // Just reset
     } else if (timerState === 'focusing' || timerState === 'paused-focusing') {
-      const elapsed = Math.max(0, totalAllocatedDuration - timeLeft)
+      const elapsed =
+        derivedMode === 'countdown' ? Math.max(0, totalAllocatedDuration - timeLeft) : timeLeft
       finalizeSession({ elapsedSeconds: elapsed, completed: false })
     }
 
     setTimerState('idle')
     startTime.current = null
-    const baseDuration =
-      activePreset === 'long' ? customMinutes * 60 : TIMER_PRESETS[activePreset].duration
-    setTimeLeft(baseDuration)
-    setTotalAllocatedDuration(baseDuration)
-  }, [timerState, totalAllocatedDuration, timeLeft, finalizeSession, activePreset, customMinutes])
+
+    if (derivedMode === 'countdown') {
+      const baseDuration =
+        activePreset === 'long' ? customMinutes * 60 : TIMER_PRESETS[activePreset].duration
+      setTimeLeft(baseDuration)
+      setTotalAllocatedDuration(baseDuration)
+    } else {
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    }
+  }, [
+    timerState,
+    derivedMode,
+    totalAllocatedDuration,
+    timeLeft,
+    finalizeSession,
+    activePreset,
+    customMinutes,
+  ])
 
   const continueNewSession = useCallback(() => {
     hasLoggedRef.current = false
     setTimerState('focusing')
-    const d = activePreset === 'long' ? customMinutes * 60 : TIMER_PRESETS[activePreset].duration
-    setTimeLeft(d)
-    setTotalAllocatedDuration(d)
+
+    if (derivedMode === 'countdown') {
+      const d = activePreset === 'long' ? customMinutes * 60 : TIMER_PRESETS[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    } else {
+      // Stopwatch reset to 0
+      setTimeLeft(0)
+      setTotalAllocatedDuration(0)
+    }
     startTime.current = Date.now()
-  }, [activePreset, customMinutes])
+  }, [activePreset, customMinutes, derivedMode])
 
   // Handle Preset Change (Reset Timer)
   useEffect(() => {
     if (timerState !== 'idle') return
-    const d = activePreset === 'long' ? customMinutes * 60 : TIMER_PRESETS[activePreset].duration
-    setTimeLeft(d)
-    setTotalAllocatedDuration(d)
-  }, [activePreset, customMinutes, timerState])
+    if (derivedMode === 'countdown') {
+      const d = activePreset === 'long' ? customMinutes * 60 : TIMER_PRESETS[activePreset].duration
+      setTimeLeft(d)
+      setTotalAllocatedDuration(d)
+    }
+  }, [activePreset, customMinutes, timerState, derivedMode])
 
   // BuBu Listener
   useEffect(() => {
@@ -237,8 +310,6 @@ export const useFocusTimer = ({
 
       // Start Logic
       setTimeout(() => {
-        // Play sound manually if needed or leave to UI?
-        // The original code played sound here.
         const audio = new Audio('/static/sounds/click.mp3')
         audio.volume = 0.5
         audio.play().catch(() => {})
@@ -247,11 +318,11 @@ export const useFocusTimer = ({
         startTime.current = Date.now()
         setTimerState('focusing')
 
-        // Force update timeleft immediately to match preset
         let d = 25 * 60
         if (detail.mode?.includes('short') || detail.duration === 5) d = 5 * 60
         else if (detail.duration && detail.duration !== 25) d = detail.duration * 60
 
+        // BuBu implicitly targets countdown mode
         setTimeLeft(d)
         setTotalAllocatedDuration(d)
       }, 100)
@@ -259,7 +330,7 @@ export const useFocusTimer = ({
 
     window.addEventListener('bubu-timer-control', handleBuBuTimerControl)
     return () => window.removeEventListener('bubu-timer-control', handleBuBuTimerControl)
-  }, []) // Empty deps for listener
+  }, [])
 
   return {
     state: {
@@ -285,7 +356,7 @@ export const useFocusTimer = ({
       pauseTimer,
       endSession,
       continueNewSession,
-      playAlarmSound, // Exposing just in case
+      playAlarmSound,
     },
   }
 }

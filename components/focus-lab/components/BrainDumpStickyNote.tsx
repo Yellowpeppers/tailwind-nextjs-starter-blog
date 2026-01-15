@@ -3,7 +3,7 @@ import { useTranslation } from '@/context/LanguageContext'
 import { BrainDumpItem } from '../brainDumpStorage'
 import { XIcon } from '../icons'
 
-export const BrainDumpCard = memo(
+export const BrainDumpStickyNote = memo(
   ({
     item,
     onMove,
@@ -136,4 +136,4 @@ export const BrainDumpCard = memo(
   }
 )
 
-BrainDumpCard.displayName = 'BrainDumpCard'
+BrainDumpStickyNote.displayName = 'BrainDumpStickyNote'

@@ -1,43 +1,61 @@
+'use client'
+
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { CardShell } from '@/components/focus-lab/CardShell'
-import { FocusStation } from '../FocusStation'
-import { ScratchCard } from '../components/ScratchCard'
-import { UseToDoManagerResult } from '../hooks/useToDoManager'
-import { MoreHorizontalIcon } from '../icons'
+import { FocusStation } from '@/components/focus-lab/FocusStation'
+import { ScratchCard } from '@/components/focus-lab/components/ScratchCard'
+import { useToDoManager } from '@/components/focus-lab/hooks/useToDoManager'
+import { MoreHorizontalIcon } from '@/components/focus-lab/icons'
 
 export const ToDoCard = ({
-  todo,
   cols,
-  onDelete,
+  onDeleteAction,
   className,
   isFocused,
-  externalFocusedTaskId, // Allow overriding if needed, or take from todo.state.focusedTask
+  onStartFocusAction,
+  focusedTaskId: externalFocusedTaskId,
+  onTaskCompleteAction,
 }: {
-  todo: UseToDoManagerResult
   cols?: number
-  onDelete?: () => void
+  onDeleteAction?: () => void
   className?: string
   isFocused?: boolean
-  externalFocusedTaskId?: string | null
+  onStartFocusAction?: (task: string, id: string) => void
+  focusedTaskId?: string | null
+  onTaskCompleteAction?: () => void
 }) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
   const [isFlipped, setIsFlipped] = useState(false)
   const isCartoon = uiStyle === 'cartoon'
 
-  // If externalFocusedTaskId is provided (e.g. from parent state), use it.
-  // Otherwise derive from todo.state.focusedTask.id
+  // Use the extracted hook
+  const todo = useToDoManager()
+
+  // Use external focusedTaskId if provided, else use local state
   const focusedTaskId = externalFocusedTaskId ?? todo.state.focusedTask?.id ?? null
+
+  const handleStartFocus = (task: string, id: string) => {
+    // 1. Call hook action
+    todo.actions.handleStartFocus(task, id)
+    // 2. Call parent callback
+    onStartFocusAction?.(task, id)
+  }
+
+  const handleTaskComplete = () => {
+    todo.actions.handleTaskComplete()
+    onTaskCompleteAction?.()
+  }
 
   return (
     <CardShell
       // Hide header when flipped so ScratchCard can take over the full area
       showHeader={!isFlipped}
       title={t.focusLab.widgets.todo.title}
-      onDelete={onDelete}
+      onDelete={onDeleteAction}
       // Remove padding when flipped
       className={`${className} ${isFlipped ? '!overflow-hidden !p-0' : ''}`}
       // Remove top margin when flipped
@@ -78,10 +96,11 @@ export const ToDoCard = ({
           >
             <ScratchCard
               onStartFocus={(task, id) => {
-                todo.actions.handleStartFocus(task, id)
+                handleStartFocus(task, id)
                 setIsFlipped(false)
               }}
               onFlipBack={() => setIsFlipped(false)}
+              className="rounded-none"
             />
           </motion.div>
         ) : (
@@ -95,9 +114,9 @@ export const ToDoCard = ({
           >
             <FocusStation
               cols={cols}
-              onStartFocusAction={todo.actions.handleStartFocus}
+              onStartFocusAction={handleStartFocus}
               focusedTaskId={focusedTaskId}
-              onTaskCompleteAction={todo.actions.handleTaskComplete}
+              onTaskCompleteAction={handleTaskComplete}
             />
           </motion.div>
         )}
