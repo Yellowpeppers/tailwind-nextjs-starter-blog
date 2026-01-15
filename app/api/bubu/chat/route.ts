@@ -140,6 +140,26 @@ function buildSystemPrompt(personality: string, language: string, context?: any)
         .map((t: FocusTask) => `- ${t.content}`)
         .join('\n') || '暂无'
 
+    // Available sounds list
+    const AVAILABLE_SOUNDS = [
+      'rain (雨声)',
+      'fire/campfire (篝火)',
+      'wind (风声)',
+      'forest/insects (森林/昆虫)',
+      'waves (海浪)',
+      'thunder (雷声)',
+      'summer-night (夏夜)',
+      'white-noise (白噪音)',
+      'pink (粉红噪音)',
+      'brown (红噪音)',
+      'alpha (Alpha波)',
+      'beta (Beta波)',
+      'theta (Theta波)',
+      'delta (Delta波)',
+      'gamma (Gamma波)',
+      'cat-purring (猫咪呼噜)',
+    ].join(', ')
+
     // Format ideas for AI
     const ideaList =
       [...(context.ideas?.left || []), ...(context.ideas?.right || [])]
@@ -165,6 +185,9 @@ ${completedTaskList}
 
 **💡 注意力中转站想法 (共 ${ideaCount} 项):**
 ${ideaList}
+
+**🎵 可用白噪音列表:**
+${AVAILABLE_SOUNDS} (请务必只从这里选择声音，如果没有匹配的请告诉用户"我这里只有...")
 
 *重要指令：*
 - 当用户问"有哪些任务"或"我的待办"时，告诉他们"未完成的任务"列表内容！
@@ -336,7 +359,8 @@ const BUBU_FUNCTIONS = [
         },
         sound: {
           type: SchemaType.STRING,
-          description: '声音名称（如：rain, fire, wind, forest, coffee）。如果是停止所有，可为空。',
+          description:
+            '声音名称（ID）。请务必从 **可用白噪音列表** 中选择（如：rain, fire, wind 等）。严格禁止臆造不存在的声音（如 coffee shop）。如果不确定，请回复说明没有该声音。',
         },
         volume: {
           type: SchemaType.NUMBER,
