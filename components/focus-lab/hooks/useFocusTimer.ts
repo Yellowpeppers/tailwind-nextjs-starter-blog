@@ -180,28 +180,64 @@ export const useFocusTimer = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [derivedMode, activePreset, customMinutes])
 
-  // Timer Tick
+  // Timer Tick - 使用时间戳计算，解决后台标签页节流问题
   useEffect(() => {
     let interval: NodeJS.Timeout
+    let lastTickTime = Date.now()
+
     if (timerState === 'focusing' || timerState === 'break') {
       interval = setInterval(() => {
+        const now = Date.now()
+        const elapsedSinceLastTick = Math.round((now - lastTickTime) / 1000)
+        lastTickTime = now
+
         if (derivedMode === 'countdown') {
           setTimeLeft((prev) => {
-            if (prev <= 1) {
+            const newTime = prev - elapsedSinceLastTick
+            if (newTime <= 0) {
               playAlarmSound()
               setTimerState(timerState === 'focusing' ? 'focus-completed' : 'break-completed')
               return 0
             }
-            return prev - 1
+            return newTime
           })
         } else {
-          // Stopwatch: Count Up
-          setTimeLeft((prev) => prev + 1)
+          // Stopwatch: Count Up - 使用实际经过时间
+          setTimeLeft((prev) => prev + elapsedSinceLastTick)
         }
       }, 1000)
     }
     return () => clearInterval(interval)
   }, [timerState, derivedMode, playAlarmSound])
+
+  // 页面可见性变化时校正时间
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (timerState !== 'focusing' && timerState !== 'break') return
+    if (!startTime.current) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && startTime.current) {
+        const now = Date.now()
+        const totalElapsedSeconds = Math.round((now - startTime.current) / 1000)
+
+        if (derivedMode === 'countdown') {
+          const newTimeLeft = Math.max(0, totalAllocatedDuration - totalElapsedSeconds)
+          setTimeLeft(newTimeLeft)
+          if (newTimeLeft <= 0) {
+            playAlarmSound()
+            setTimerState(timerState === 'focusing' ? 'focus-completed' : 'break-completed')
+          }
+        } else {
+          // Stopwatch: elapsed time
+          setTimeLeft(totalElapsedSeconds)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [timerState, derivedMode, totalAllocatedDuration, playAlarmSound])
 
   // Completion Effect
   useEffect(() => {
