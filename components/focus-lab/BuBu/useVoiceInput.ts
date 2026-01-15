@@ -62,19 +62,37 @@ export const useVoiceInput = (): UseVoiceInputReturn => {
 
         recognitionInstance.continuous = true
         recognitionInstance.interimResults = true
+        // 立即设置语言，Chrome 的云端语音识别服务需要在 start() 前设置好语言
+        recognitionInstance.lang = language === 'zh' ? 'zh-CN' : 'en-US'
 
         recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
+          console.log(
+            '[Voice] onresult triggered, resultIndex:',
+            event.resultIndex,
+            'results length:',
+            event.results.length
+          )
           let finalTranscriptChunk = ''
           let currentInterim = ''
 
           for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscriptChunk += event.results[i][0].transcript
+            const result = event.results[i]
+            console.log(
+              '[Voice] Result',
+              i,
+              '- isFinal:',
+              result.isFinal,
+              'transcript:',
+              result[0].transcript
+            )
+            if (result.isFinal) {
+              finalTranscriptChunk += result[0].transcript
             } else {
-              currentInterim += event.results[i][0].transcript
+              currentInterim += result[0].transcript
             }
           }
 
+          console.log('[Voice] Final chunk:', finalTranscriptChunk, 'Interim:', currentInterim)
           if (finalTranscriptChunk) {
             setTranscript((prev) => prev + finalTranscriptChunk)
           }
@@ -116,7 +134,7 @@ export const useVoiceInput = (): UseVoiceInputReturn => {
         }
       }
     }
-  }, [])
+  }, [language])
 
   // Update language when it changes
   useEffect(() => {
@@ -125,19 +143,22 @@ export const useVoiceInput = (): UseVoiceInputReturn => {
     }
   }, [language, recognition])
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(() => {
+    console.log(
+      '[Voice] startListening called, recognition:',
+      !!recognition,
+      'lang:',
+      recognition?.lang
+    )
     if (recognition) {
       try {
-        // Explicitly request permission to force prompt if needed
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          await navigator.mediaDevices.getUserMedia({ audio: true })
-        }
-
         setError(null)
+        console.log('[Voice] Calling recognition.start()...')
         recognition.start()
+        console.log('[Voice] recognition.start() succeeded')
         setIsListening(true)
       } catch (e: unknown) {
-        console.error('Speech recognition start failed', e)
+        console.error('[Voice] Speech recognition start failed', e)
         const error = e as Error & { name?: string }
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
           setError('not-allowed')

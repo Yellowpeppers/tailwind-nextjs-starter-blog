@@ -21,6 +21,63 @@ interface BuBuChatModalProps {
 export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) => {
   const { t } = useTranslation()
   const { uiStyle } = useThemeColor()
+
+  // Theme helpers
+  const isCartoon = uiStyle === 'cartoon'
+  const isWarm = uiStyle === 'warm'
+  const isGreen = uiStyle === 'green'
+  const isBlue = uiStyle === 'blue'
+
+  const containerStyle = isCartoon
+    ? 'bg-[#FFF8E7] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:bg-[#2A2A2A] dark:border-white dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] rounded-xl'
+    : isWarm
+      ? 'bg-[#F5F2EC] border border-[#ECE8E0] shadow-xl dark:bg-[#1E1C1A] dark:border-[#3E352F] rounded-xl'
+      : isGreen
+        ? 'bg-[#F8F9F7] border border-[#E2E8E2] shadow-xl dark:bg-[#1A201A] dark:border-[#2F3E2F] rounded-xl'
+        : isBlue
+          ? 'bg-[#E0EEF8] border border-[#D1E3F3] shadow-xl dark:bg-[#1A1F26] dark:border-[#2F3540] rounded-xl'
+          : 'bg-white/95 backdrop-blur-xl shadow-2xl dark:bg-gray-900/95 rounded-2xl'
+
+  const headerBorder = isCartoon
+    ? 'border-b-4 border-black dark:border-white'
+    : isWarm
+      ? 'border-b border-[#ECE8E0] dark:border-[#3E352F]'
+      : isGreen
+        ? 'border-b border-[#E2E8E2] dark:border-[#2F3E2F]'
+        : isBlue
+          ? 'border-b border-[#D1E3F3] dark:border-[#2F3540]'
+          : 'border-b border-gray-200 dark:border-gray-800'
+
+  const sendBtnStyle = isCartoon
+    ? 'bg-black text-white hover:scale-105 active:scale-95 border-2 border-transparent hover:border-black hover:bg-white hover:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:bg-white dark:text-black dark:hover:border-white dark:hover:bg-black dark:hover:text-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+    : isWarm
+      ? 'bg-[#C27B4A] text-white hover:bg-[#A6663E]'
+      : isGreen
+        ? 'bg-[#7A9F7A] text-white hover:bg-[#688868]'
+        : isBlue
+          ? 'bg-[#5B84B1] text-white hover:bg-[#4A6E94]'
+          : 'bg-primary-500 hover:bg-primary-600'
+
+  const quickCommandStyle = isCartoon
+    ? 'border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] active:scale-95 rounded-xl font-bold'
+    : isWarm
+      ? 'bg-white border border-[#ECE8E0] text-[#8D5A36] shadow-sm hover:bg-[#F5F2EC] hover:text-[#C27B4A]'
+      : isGreen
+        ? 'bg-white border border-[#E2E8E2] text-[#556F55] shadow-sm hover:bg-[#F8F9F7] hover:text-[#7A9F7A]'
+        : isBlue
+          ? 'bg-white border border-[#D1E3F3] text-[#3F5C7A] shadow-sm hover:bg-[#E0EEF8] hover:text-[#5B84B1]'
+          : 'bg-white border border-gray-200 text-gray-600 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+
+  const welcomeBoxStyle = isCartoon
+    ? 'border-2 border-black bg-white text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+    : isWarm
+      ? 'bg-[#FDFCF8] border border-[#ECE8E0] text-[#8D5A36]'
+      : isGreen
+        ? 'bg-[#FCFDFB] border border-[#E2E8E2] text-[#556F55]'
+        : isBlue
+          ? 'bg-[#F5FAFF] border border-[#D1E3F3] text-[#3F5C7A]'
+          : 'bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -156,7 +213,7 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
           {t.bubu?.welcome?.subtitle || '你可以和我聊聊天，或者告诉我今天要做的事情'}
         </p>
       </div>
-      <div className="w-full rounded-xl bg-gray-50 p-4 text-left text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+      <div className={`w-full rounded-xl p-4 text-left text-xs ${welcomeBoxStyle}`}>
         <div className="mb-2 font-semibold">💡 试试这样说：</div>
         <ul className="space-y-1">
           <li>• "今天要写报告和开会"</li>
@@ -188,23 +245,23 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed inset-0 z-[100] flex h-full w-full flex-col bg-white/95 backdrop-blur-xl md:top-1/2 md:left-1/2 md:h-[600px] md:max-h-[80vh] md:w-[420px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:shadow-2xl dark:bg-gray-900/95`}
+            className={`fixed inset-0 z-[100] flex h-full w-full flex-col md:top-1/2 md:left-1/2 md:h-[600px] md:max-h-[80vh] md:w-[420px] md:-translate-x-1/2 md:-translate-y-1/2 ${containerStyle}`}
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+            <div className={`flex shrink-0 items-center justify-between px-6 py-4 ${headerBorder}`}>
               <Menu as="div" className="relative inline-block text-left">
                 <div>
-                  <Menu.Button className="group flex cursor-pointer items-center gap-2 rounded-lg py-1 pr-2 transition-colors outline-none hover:bg-gray-100 dark:hover:bg-gray-800">
-                    <span className="text-xl">{currentPersonality.icon}</span>
-                    <div className="flex flex-col items-start gap-0.5">
-                      <span className="leading-none font-bold text-gray-800 dark:text-gray-100">
+                  <Menu.Button className="group flex cursor-pointer items-center gap-3 rounded-lg py-1 pr-2 transition-colors outline-none hover:bg-black/5 dark:hover:bg-white/10">
+                    <span className="text-2xl">{currentPersonality.icon}</span>
+                    <div className="flex flex-col items-start">
+                      <span className="mb-0.5 text-lg leading-none font-black tracking-tight text-gray-900 dark:text-gray-100">
                         BuBu
                       </span>
-                      <span className="text-[10px] font-medium text-gray-500">
+                      <span className="text-[10px] font-semibold whitespace-nowrap text-gray-500/90">
                         {currentPersonality.name}
                       </span>
                     </div>
-                    <ChevronDown className="h-3 w-3 text-gray-400 transition-transform group-hover:text-gray-600 group-data-[open]:rotate-180" />
+                    <ChevronDown className="h-4 w-4 text-gray-400 transition-transform group-hover:text-gray-600 group-data-[open]:rotate-180" />
                   </Menu.Button>
                 </div>
                 <Transition
@@ -253,14 +310,14 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
                 <button
                   onClick={handleClearWithConfirm}
                   disabled={messages.length === 0}
-                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-800"
+                  className="rounded-lg p-2 text-gray-400 hover:bg-black/5 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-white/10"
                   title="新对话"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={onClose}
-                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                  className="rounded-lg p-2 text-gray-400 hover:bg-black/5 hover:text-gray-600 dark:hover:bg-white/10"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -355,7 +412,7 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
 
             {/* Input area */}
             <div
-              className={`shrink-0 border-gray-200 p-4 dark:border-gray-800 ${voiceError ? 'border-t-0' : 'border-t'}`}
+              className={`shrink-0 p-4 ${headerBorder} ${voiceError ? 'border-t-0' : 'border-t'}`}
             >
               {/* Quick Commands */}
               <div className="mb-3 flex flex-wrap gap-2">
@@ -368,7 +425,7 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
                     key={cmd.label}
                     onClick={() => handleSend(cmd.message)}
                     disabled={isLoading}
-                    className="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:border-primary-700 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 transition-colors disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
+                    className={`px-4 py-1.5 text-xs transition-all duration-200 ${quickCommandStyle}`}
                   >
                     {cmd.label}
                   </button>
@@ -421,12 +478,24 @@ export const BuBuChatModal = ({ isOpen, onClose, stats }: BuBuChatModalProps) =>
                   placeholder={isListening ? '' : t.bubu?.placeholder || '和 BuBu 聊聊天...'}
                   disabled={isLoading}
                   rows={1}
-                  className={`focus:border-primary-500 focus:ring-primary-500/20 max-h-[120px] flex-1 resize-none rounded-lg border bg-white px-4 py-2 text-sm outline-none focus:ring-2 disabled:opacity-50 dark:bg-gray-800 ${isListening ? 'border-red-300 dark:border-red-700' : 'border-gray-300 dark:border-gray-700'}`}
+                  className={`max-h-[120px] flex-1 resize-none rounded-lg border bg-white px-4 py-2 text-sm outline-none focus:ring-2 disabled:opacity-50 dark:bg-gray-800 ${
+                    isListening
+                      ? 'border-red-300 dark:border-red-700'
+                      : isCartoon
+                        ? 'border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:ring-0 dark:border-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]'
+                        : isWarm
+                          ? 'border-[#ECE8E0] focus:border-[#C27B4A] focus:ring-[#C27B4A]'
+                          : isGreen
+                            ? 'border-[#E2E8E2] focus:border-[#7A9F7A] focus:ring-[#7A9F7A]'
+                            : isBlue
+                              ? 'border-[#D1E3F3] focus:border-[#5B84B1] focus:ring-[#5B84B1]'
+                              : 'focus:border-primary-500 focus:ring-primary-500/20 border-gray-300 dark:border-gray-700'
+                  }`}
                 />
                 <button
                   onClick={handleSend}
                   disabled={!inputValue.trim() || isLoading}
-                  className="bg-primary-500 hover:bg-primary-600 h-fit self-end rounded-lg px-4 py-2 text-white disabled:opacity-50"
+                  className={`h-fit self-end rounded-lg px-4 py-2 transition-all disabled:opacity-50 ${sendBtnStyle}`}
                 >
                   <Send className="h-5 w-5" />
                 </button>

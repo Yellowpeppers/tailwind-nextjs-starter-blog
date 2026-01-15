@@ -184,9 +184,49 @@ const AutoConfirmCard = ({
   )
 }
 
+import { useThemeColor } from '@/context/ThemeColorContext' // Add this import
+
 const MessageItem = memo(
   ({ message, isLastMessage, onRemoveTask, onConfirmAction, onCancelAction }: MessageItemProps) => {
+    const { uiStyle } = useThemeColor()
     const isUser = message.role === 'user'
+
+    // Theme helpers
+    const isCartoon = uiStyle === 'cartoon'
+    const isWarm = uiStyle === 'warm'
+    const isGreen = uiStyle === 'green'
+    const isBlue = uiStyle === 'blue'
+
+    // Bubble Styles
+    const userBubbleStyle = isCartoon
+      ? 'bg-black text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:bg-white dark:text-black dark:border-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] rounded-xl rounded-br-sm'
+      : isWarm
+        ? 'bg-[#C27B4A] text-white rounded-2xl rounded-br-sm'
+        : isGreen
+          ? 'bg-[#7A9F7A] text-white rounded-2xl rounded-br-sm'
+          : isBlue
+            ? 'bg-[#5B84B1] text-white rounded-2xl rounded-br-sm'
+            : 'bg-primary-500 text-white rounded-2xl rounded-br-sm'
+
+    const aiBubbleStyle = isCartoon
+      ? 'bg-white text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:bg-black dark:text-white dark:border-white dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] rounded-xl rounded-bl-sm'
+      : isWarm
+        ? 'bg-[#F5F2EC] text-gray-900 border border-[#ECE8E0] dark:bg-[#1E1C1A] dark:text-gray-100 dark:border-[#3E352F] rounded-2xl rounded-bl-sm'
+        : isGreen
+          ? 'bg-[#F8F9F7] text-gray-900 border border-[#E2E8E2] dark:bg-[#1A201A] dark:text-gray-100 dark:border-[#2F3E2F] rounded-2xl rounded-bl-sm'
+          : isBlue
+            ? 'bg-[#E0EEF8] text-gray-900 border border-[#D1E3F3] dark:bg-[#1A1F26] dark:text-gray-100 dark:border-[#2F3540] rounded-2xl rounded-bl-sm'
+            : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded-2xl rounded-bl-sm'
+
+    const avatarStyle = isCartoon
+      ? 'bg-black text-white border border-black dark:bg-white dark:text-black dark:border-white'
+      : isWarm
+        ? 'bg-gradient-to-tr from-[#C27B4A] to-[#A6663E] text-white'
+        : isGreen
+          ? 'bg-gradient-to-tr from-[#7A9F7A] to-[#688868] text-white'
+          : isBlue
+            ? 'bg-gradient-to-tr from-[#5B84B1] to-[#4A6E94] text-white'
+            : 'bg-gradient-to-tr from-primary-400 to-primary-600 text-white'
 
     const components = useMemo(
       () => ({
@@ -228,20 +268,16 @@ const MessageItem = memo(
         <div className={`flex max-w-[85%] gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
           {/* Avatar */}
           {!isUser && (
-            <div className="from-primary-400 to-primary-600 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr text-sm font-bold text-white">
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${avatarStyle}`}
+            >
               B
             </div>
           )}
 
           {/* Message bubble */}
           <div className="flex min-w-0 flex-col gap-2">
-            <div
-              className={`rounded-2xl px-4 py-2.5 ${
-                isUser
-                  ? 'bg-primary-500 rounded-br-sm text-white'
-                  : 'rounded-bl-sm bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
-              } `}
-            >
+            <div className={`px-4 py-2.5 ${isUser ? userBubbleStyle : aiBubbleStyle}`}>
               <div
                 className={`prose prose-sm max-w-none break-words ${
                   isUser ? 'prose-invert text-white' : 'dark:prose-invert'
