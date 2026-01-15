@@ -14,6 +14,7 @@ export type FocusItem = {
   type: FocusItemType
   content: string // Text content or Image URL/Path
   completed: boolean
+  completed_at?: number | null
   position: number
   created_at?: string
 }
@@ -123,6 +124,7 @@ export const createFocusItem = (type: FocusItemType, content: string): FocusItem
     type,
     content,
     completed: false,
+    completed_at: null,
     position: Date.now(),
   }
 }
@@ -144,6 +146,7 @@ export const readStationStorage = (userId?: string): FocusItem[] => {
     return parsed.map((item: Record<string, unknown>) => ({
       ...item,
       completed: (item.completed as boolean) ?? false,
+      completed_at: (item.completed_at as number) ?? null,
     })) as FocusItem[]
   } catch (error) {
     console.error('Failed to read Focus Station storage', error)
@@ -172,6 +175,7 @@ export const fetchCloudItems = async (user: User): Promise<FocusItem[] | null> =
     content: d.content,
     position: d.position,
     completed: d.is_completed || false,
+    completed_at: d.completed_at ? new Date(d.completed_at).getTime() : null,
   }))
 }
 
@@ -192,23 +196,44 @@ export const saveStationItems = async (items: FocusItem[], user?: User | null) =
         type: item.type,
         content: item.content,
         is_completed: item.completed,
+        completed_at: item.completed_at ? new Date(item.completed_at).toISOString() : null,
         position: index,
         updated_at: new Date().toISOString(),
       }))
 
       try {
         const { error } = await supabase.from('focus_items').upsert(dbPayload, { onConflict: 'id' })
-        if (error) console.error('Cloud save error (focus_items):', error.message || error)
 
-        if (items.length > 0) {
-          const ids = items.map((i) => i.id)
-          await supabase
+        // 1. Handle missing column error by retrying without 'completed_at'
+        if (
+          error &&
+          error.message &&
+          error.message.includes("Could not find the 'completed_at' column")
+        ) {
+          console.warn('Schema mismatch: Retrying sync without completed_at field...')
+          const fallbackPayload = dbPayload.map(({ completed_at, ...rest }) => rest)
+          const { error: retryError } = await supabase
             .from('focus_items')
-            .delete()
-            .eq('user_id', user.id)
-            .not('id', 'in', `(${ids.join(',')})`)
-        } else {
-          await supabase.from('focus_items').delete().eq('user_id', user.id)
+            .upsert(fallbackPayload, { onConflict: 'id' })
+          if (retryError) {
+            console.error('Cloud save fallback error:', retryError.message)
+          }
+        } else if (error) {
+          console.error('Cloud save error (focus_items):', error.message || error)
+        }
+
+        // 2. Cleanup old items (only if sync was successful or partially successful)
+        if (!error || (error.message && error.message.includes('completed_at'))) {
+          if (items.length > 0) {
+            const ids = items.map((i) => i.id)
+            await supabase
+              .from('focus_items')
+              .delete()
+              .eq('user_id', user.id)
+              .not('id', 'in', `(${ids.join(',')})`)
+          } else {
+            await supabase.from('focus_items').delete().eq('user_id', user.id)
+          }
         }
       } catch (err) {
         console.error('Sync failed', err)

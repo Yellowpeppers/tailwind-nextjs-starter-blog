@@ -926,6 +926,16 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
   const refreshTodayProgress = useCallback(() => {
     const minutes = getTodayFocusMinutes(user?.id)
     setTodayMinutes(minutes)
+
+    const items = readStationStorage(user?.id)
+    const now = new Date()
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+
+    const taskCount = items.filter(
+      (item) =>
+        item.completed && typeof item.completed_at === 'number' && item.completed_at >= startOfDay
+    ).length
+    setTodayCompletedCount(taskCount)
   }, [user?.id])
   const handleSessionLogged = useCallback(
     (mins: number) => {

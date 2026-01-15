@@ -472,7 +472,11 @@ export const FocusStation = ({
       }
 
       setItems((prev) => {
-        const updatedItems = prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+        const updatedItems = prev.map((t) =>
+          t.id === id
+            ? { ...t, completed: !t.completed, completed_at: !t.completed ? Date.now() : null }
+            : t
+        )
         // Re-sort: Active then Completed
         const active = updatedItems.filter((t) => !t.completed)
         const completed = updatedItems.filter((t) => t.completed)
