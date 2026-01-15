@@ -78,7 +78,7 @@ const MessageItem = memo(
                 }`}
               >
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-                  {message.content}
+                  {typeof message.content === 'string' ? message.content : String(message.content)}
                 </ReactMarkdown>
               </div>
             </div>

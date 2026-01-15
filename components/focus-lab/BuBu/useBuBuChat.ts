@@ -139,10 +139,14 @@ export const useBuBuChat = () => {
           throw new Error(data.error)
         }
 
+        // Ensure reply is a string (API might return object in some edge cases)
+        const replyContent =
+          typeof data.data.reply === 'string' ? data.data.reply : JSON.stringify(data.data.reply)
+
         const assistantMessage: ChatMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: data.data.reply,
+          content: replyContent,
           timestamp: Date.now(),
           action: data.data.action
             ? {
