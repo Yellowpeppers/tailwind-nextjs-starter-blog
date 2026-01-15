@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { Check, X, XCircle } from 'lucide-react'
 import { Typewriter } from './Typewriter'
 import type { ChatMessage } from './types'
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState, useEffect, useRef } from 'react'
 
 interface MessageItemProps {
   message: ChatMessage
@@ -12,6 +12,181 @@ interface MessageItemProps {
   onRemoveTask: (messageId: string, index: number) => void
   onConfirmAction: (messageId: string) => void
   onCancelAction: (messageId: string) => void
+}
+
+const AutoConfirmCard = ({
+  message,
+  isLastMessage,
+  onConfirm,
+  onCancel,
+  onRemoveTask,
+}: {
+  message: ChatMessage
+  isLastMessage: boolean
+  onConfirm: () => void
+  onCancel: () => void
+  onRemoveTask: (messageId: string, index: number) => void
+}) => {
+  const [timeLeft, setTimeLeft] = useState(3)
+  const [isPaused, setIsPaused] = useState(false)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    // Only auto-confirm if it's the last message
+    if (!isLastMessage) return
+
+    if (timeLeft > 0 && !isPaused) {
+      timerRef.current = setTimeout(() => {
+        setTimeLeft((prev) => prev - 1)
+      }, 1000)
+    } else if (timeLeft === 0) {
+      onConfirm()
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [timeLeft, isPaused, isLastMessage, onConfirm])
+
+  const handleMouseEnter = () => setIsPaused(true)
+  const handleMouseLeave = () => setIsPaused(false)
+
+  // Progress percentage for the bar (3s -> 0s)
+  const progress = ((3 - timeLeft) / 3) * 100
+
+  return (
+    <div
+      className="border-primary-200 bg-primary-50/50 dark:border-primary-800 dark:bg-primary-900/20 relative mt-1 overflow-hidden rounded-xl border-2 p-3"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Auto-confirm Progress Bar (Background) */}
+      {isLastMessage && timeLeft > 0 && (
+        <div
+          className="bg-primary-500/30 absolute bottom-0 left-0 h-1 transition-all duration-1000 ease-linear"
+          style={{ width: `${progress}%` }}
+        />
+      )}
+
+      <div className="mb-2 flex justify-between text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <div>
+          {message.action?.type === 'add_tasks' && '📝 任务预览：'}
+          {message.action?.type === 'add_idea' && '💡 想法：'}
+          {message.action?.type === 'complete_task' && '✅ 标记完成：'}
+          {message.action?.type === 'delete_task' && '🗑️ 删除任务：'}
+          {message.action?.type === 'uncomplete_task' && '↩️ 标记为未完成：'}
+          {message.action?.type === 'delete_idea' && '🗑️ 删除想法：'}
+          {(message.action?.type === 'update_task' || message.action?.type === 'update_idea') &&
+            '✏️ 修改内容：'}
+          {message.action?.type === 'start_pomodoro' && '⏱️ 开启专注：'}
+          {message.action?.type === 'control_ambience' && '🎵 播放声音：'}
+        </div>
+        {isLastMessage && timeLeft > 0 && (
+          <div className="text-primary-600 dark:text-primary-400 text-xs font-normal">
+            {isPaused ? '⏸ 已暂停' : `${timeLeft}秒后自动执行`}
+          </div>
+        )}
+      </div>
+
+      {/* Tasks list */}
+      {message.action?.type === 'add_tasks' && (
+        <ul className="mb-3 space-y-1.5">
+          {(message.action.payload as string[]).map((task, i) => (
+            <li
+              key={i}
+              className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
+            >
+              <span>• {task}</span>
+              <button
+                onClick={() => onRemoveTask(message.id, i)}
+                className="ml-auto text-gray-400 hover:text-red-500"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Single idea */}
+      {message.action?.type === 'add_idea' && (
+        <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+          "{message.action.payload as string}"
+        </div>
+      )}
+
+      {/* Complete/Delete/Uncomplete task preview - supports array */}
+      {(message.action?.type === 'complete_task' ||
+        message.action?.type === 'delete_task' ||
+        message.action?.type === 'uncomplete_task' ||
+        message.action?.type === 'delete_idea') && (
+        <ul className="mb-3 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+          {(Array.isArray(message.action.payload)
+            ? (message.action.payload as string[])
+            : [message.action.payload as string]
+          ).map((task, i) => (
+            <li key={i}>• {task}</li>
+          ))}
+        </ul>
+      )}
+
+      {/* Update task/idea preview */}
+      {(message.action?.type === 'update_task' || message.action?.type === 'update_idea') && (
+        <div className="mb-3 space-y-2 text-sm">
+          <div className="text-gray-500 line-through">
+            {(message.action.payload as { oldContent: string }).oldContent}
+          </div>
+          <div className="text-gray-500">↓</div>
+          <div className="text-gray-800 dark:text-gray-200">
+            {(message.action.payload as { newContent: string }).newContent}
+          </div>
+        </div>
+      )}
+
+      {/* Pomodoro/Ambience preview */}
+      {message.action?.type === 'start_pomodoro' && (
+        <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+          {(() => {
+            const payload = message.action.payload as { duration?: number; mode?: string }
+            const mode =
+              payload.mode === 'short' ? '短休息' : payload.mode === 'long' ? '长休息' : '专注'
+            const duration = payload.duration || 25
+            return `${mode} ${duration} 分钟`
+          })()}
+        </div>
+      )}
+
+      {message.action?.type === 'control_ambience' && (
+        <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+          {(() => {
+            const payload = message.action.payload as { action: string; sound?: string }
+            if (payload.action === 'stop' || payload.action === 'pause') return '停止播放'
+            if (payload.action === 'play')
+              return payload.sound ? `播放 ${payload.sound}` : '恢复播放'
+            return '调整音量'
+          })()}
+        </div>
+      )}
+
+      {/* Confirmation buttons */}
+      <div className="relative z-10 flex gap-2">
+        <button
+          onClick={onConfirm}
+          className="bg-primary-500 hover:bg-primary-600 flex-1 rounded-lg py-2 text-sm font-medium text-white transition-colors"
+        >
+          <Check className="mr-1 inline h-4 w-4" />
+          {timeLeft > 0 && isLastMessage && !isPaused ? `自动执行 (${timeLeft})` : '确认执行'}
+        </button>
+        <button
+          onClick={onCancel}
+          className="rounded-lg px-4 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          <X className="inline h-4 w-4" />
+          {isLastMessage && timeLeft > 0 ? '取消' : ''}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 const MessageItem = memo(
@@ -85,100 +260,13 @@ const MessageItem = memo(
 
             {/* Action preview card (for tasks/ideas) */}
             {message.action && message.action.status === 'pending' && (
-              <div className="border-primary-200 bg-primary-50/50 dark:border-primary-800 dark:bg-primary-900/20 mt-1 rounded-xl border-2 p-3">
-                <div className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {message.action.type === 'add_tasks' && '📝 任务预览：'}
-                  {message.action.type === 'add_idea' && '💡 想法：'}
-                  {message.action.type === 'complete_task' && '✅ 标记完成：'}
-                  {message.action.type === 'delete_task' && '🗑️ 删除任务：'}
-                  {message.action.type === 'uncomplete_task' && '↩️ 标记为未完成：'}
-                  {message.action.type === 'delete_idea' && '🗑️ 删除想法：'}
-                  {(message.action.type === 'update_task' ||
-                    message.action.type === 'update_idea') &&
-                    '✏️ 修改内容：'}
-                </div>
-
-                {/* Tasks list */}
-                {message.action.type === 'add_tasks' && (
-                  <ul className="mb-3 space-y-1.5">
-                    {(message.action.payload as string[]).map((task, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
-                      >
-                        <span>• {task}</span>
-                        <button
-                          onClick={() => onRemoveTask(message.id, i)}
-                          className="ml-auto text-gray-400 hover:text-red-500"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {/* Single idea */}
-                {message.action.type === 'add_idea' && (
-                  <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                    "{message.action.payload as string}"
-                  </div>
-                )}
-
-                {/* Complete/Delete/Uncomplete task preview - supports array */}
-                {(message.action.type === 'complete_task' ||
-                  message.action.type === 'delete_task' ||
-                  message.action.type === 'uncomplete_task' ||
-                  message.action.type === 'delete_idea') && (
-                  <ul className="mb-3 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                    {(Array.isArray(message.action.payload)
-                      ? message.action.payload
-                      : [message.action.payload]
-                    ).map((task, i) => (
-                      <li key={i}>• {task}</li>
-                    ))}
-                  </ul>
-                )}
-
-                {/* Update task/idea preview */}
-                {(message.action.type === 'update_task' ||
-                  message.action.type === 'update_idea') && (
-                  <div className="mb-3 space-y-2 text-sm">
-                    <div className="text-gray-500 line-through">
-                      {(message.action.payload as { oldContent: string }).oldContent}
-                    </div>
-                    <div className="text-gray-500">↓</div>
-                    <div className="text-gray-800 dark:text-gray-200">
-                      {(message.action.payload as { newContent: string }).newContent}
-                    </div>
-                  </div>
-                )}
-
-                {/* Confirmation buttons */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onConfirmAction(message.id)}
-                    className="bg-primary-500 hover:bg-primary-600 flex-1 rounded-lg py-2 text-sm font-medium text-white"
-                  >
-                    <Check className="mr-1 inline h-4 w-4" />
-                    {message.action.type === 'add_tasks' && '添加到任务列表'}
-                    {message.action.type === 'add_idea' && '添加到想法本'}
-                    {message.action.type === 'complete_task' && '确认完成'}
-                    {message.action.type === 'delete_task' && '确认删除'}
-                    {message.action.type === 'uncomplete_task' && '确认撤销完成'}
-                    {message.action.type === 'delete_idea' && '确认删除想法'}
-                    {(message.action.type === 'update_task' ||
-                      message.action.type === 'update_idea') &&
-                      '确认修改'}
-                  </button>
-                  <button
-                    onClick={() => onCancelAction(message.id)}
-                    className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <X className="inline h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+              <AutoConfirmCard
+                message={message}
+                isLastMessage={isLastMessage}
+                onConfirm={() => onConfirmAction(message.id)}
+                onCancel={() => onCancelAction(message.id)}
+                onRemoveTask={onRemoveTask}
+              />
             )}
 
             {/* Confirmed state */}
