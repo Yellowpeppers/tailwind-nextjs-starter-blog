@@ -237,6 +237,25 @@ const BUBU_FUNCTIONS = [
     },
   },
   {
+    name: 'delete_idea',
+    description: '用户想要删除注意力中转站中的一个或多个想法。根据上下文中的想法列表匹配。',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        ideas: {
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING },
+          description: '要删除的想法内容列表（需要匹配用户想法列表中的内容）',
+        },
+        reply: {
+          type: SchemaType.STRING,
+          description: 'BuBu 的回复。确认想法已删除。',
+        },
+      },
+      required: ['ideas', 'reply'],
+    },
+  },
+  {
     name: 'complete_task',
     description:
       '用户想要标记一个或多个任务为已完成。根据上下文中的任务列表匹配任务。可以同时完成多个任务。',
@@ -502,6 +521,21 @@ export async function POST(request: Request) {
           action: {
             type: 'add_idea',
             payload: args.idea,
+          },
+          remaining: rateLimit.remaining - 1,
+        },
+      })
+    }
+
+    if (name === 'delete_idea') {
+      incrementRateLimit(clientId)
+      return NextResponse.json({
+        success: true,
+        data: {
+          reply: args.reply,
+          action: {
+            type: 'delete_idea',
+            payload: args.ideas,
           },
           remaining: rateLimit.remaining - 1,
         },

@@ -8,14 +8,26 @@ export type ChatMessage = {
   content: string
   timestamp: number
   action?: {
-    type: 'add_tasks' | 'add_idea' | 'complete_task' | 'delete_task' | 'uncomplete_task'
+    type:
+      | 'add_tasks'
+      | 'add_idea'
+      | 'complete_task'
+      | 'delete_task'
+      | 'uncomplete_task'
+      | 'delete_idea'
     payload: string[] | string
     status: 'pending' | 'confirmed' | 'cancelled'
   }
 }
 
 export type BuBuAction = {
-  type: 'add_tasks' | 'add_idea' | 'complete_task' | 'delete_task' | 'uncomplete_task'
+  type:
+    | 'add_tasks'
+    | 'add_idea'
+    | 'complete_task'
+    | 'delete_task'
+    | 'uncomplete_task'
+    | 'delete_idea'
   payload: string[] | string
 }
 

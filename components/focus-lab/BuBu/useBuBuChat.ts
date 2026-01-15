@@ -285,6 +285,26 @@ export const useBuBuChat = () => {
           }
 
           console.log(`[BuBu] Marked ${tasksToUncomplete.length} task(s) as uncompleted`)
+        } else if (message.action.type === 'delete_idea') {
+          // Delete ideas from Brain Dump (supports array)
+          const ideasToDelete = message.action.payload as string[]
+          const currentState = await readBrainDumpStorage(user?.id)
+
+          // Filter out the ideas from both columns
+          const updatedState = {
+            left: currentState.left.filter((i) => !ideasToDelete.includes(i.text)),
+            right: currentState.right.filter((i) => !ideasToDelete.includes(i.text)),
+          }
+
+          // Save to storage
+          await saveBrainDump(updatedState, user)
+
+          // Trigger sync event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('brain-dump-sync'))
+          }
+
+          console.log(`[BuBu] Deleted ${ideasToDelete.length} idea(s)`)
         }
 
         // Update message status to confirmed
