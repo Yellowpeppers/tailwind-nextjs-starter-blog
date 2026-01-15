@@ -3334,6 +3334,7 @@ const SonicShieldWidget = ({
   }
 
   // BuBu: Listen for sound control events
+  // BuBu: Listen for sound control events
   useEffect(() => {
     const handleBuBuSoundControl = (event: Event) => {
       const detail = (event as CustomEvent).detail as {
@@ -3346,7 +3347,7 @@ const SonicShieldWidget = ({
       if (detail.action === 'stop' || detail.action === 'pause') {
         // Stop specific sound or all sounds
         if (detail.sound) {
-          // Try to match sound name or ID
+          // Stop specific sound (remove from tracks)
           const targetSound = allSounds.find(
             (s) => s.name.toLowerCase() === detail.sound?.toLowerCase() || s.id === detail.sound
           )
@@ -3358,32 +3359,47 @@ const SonicShieldWidget = ({
             })
           }
         } else {
-          // Stop all
-          setActiveTracks({})
+          // Global Pause: Just disable the master switch, DO NOT clear active tracks
+          // So user can resume later without losing selection
           updateSettings('focus_lab.sound.enabled', false)
         }
       } else if (detail.action === 'play') {
-        // Play specific sound
-        if (!detail.sound) return // Must specify sound to play
-
         // Enable master sound if disabled
         if (!isSoundEnabled) {
           updateSettings('focus_lab.sound.enabled', true)
         }
 
-        const targetSound = allSounds.find(
-          (s) => s.name.toLowerCase() === detail.sound?.toLowerCase() || s.id === detail.sound
-        )
-        // If not exact match, try partial match
-        const bestMatch =
-          targetSound ||
-          allSounds.find((s) => s.name.toLowerCase().includes(detail.sound!.toLowerCase()))
+        if (detail.sound) {
+          // Case 1: Play specific sound
+          const targetSound = allSounds.find(
+            (s) => s.name.toLowerCase() === detail.sound?.toLowerCase() || s.id === detail.sound
+          )
+          // If not exact match, try partial match
+          const bestMatch =
+            targetSound ||
+            allSounds.find((s) => s.name.toLowerCase().includes(detail.sound!.toLowerCase()))
 
-        if (bestMatch) {
-          setActiveTracks((prev) => ({
-            ...prev,
-            [bestMatch.id]: { id: bestMatch.id, volume: detail.volume || 0.5, isPlaying: true },
-          }))
+          if (bestMatch) {
+            setActiveTracks((prev) => ({
+              ...prev,
+              [bestMatch.id]: { id: bestMatch.id, volume: detail.volume || 0.5, isPlaying: true },
+            }))
+          }
+        } else {
+          // Case 2: Resume / General Play
+          // Check if we have any active tracks
+          const hasTracks = Object.keys(activeTracks).length > 0
+
+          if (!hasTracks) {
+            // Fallback: If no tracks selected, play Rain by default to avoid silence
+            const rainSound = allSounds.find((s) => s.id === 'rain') || allSounds[0]
+            if (rainSound) {
+              setActiveTracks({
+                [rainSound.id]: { id: rainSound.id, volume: 0.5, isPlaying: true },
+              })
+            }
+          }
+          // If hasTracks is true, we just enabled the master switch above, so it will resume naturally.
         }
       } else if (detail.action === 'volume') {
         // Adjust master volume or specific track
@@ -3395,7 +3411,7 @@ const SonicShieldWidget = ({
 
     window.addEventListener('bubu-sound-control', handleBuBuSoundControl)
     return () => window.removeEventListener('bubu-sound-control', handleBuBuSoundControl)
-  }, [allSounds, isSoundEnabled, updateSettings])
+  }, [allSounds, isSoundEnabled, updateSettings, activeTracks])
 
   // Sync Audio Elements
   useEffect(() => {
