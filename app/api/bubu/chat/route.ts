@@ -20,6 +20,16 @@ const HISTORY_LIMIT = 10 // Keep last 10 rounds (20 messages)
 const DAILY_LIMIT_FREE = 20 // Free users: 20 conversations per day
 const DAILY_LIMIT_PRO = 200 // Pro users: 200 conversations per day
 
+// Context types for type safety
+interface FocusTask {
+  content: string
+  completed: boolean
+}
+
+interface BrainDumpIdea {
+  content: string
+}
+
 // Personality prompts
 const PERSONALITY_PROMPTS = {
   gentle: `你是温柔陪伴型的 BuBu：
@@ -90,14 +100,60 @@ Important rules:
 }
 
 // Build complete system prompt
-function buildSystemPrompt(personality: string, language: string): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildSystemPrompt(personality: string, language: string, context?: any): string {
   const basePrompt = getBasePrompt(language)
   // Default to 'gentle' if personality key is invalid or missing
   const personalityPrompt =
     PERSONALITY_PROMPTS[personality as keyof typeof PERSONALITY_PROMPTS] ||
     PERSONALITY_PROMPTS.gentle
 
+  let contextPrompt = ''
+  if (context) {
+    const taskCount = context.tasks?.length || 0
+    const ideaCount = (context.ideas?.left?.length || 0) + (context.ideas?.right?.length || 0)
+
+    // Format tasks for AI (limit to first 10 to give better context)
+    // FocusItem has: content (not text), completed (not status)
+    const taskList =
+      context.tasks
+        ?.slice(0, 10)
+        .map((t: FocusTask) => {
+          const status = t.completed ? '✓ 已完成' : '待办'
+          return `- ${t.content} (${status})`
+        })
+        .join('\n') || '暂无任务'
+
+    // Format ideas for AI
+    const ideaList =
+      [...(context.ideas?.left || []), ...(context.ideas?.right || [])]
+        .slice(0, 5)
+        .map((i: BrainDumpIdea) => `- ${i.content}`)
+        .join('\n') || '暂无想法'
+
+    console.log('[BuBu API] Context received:', {
+      taskCount,
+      ideaCount,
+      sampleTask: context.tasks?.[0],
+    })
+
+    contextPrompt = `
+---
+📊 **用户当前状态** (实时数据，你可以直接使用这些信息回答用户):
+
+**待办清单 (共 ${taskCount} 项):**
+${taskList}
+
+**注意力中转站想法 (共 ${ideaCount} 项):**
+${ideaList}
+
+*重要：当用户询问"有哪些任务"或"我的待办"时，直接告诉他们上面的任务列表内容！不要说你不知道！*
+`
+  }
+
   return `${basePrompt}
+
+${contextPrompt}
 
 ---
 🌟 CURRENT PERSONALITY MODE: ${personality || 'gentle'}
@@ -176,6 +232,8 @@ type RequestBody = {
   language?: 'zh' | 'en'
   userId?: string
   isPro?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context?: any // Allow context object
 }
 
 // Simple in-memory rate limiting (TODO: use Redis in production)
@@ -220,6 +278,7 @@ export async function POST(request: Request) {
       language = 'zh',
       userId,
       isPro = false,
+      context, // Extract context
     } = body
 
     // Validate input
@@ -252,7 +311,7 @@ export async function POST(request: Request) {
     const trimmedHistory = history.slice(-HISTORY_LIMIT * 2)
 
     // Build system prompt
-    const systemPrompt = buildSystemPrompt(personality, language)
+    const systemPrompt = buildSystemPrompt(personality, language, context)
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey)

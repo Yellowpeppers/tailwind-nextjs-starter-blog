@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
+import { createClient } from '@/lib/supabase'
 import {
   createFocusItem,
   saveStationItems,
@@ -11,7 +12,7 @@ import {
   saveBrainDump,
   readBrainDumpStorage,
 } from '@/components/focus-lab/brainDumpStorage'
-import type { ChatMessage, PersonalityType, BuBuApiResponse } from './types'
+import type { ChatMessage, PersonalityType, BuBuApiResponse, BuBuAction } from './types'
 
 export const useBuBuChat = () => {
   const { language } = useTranslation()
@@ -19,6 +20,7 @@ export const useBuBuChat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const supabase = createClient() // Initialize Supabase client
 
   // Load personality from localStorage
   const [personality, setPersonalityState] = useState<PersonalityType>(() => {
@@ -35,6 +37,62 @@ export const useBuBuChat = () => {
     }
   }, [])
 
+  // Load messages from Supabase on mount
+  useEffect(() => {
+    if (!user) return
+
+    const loadMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('bubu_messages')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }) // Get latest first
+          .limit(20) // Limit to last 20 messages (10 interactions)
+
+        if (error) throw error
+
+        if (data) {
+          // Reverse back to chronological order for display
+          const history = data.reverse().map((msg) => ({
+            id: msg.id,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.created_at).getTime(),
+            action: msg.action,
+          }))
+          setMessages(history)
+        }
+      } catch (err) {
+        console.error('Failed to load chat history:', err)
+        // Ensure error doesn't break the UI, just log it
+      }
+    }
+
+    loadMessages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  // Save message to Supabase
+  const saveMessageToCloud = useCallback(
+    async (role: 'user' | 'assistant', content: string, action?: BuBuAction) => {
+      if (!user) return
+
+      try {
+        await supabase.from('bubu_messages').insert({
+          user_id: user.id,
+          role,
+          content,
+          action,
+        })
+      } catch (err) {
+        console.error('Failed to save message to cloud:', err)
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user]
+  )
+
   // Send message to BuBu API
   const sendMessage = useCallback(
     async (text: string) => {
@@ -49,6 +107,9 @@ export const useBuBuChat = () => {
       setIsLoading(true)
       setError(null)
 
+      // Save user message to cloud (fire and forget)
+      saveMessageToCloud('user', text)
+
       try {
         const response = await fetch('/api/bubu/chat', {
           method: 'POST',
@@ -61,6 +122,13 @@ export const useBuBuChat = () => {
             })),
             personality,
             language,
+            // Add Context Awareness
+            context: await (async () => {
+              const tasks = await readStationStorage(user?.id)
+              const ideas = await readBrainDumpStorage(user?.id)
+              console.log('[useBuBuChat] Context loaded:', { taskCount: tasks.length, ideas })
+              return { tasks, ideas }
+            })(),
           }),
         })
         console.log('[useBuBuChat] Sending message with personality:', personality)
@@ -85,13 +153,17 @@ export const useBuBuChat = () => {
         }
 
         setMessages((prev) => [...prev, assistantMessage])
+
+        // Save assistant message to cloud
+        saveMessageToCloud('assistant', data.data.reply, data.data.action)
       } catch (err) {
         setError(err instanceof Error ? err.message : '发送失败，请重试')
       } finally {
         setIsLoading(false)
       }
     },
-    [messages, personality, language]
+
+    [messages, personality, language, saveMessageToCloud, user?.id]
   )
 
   // Confirm action (add tasks or idea) - WITH ACTUAL INTEGRATION

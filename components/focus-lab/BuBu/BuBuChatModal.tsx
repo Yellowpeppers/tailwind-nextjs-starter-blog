@@ -3,12 +3,13 @@
 import { Menu, Transition } from '@headlessui/react'
 import { useState, useRef, useEffect, Fragment } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Trash2, Send, Check, XCircle, ChevronDown } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { X, Trash2, Send, ChevronDown, Check } from 'lucide-react'
 import { useThemeColor } from '@/context/ThemeColorContext'
 import { useTranslation } from '@/context/LanguageContext'
 import { useBuBuChat } from './useBuBuChat'
+import { useVoiceInput } from './useVoiceInput'
+import { MessageItem } from './MessageItem'
+import { Mic, MicOff } from 'lucide-react'
 import type { ChatMessage } from './types'
 
 interface BuBuChatModalProps {
@@ -84,6 +85,37 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
     adjustTextareaHeight()
   }, [inputValue])
 
+  // Voice Input Hook
+  const {
+    isListening,
+    transcript,
+    startListening,
+    stopListening,
+    resetTranscript,
+    isSupported: isVoiceSupported,
+    error: voiceError,
+    clearError,
+    interimTranscript,
+  } = useVoiceInput()
+
+  // Handle voice errors (e.g. permission denied)
+  useEffect(() => {
+    console.log('[BuBuChatModal] Voice state:', { isVoiceSupported, voiceError, isListening })
+  }, [isVoiceSupported, voiceError, isListening])
+
+  // Sync voice transcript to input
+  useEffect(() => {
+    if (transcript) {
+      setInputValue((prev) => {
+        // Avoid duplicating if already present (simple check)
+        if (prev.endsWith(transcript)) return prev
+        const suffix = prev.length > 0 && !prev.endsWith(' ') ? ' ' : ''
+        return prev + suffix + transcript
+      })
+      resetTranscript()
+    }
+  }, [transcript, resetTranscript])
+
   const handleSend = () => {
     if (!inputValue.trim() || isLoading) return
     sendMessage(inputValue.trim())
@@ -108,124 +140,7 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
     }
   }
 
-  // Render individual message
-  const renderMessage = (message: ChatMessage) => {
-    const isUser = message.role === 'user'
-
-    return (
-      <motion.div
-        key={message.id}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
-      >
-        <div className={`flex max-w-[85%] gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-          {/* Avatar */}
-          {!isUser && (
-            <div className="from-primary-400 to-primary-600 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr text-sm font-bold text-white">
-              B
-            </div>
-          )}
-
-          {/* Message bubble */}
-          <div className="flex min-w-0 flex-col gap-2">
-            <div
-              className={`rounded-2xl px-4 py-2.5 ${
-                isUser
-                  ? 'bg-primary-500 rounded-br-sm text-white'
-                  : 'rounded-bl-sm bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
-              } `}
-            >
-              <div
-                className={`prose prose-sm max-w-none break-words ${
-                  isUser ? 'prose-invert text-white' : 'dark:prose-invert'
-                }`}
-              >
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    // Override link to open in new tab
-                    a: ({ node, children, ...props }) => (
-                      <a target="_blank" rel="noopener noreferrer" {...props}>
-                        {children}
-                      </a>
-                    ),
-                    // Reduce margin on paragraphs
-                    p: ({ node, ...props }) => <p className="mb-1 last:mb-0" {...props} />,
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              </div>
-            </div>
-
-            {/* Action preview card (for tasks/ideas) */}
-            {message.action && message.action.status === 'pending' && (
-              <div className="border-primary-200 bg-primary-50/50 dark:border-primary-800 dark:bg-primary-900/20 mt-1 rounded-xl border-2 p-3">
-                <div className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {message.action.type === 'add_tasks' ? '📝 任务预览：' : '💡 想法：'}
-                </div>
-
-                {/* Tasks list */}
-                {message.action.type === 'add_tasks' && (
-                  <ul className="mb-3 space-y-1.5">
-                    {(message.action.payload as string[]).map((task, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
-                      >
-                        <span>• {task}</span>
-                        <button
-                          onClick={() => removeTaskFromPreview(message.id, i)}
-                          className="ml-auto text-gray-400 hover:text-red-500"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {/* Single idea */}
-                {message.action.type === 'add_idea' && (
-                  <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                    "{message.action.payload as string}"
-                  </div>
-                )}
-
-                {/* Confirmation buttons */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => confirmAction(message.id)}
-                    className="bg-primary-500 hover:bg-primary-600 flex-1 rounded-lg py-2 text-sm font-medium text-white"
-                  >
-                    <Check className="mr-1 inline h-4 w-4" />
-                    {message.action.type === 'add_tasks' ? '添加到任务列表' : '添加到想法本'}
-                  </button>
-                  <button
-                    onClick={() => cancelAction(message.id)}
-                    className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <X className="inline h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Confirmed state */}
-            {message.action && message.action.status === 'confirmed' && (
-              <div className="mt-1 text-xs text-green-600 dark:text-green-400">
-                ✓ 已添加{' '}
-                {message.action.type === 'add_tasks'
-                  ? `${(message.action.payload as string[]).length} 个任务`
-                  : '想法'}
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    )
-  }
+  // Render individual message logic moved to MessageItem component
 
   // Welcome message
   const WelcomeMessage = () => (
@@ -354,7 +269,16 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
                 <WelcomeMessage />
               ) : (
                 <>
-                  {messages.map(renderMessage)}
+                  {messages.map((msg, index) => (
+                    <MessageItem
+                      key={msg.id}
+                      message={msg}
+                      isLastMessage={index === messages.length - 1}
+                      onRemoveTask={removeTaskFromPreview}
+                      onConfirmAction={confirmAction}
+                      onCancelAction={cancelAction}
+                    />
+                  ))}
 
                   {/* Loading indicator */}
                   {isLoading && (
@@ -386,18 +310,97 @@ export const BuBuChatModal = ({ isOpen, onClose }: BuBuChatModalProps) => {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Voice Permission Error Banner - Persistent */}
+            {voiceError === 'not-allowed' && (
+              <div className="flex items-start justify-between gap-2 border-t border-red-100 bg-red-50 px-4 py-3 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold">🚫 无法访问麦克风</span>
+                  <span>1. 请检查浏览器地址栏权限设置 (点击 🔒 图标)</span>
+                  <span>2. **修改后请刷新页面** (浏览器限制)</span>
+                  <span>
+                    3. macOS 用户请检查 系统设置 {'>'} 隐私 {'>'} 麦克风
+                  </span>
+                </div>
+                <button
+                  onClick={clearError}
+                  className="rounded p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40"
+                  title="关闭提示"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Network Error Banner - Chrome requires Google access */}
+            {voiceError === 'network' && (
+              <div className="flex items-start justify-between gap-2 border-t border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold">🌐 语音识别连接失败</span>
+                  <span>Chrome 语音识别需要访问 Google 服务器</span>
+                  <span>• 请检查网络连接，或使用 Safari 浏览器（本地识别）</span>
+                </div>
+                <button
+                  onClick={clearError}
+                  className="rounded p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                  title="关闭提示"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
             {/* Input area */}
-            <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-800">
+            <div
+              className={`shrink-0 border-gray-200 p-4 dark:border-gray-800 ${voiceError ? 'border-t-0' : 'border-t'}`}
+            >
               <div className="flex gap-2">
+                {/* Voice Input Button */}
+                {isVoiceSupported && (
+                  <div className="group relative">
+                    {/* Tooltip removed in favor of banner */}
+                    <button
+                      onClick={isListening ? stopListening : startListening}
+                      className={`rounded-full p-2 transition-colors ${
+                        isListening
+                          ? 'animate-pulse bg-red-100 text-red-500'
+                          : voiceError
+                            ? 'text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                            : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                      title={
+                        voiceError === 'not-allowed'
+                          ? '麦克风权限被拒绝'
+                          : isListening
+                            ? 'Stop listening'
+                            : 'Start voice input'
+                      }
+                    >
+                      {/* Show alert icon if error, otherwise Mic */}
+                      {voiceError === 'not-allowed' ? (
+                        <MicOff size={20} />
+                      ) : isListening ? (
+                        <MicOff size={20} />
+                      ) : (
+                        <Mic size={20} />
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 <textarea
                   ref={inputRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  value={isListening ? inputValue + interimTranscript : inputValue}
+                  onChange={(e) => {
+                    // 只有非录音状态才允许手动编辑
+                    if (!isListening) {
+                      setInputValue(e.target.value)
+                    }
+                  }}
                   onKeyDown={handleKeyDown}
-                  placeholder={t.bubu?.placeholder || '和 BuBu 聊聊天...'}
+                  placeholder={isListening ? '' : t.bubu?.placeholder || '和 BuBu 聊聊天...'}
                   disabled={isLoading}
                   rows={1}
-                  className="focus:border-primary-500 focus:ring-primary-500/20 max-h-[120px] flex-1 resize-none rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
+                  className={`focus:border-primary-500 focus:ring-primary-500/20 max-h-[120px] flex-1 resize-none rounded-lg border bg-white px-4 py-2 text-sm outline-none focus:ring-2 disabled:opacity-50 dark:bg-gray-800 ${isListening ? 'border-red-300 dark:border-red-700' : 'border-gray-300 dark:border-gray-700'}`}
                 />
                 <button
                   onClick={handleSend}
