@@ -820,7 +820,7 @@ export async function POST(request: Request) {
         const model = genAI.getGenerativeModel({
           model: modelName,
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.85, // 提高创造性减少重复回复
             maxOutputTokens: 500,
           },
         })
@@ -865,13 +865,16 @@ export async function POST(request: Request) {
 
     if (!functionCall) {
       // Fallback: return direct text response
-      const text = response.text()
+      const text = response.text()?.trim()
       incrementRateLimit(clientId)
+
+      // 防止空白回复
+      const replyText = text || '我听到你了！💙 再说一遍好吗？'
 
       return NextResponse.json({
         success: true,
         data: {
-          reply: text,
+          reply: replyText,
           remaining: rateLimit.remaining - 1,
         },
       })
@@ -882,10 +885,12 @@ export async function POST(request: Request) {
     // Handle different function calls
     if (name === 'chat_only') {
       incrementRateLimit(clientId)
+      // 防止空白回复：如果 reply 为空则使用 fallback
+      const replyText = args.reply?.trim() || '我在呢！有什么想聊的吗？💙'
       return NextResponse.json({
         success: true,
         data: {
-          reply: args.reply,
+          reply: replyText,
           remaining: rateLimit.remaining - 1,
         },
       })
