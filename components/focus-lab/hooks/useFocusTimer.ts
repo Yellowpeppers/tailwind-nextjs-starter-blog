@@ -327,7 +327,6 @@ export const useFocusTimer = ({
 
     const handleBuBuTimerControl = (event: Event) => {
       const detail = (event as CustomEvent).detail
-      console.log('[TimerHook] Received BuBu command:', detail)
 
       if (detail.mode) {
         if (detail.mode.includes('short')) setActivePreset('short')

@@ -189,7 +189,6 @@ export const useSoundSystem = () => {
         if (soundDef) {
           audio = new Audio(soundDef.path)
           audio.loop = true
-          console.log(`[SoundSystem] Created audio for ${track.id}`)
           instances[track.id] = audio
         } else {
           console.warn(`[SoundSystem] Definition not found for ${track.id}`)
@@ -232,7 +231,6 @@ export const useSoundSystem = () => {
         sound?: string
         volume?: number
       }
-      console.log('[SoundSystem] Received BuBu command:', detail)
 
       if (detail.action === 'stop' || detail.action === 'pause') {
         if (detail.sound) {

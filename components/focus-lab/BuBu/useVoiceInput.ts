@@ -66,25 +66,11 @@ export const useVoiceInput = (): UseVoiceInputReturn => {
         recognitionInstance.lang = language === 'zh' ? 'zh-CN' : 'en-US'
 
         recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
-          console.log(
-            '[Voice] onresult triggered, resultIndex:',
-            event.resultIndex,
-            'results length:',
-            event.results.length
-          )
           let finalTranscriptChunk = ''
           let currentInterim = ''
 
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             const result = event.results[i]
-            console.log(
-              '[Voice] Result',
-              i,
-              '- isFinal:',
-              result.isFinal,
-              'transcript:',
-              result[0].transcript
-            )
             if (result.isFinal) {
               finalTranscriptChunk += result[0].transcript
             } else {
@@ -92,7 +78,6 @@ export const useVoiceInput = (): UseVoiceInputReturn => {
             }
           }
 
-          console.log('[Voice] Final chunk:', finalTranscriptChunk, 'Interim:', currentInterim)
           if (finalTranscriptChunk) {
             setTranscript((prev) => prev + finalTranscriptChunk)
           }
@@ -102,7 +87,6 @@ export const useVoiceInput = (): UseVoiceInputReturn => {
         recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
           // no-speech is not a real error - user just didn't speak, silently stop
           if (event.error === 'no-speech') {
-            console.log('[Voice] No speech detected, stopping...')
             setIsListening(false)
             return
           }
@@ -144,18 +128,10 @@ export const useVoiceInput = (): UseVoiceInputReturn => {
   }, [language, recognition])
 
   const startListening = useCallback(() => {
-    console.log(
-      '[Voice] startListening called, recognition:',
-      !!recognition,
-      'lang:',
-      recognition?.lang
-    )
     if (recognition) {
       try {
         setError(null)
-        console.log('[Voice] Calling recognition.start()...')
         recognition.start()
-        console.log('[Voice] recognition.start() succeeded')
         setIsListening(true)
       } catch (e: unknown) {
         console.error('[Voice] Speech recognition start failed', e)

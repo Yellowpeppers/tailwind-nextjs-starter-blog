@@ -10,7 +10,6 @@ export type EncouragementToastProps = {
 }
 
 export const EncouragementToast = ({ message, onClose }: EncouragementToastProps) => {
-  console.log('[Debug] EncouragementToast rendered, message:', message)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -20,7 +19,6 @@ export const EncouragementToast = ({ message, onClose }: EncouragementToastProps
 
   useEffect(() => {
     if (message) {
-      console.log('Toast showing message:', message)
       const timer = setTimeout(onClose, 3000)
       return () => clearTimeout(timer)
     }
