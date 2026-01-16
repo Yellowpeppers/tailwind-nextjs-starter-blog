@@ -152,15 +152,10 @@ export const useBuBuChat = ({
                 right: right.map((i) => ({ content: i.text })),
               }
 
-              console.log('[useBuBuChat] Context loaded:', {
-                taskCount: safeTasks.length,
-                ideas: safeIdeas,
-              })
               return { tasks: safeTasks, ideas: safeIdeas }
             })(),
           }),
         })
-        console.log('[useBuBuChat] Sending message with personality:', personality)
 
         const data: BuBuApiResponse = await response.json()
 
@@ -227,8 +222,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('focus-station-sync'))
           }
-
-          console.log(`[BuBu] Added ${tasks.length} tasks to Focus Station`)
         } else if (message.action.type === 'add_idea') {
           // Add idea to Brain Dump (left column)
           const idea = message.action.payload as string
@@ -247,8 +240,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('brain-dump-sync'))
           }
-
-          console.log('[BuBu] Added idea to Brain Dump')
         } else if (message.action.type === 'complete_task') {
           // Mark tasks as completed (supports array)
           const tasksToComplete = message.action.payload as string[]
@@ -266,8 +257,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('focus-station-sync'))
           }
-
-          console.log(`[BuBu] Marked ${tasksToComplete.length} task(s) as completed`)
         } else if (message.action.type === 'delete_task') {
           // Delete tasks from list (supports array)
           const tasksToDelete = message.action.payload as string[]
@@ -283,8 +272,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('focus-station-sync'))
           }
-
-          console.log(`[BuBu] Deleted ${tasksToDelete.length} task(s)`)
         } else if (message.action.type === 'uncomplete_task') {
           // Mark tasks as uncompleted (supports array)
           const tasksToUncomplete = message.action.payload as string[]
@@ -302,8 +289,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('focus-station-sync'))
           }
-
-          console.log(`[BuBu] Marked ${tasksToUncomplete.length} task(s) as uncompleted`)
         } else if (message.action.type === 'delete_idea') {
           // Delete ideas from Brain Dump (supports array)
           const ideasToDelete = message.action.payload as string[]
@@ -321,8 +306,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('brain-dump-sync'))
           }
-
-          console.log(`[BuBu] Deleted ${ideasToDelete.length} idea(s)`)
         } else if (message.action.type === 'update_task') {
           // Update a task content
           const { oldContent, newContent } = message.action.payload as {
@@ -341,7 +324,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('focus-station-sync'))
           }
-          console.log(`[BuBu] Updated task: "${oldContent}" -> "${newContent}"`)
         } else if (message.action.type === 'update_idea') {
           // Update an idea content
           const { oldContent, newContent } = message.action.payload as {
@@ -362,7 +344,6 @@ export const useBuBuChat = ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('brain-dump-sync'))
           }
-          console.log(`[BuBu] Updated idea: "${oldContent}" -> "${newContent}"`)
         } else if (message.action.type === 'start_pomodoro') {
           // Dispatch timer control event
           if (typeof window !== 'undefined') {
@@ -372,7 +353,6 @@ export const useBuBuChat = ({
               })
             )
           }
-          console.log('[BuBu] Dispatched timer control event:', message.action.payload)
         } else if (message.action.type === 'control_ambience') {
           // Dispatch ambience control event
           if (typeof window !== 'undefined') {
@@ -382,7 +362,6 @@ export const useBuBuChat = ({
               })
             )
           }
-          console.log('[BuBu] Dispatched sound control event:', message.action.payload)
         }
 
         // Update message status to confirmed
