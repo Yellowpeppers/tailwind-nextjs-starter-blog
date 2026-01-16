@@ -863,13 +863,32 @@ export async function POST(request: Request) {
     // Parse function call
     const functionCall = response.functionCalls()?.[0]
 
+    // 诊断日志：帮助追踪 function call 问题
+    console.log('[BuBu API] Response analysis:', {
+      hasFunctionCall: !!functionCall,
+      functionName: functionCall?.name || 'none',
+      textLength: response.text()?.length || 0,
+      textPreview: response.text()?.substring(0, 100) || '(empty)',
+    })
+
     if (!functionCall) {
       // Fallback: return direct text response
       const text = response.text()?.trim()
       incrementRateLimit(clientId)
 
-      // 防止空白回复
-      const replyText = text || '我听到你了！💙 再说一遍好吗？'
+      // 防止空白回复 - 提供更有意义的 fallback
+      let replyText = text
+      if (!text) {
+        console.warn('[BuBu API] Empty response detected for message:', message)
+        // 根据消息内容提供更智能的 fallback
+        if (message.includes('番茄') || message.includes('专注') || message.includes('timer')) {
+          replyText = '好的，我帮你启动番茄钟！🍅 请点击右侧的计时器开始吧～'
+        } else if (message.includes('任务') || message.includes('task')) {
+          replyText = '我看到你想处理任务！📋 你可以在左侧添加任务，或者告诉我具体想做什么？'
+        } else {
+          replyText = '我在认真听呢！💙 可以再说一遍吗？'
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -881,6 +900,7 @@ export async function POST(request: Request) {
     }
 
     const { name, args } = functionCall
+    console.log('[BuBu API] Function call detected:', { name, args })
 
     // Handle different function calls
     if (name === 'chat_only') {
