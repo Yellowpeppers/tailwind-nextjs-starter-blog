@@ -9,6 +9,8 @@ import {
   fetchCloudBrainDump,
   saveBrainDump,
   createBrainDumpItem,
+  getNextBrainDumpLane,
+  splitBrainDumpItems,
 } from '../brainDumpStorage'
 
 export const useBrainDump = () => {
@@ -16,8 +18,7 @@ export const useBrainDump = () => {
   const { user } = useAuth()
 
   // State
-  const [leftItems, setLeftItems] = useState<BrainDumpItem[]>([])
-  const [rightItems, setRightItems] = useState<BrainDumpItem[]>([])
+  const [items, setItems] = useState<BrainDumpItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
 
   // Refs
@@ -30,9 +31,8 @@ export const useBrainDump = () => {
       // 1. Try Cloud First if User
       if (user) {
         const cloud = await fetchCloudBrainDump(user)
-        if (cloud && (cloud.left.length > 0 || cloud.right.length > 0)) {
-          setLeftItems(cloud.left)
-          setRightItems(cloud.right)
+        if (cloud && cloud.items.length > 0) {
+          setItems(cloud.items)
           setIsLoaded(true)
           dataOwnerId.current = user.id
           return
@@ -42,7 +42,7 @@ export const useBrainDump = () => {
       // 2. Fallback to Local (Only if Guest)
       if (!user) {
         const local = readBrainDumpStorage()
-        if (local.left.length > 0 || local.right.length > 0) {
+        if (local.items.length > 0) {
           const generateUUID = () => {
             if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -59,8 +59,7 @@ export const useBrainDump = () => {
               return isValidUUID ? item : { ...item, id: generateUUID() }
             })
 
-          setLeftItems(sanitize(local.left))
-          setRightItems(sanitize(local.right))
+          setItems(sanitize(local.items))
         }
       }
 
@@ -89,11 +88,11 @@ export const useBrainDump = () => {
     }
 
     const save = async () => {
-      await saveBrainDump({ left: leftItems, right: rightItems }, user)
+      await saveBrainDump({ items }, user)
     }
     const timeout = setTimeout(save, 1000)
     return () => clearTimeout(timeout)
-  }, [leftItems, rightItems, user, isLoaded])
+  }, [items, user, isLoaded])
 
   // -- Broadcast Channel --
   useEffect(() => {
@@ -106,13 +105,12 @@ export const useBrainDump = () => {
       try {
         const updatedData = readBrainDumpStorage(user?.id)
 
-        if (isEqual(updatedData.left, leftItems) && isEqual(updatedData.right, rightItems)) {
+        if (isEqual(updatedData.items, items)) {
           return
         }
 
         remoteUpdateRef.current = true
-        setLeftItems(updatedData.left)
-        setRightItems(updatedData.right)
+        setItems(updatedData.items)
       } catch (error) {
         console.error('[Brain Dump] Failed to reload data:', error)
       }
@@ -123,20 +121,20 @@ export const useBrainDump = () => {
       channel.removeEventListener('message', handleMessage)
       channel.close()
     }
-  }, [user, leftItems, rightItems, isLoaded])
+  }, [user, items, isLoaded])
 
   // -- Actions --
 
   const addItem = useCallback(
     (text: string, image?: string | null) => {
-      const newItem = createBrainDumpItem(text, image || undefined)
-      if (leftItems.length <= rightItems.length) {
-        setLeftItems((prev) => [newItem, ...prev])
-      } else {
-        setRightItems((prev) => [newItem, ...prev])
-      }
+      setItems((prev) => {
+        const { left, right } = splitBrainDumpItems(prev)
+        const lane = getNextBrainDumpLane(prev)
+        const newItem = createBrainDumpItem(text, image || undefined, lane)
+        return lane === 'left' ? [newItem, ...left, ...right] : [...left, newItem, ...right]
+      })
     },
-    [leftItems.length, rightItems.length]
+    [setItems]
   )
 
   const clearAll = useCallback(() => {
@@ -145,23 +143,23 @@ export const useBrainDump = () => {
         lang === 'en' ? 'Clear all notes? This cannot be undone.' : '清空所有便签？此操作无法撤销。'
       )
     ) {
-      setLeftItems([])
-      setRightItems([])
+      setItems([])
     }
-  }, [lang])
+  }, [lang, setItems])
 
-  const deleteItem = useCallback((id: string, column: 'left' | 'right') => {
-    if (column === 'left') {
-      setLeftItems((prev) => prev.filter((i) => i.id !== id))
-    } else {
-      setRightItems((prev) => prev.filter((i) => i.id !== id))
-    }
-  }, [])
+  const deleteItem = useCallback(
+    (id: string, _column: 'left' | 'right') => {
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    },
+    [setItems]
+  )
 
-  const updateItemText = useCallback((id: string, text: string, column: 'left' | 'right') => {
-    const setter = column === 'left' ? setLeftItems : setRightItems
-    setter((prev) => prev.map((i) => (i.id === id ? { ...i, text: text.trim() } : i)))
-  }, [])
+  const updateItemText = useCallback(
+    (id: string, text: string, _column: 'left' | 'right') => {
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, text: text.trim() } : i)))
+    },
+    [setItems]
+  )
 
   const handlePasteImage = useCallback(
     async (blob: File) => {
@@ -197,13 +195,11 @@ export const useBrainDump = () => {
 
   return {
     state: {
-      leftItems,
-      rightItems,
+      items,
       isLoaded,
     },
     actions: {
-      setLeftItems,
-      setRightItems,
+      setItems,
       addItem,
       clearAll,
       deleteItem,

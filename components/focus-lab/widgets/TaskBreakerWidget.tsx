@@ -1,29 +1,43 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from '@/context/LanguageContext'
+import { useAuth } from '@/context/AuthContext'
 import { useThemeColor, UIStyle } from '@/context/ThemeColorContext'
 import { UseTaskBreakerResult } from '../hooks/useTaskBreaker'
 import { MagicIcon, ArrowLaunchIcon, PlusIcon } from '../icons'
+import { FeatureGateModal } from '../FeatureGateModal'
 
 export const TaskBreakerWidget = ({
   taskBreaker,
   uiStyle,
   isResultView,
+  onLogin,
 }: {
   taskBreaker: UseTaskBreakerResult
   uiStyle?: UIStyle
   isResultView: boolean
+  onLogin?: () => void
 }) => {
   const isWarm = uiStyle === 'warm'
   const isGreen = uiStyle === 'green'
   const isBlue = uiStyle === 'blue'
   const isCartoon = uiStyle === 'cartoon'
   const { t, language: lang } = useTranslation()
+  const { user } = useAuth()
+  const [showLoginGate, setShowLoginGate] = useState(false)
 
   const { state, actions } = taskBreaker
   const { task, visibleSteps, isLoading, error, isTransferring, hasTransferred, transferStatus } =
     state
   const { setTask, handleBreakDown, handleTransferToTodo, handleReset } = actions
+
+  const handleBreakDownWithAuth = () => {
+    if (!user) {
+      setShowLoginGate(true)
+      return
+    }
+    handleBreakDown()
+  }
 
   if (isResultView) {
     return (
@@ -146,7 +160,7 @@ export const TaskBreakerWidget = ({
       <div className="mt-auto flex justify-center pt-2 pb-0">
         <button
           type="button"
-          onClick={handleBreakDown}
+          onClick={handleBreakDownWithAuth}
           disabled={!task.trim()}
           className={`flex w-auto min-w-[100px] items-center justify-center gap-2 px-4 py-2 text-sm font-bold shadow-lg transition-all active:scale-95 disabled:active:scale-100 dark:shadow-none ${
             isWarm
@@ -163,6 +177,17 @@ export const TaskBreakerWidget = ({
           {t.focusLab.widgets.taskBreaker.button}
         </button>
       </div>
+
+      <FeatureGateModal
+        isOpen={showLoginGate}
+        onClose={() => setShowLoginGate(false)}
+        type="login"
+        feature={lang === 'zh' ? 'AI 任务拆解' : 'AI Task Breakdown'}
+        onAction={() => {
+          onLogin?.()
+          setShowLoginGate(false)
+        }}
+      />
     </div>
   )
 }

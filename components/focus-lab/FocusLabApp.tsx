@@ -822,7 +822,21 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
         onSave={handleGoalModalSave}
       />
       <AnimatePresence>
-        {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
+        {showAnalytics && (
+          <AnalyticsModal
+            onClose={() => setShowAnalytics(false)}
+            isPro={isPro}
+            onUpgrade={() => {
+              setShowAnalytics(false)
+              setShowPricingModal(true)
+            }}
+            onLogin={() => {
+              setShowAnalytics(false)
+              setAuthTrigger('generic')
+              setShowAuthModal(true)
+            }}
+          />
+        )}
       </AnimatePresence>
 
       <AuthModal
@@ -916,12 +930,16 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
                       onClick={() => setShowWeChatModal(true)}
                     />
                   )}
-                  <div className="my-1 h-2" aria-hidden />
-                  <FocusSidebarAction
-                    icon={<CrownIcon className="h-6 w-6 text-amber-500" />}
-                    label={upgradeLabel}
-                    onClick={() => setShowPricingModal(true)}
-                  />
+                  {user && (
+                    <>
+                      <div className="my-1 h-2" aria-hidden />
+                      <FocusSidebarAction
+                        icon={<CrownIcon className="h-6 w-6 text-amber-500" />}
+                        label={upgradeLabel}
+                        onClick={() => setShowPricingModal(true)}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1104,7 +1122,16 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
                           )
                         }
                         if (item.id === 'breaker') {
-                          return <TaskBreakerCard className="h-full w-full" isFocused={isFocused} />
+                          return (
+                            <TaskBreakerCard
+                              className="h-full w-full"
+                              isFocused={isFocused}
+                              onLogin={() => {
+                                setAuthTrigger('generic')
+                                setShowAuthModal(true)
+                              }}
+                            />
+                          )
                         }
                         if (item.id === 'dopamine') {
                           return (
@@ -1142,7 +1169,15 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
         />
       )}
       {/* BuBu AI Assistant */}
-      <BuBu stats={{ todayMinutes, completedTaskCount: todayCompletedCount }} />
+      <BuBu
+        stats={{ todayMinutes, completedTaskCount: todayCompletedCount }}
+        isPro={isPro}
+        onUpgrade={() => setShowPricingModal(true)}
+        onLogin={() => {
+          setAuthTrigger('generic')
+          setShowAuthModal(true)
+        }}
+      />
     </>
   )
 }

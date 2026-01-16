@@ -7,15 +7,17 @@ const BRAIN_DUMP_CHANNEL = 'focus-lab-brain-dump-channel'
 const IDB_NAME = 'focus-lab-cache'
 const IDB_STORE = 'brain-dump'
 
+export type BrainDumpLane = 'left' | 'right'
+
 export type BrainDumpItem = {
   id: string
   text: string
   image?: string
+  lane?: BrainDumpLane
 }
 
 export type BrainDumpState = {
-  left: BrainDumpItem[]
-  right: BrainDumpItem[]
+  items: BrainDumpItem[]
 }
 
 const fallbackId = () => {
@@ -28,10 +30,15 @@ const fallbackId = () => {
 }
 
 // Helper to standardise IDs
-export const createBrainDumpItem = (text: string, image?: string): BrainDumpItem => ({
+export const createBrainDumpItem = (
+  text: string,
+  image?: string,
+  lane: BrainDumpLane = 'left'
+): BrainDumpItem => ({
   id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : fallbackId(),
   text,
   image,
+  lane,
 })
 
 type BrainDumpBundle = { state: BrainDumpState; updatedAt: number }
@@ -91,6 +98,7 @@ const writeLocalBundle = (
   updatedAt: number,
   options: { skipBroadcast?: boolean; skipIdb?: boolean } = {}
 ) => {
+  const { left, right } = splitBrainDumpItems(state.items)
   window.localStorage.setItem(key, JSON.stringify(state))
   window.localStorage.setItem(getMetaKey(key), JSON.stringify({ updatedAt }))
   if (!options.skipIdb) void persistToIdb(key, { state, updatedAt })
@@ -99,18 +107,29 @@ const writeLocalBundle = (
   // 兼容旧版 left/right 独立 key，便于降级读取
   window.localStorage.setItem(
     `${BRAIN_DUMP_STORAGE_KEY}-left${key.replace(BRAIN_DUMP_STORAGE_KEY, '')}`,
-    JSON.stringify(state.left)
+    JSON.stringify(left)
   )
   window.localStorage.setItem(
     `${BRAIN_DUMP_STORAGE_KEY}-right${key.replace(BRAIN_DUMP_STORAGE_KEY, '')}`,
-    JSON.stringify(state.right)
+    JSON.stringify(right)
   )
 }
 
 const hydrateFromIdbIfStale = async (key: string, localUpdatedAt: number) => {
   const cached = await readFromIdb(key)
   if (cached && cached.updatedAt > localUpdatedAt) {
-    writeLocalBundle(key, cached.state || { left: [], right: [] }, cached.updatedAt, {
+    const cachedState =
+      cached.state && 'items' in cached.state
+        ? { items: dedupeBrainDumpItems(cached.state.items) }
+        : {
+            items: mergeBrainDumpColumns(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (cached.state as any)?.left || [],
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (cached.state as any)?.right || []
+            ),
+          }
+    writeLocalBundle(key, cachedState, cached.updatedAt, {
       skipBroadcast: true,
     })
   }
@@ -123,7 +142,18 @@ const initChannel = () => {
     if (!payload || !payload.key) return
     const localUpdatedAt = readLocalMeta(payload.key)
     if (payload.updatedAt && payload.updatedAt > localUpdatedAt) {
-      writeLocalBundle(payload.key, payload.state || { left: [], right: [] }, payload.updatedAt, {
+      const nextState =
+        payload.state && 'items' in payload.state
+          ? { items: dedupeBrainDumpItems(payload.state.items) }
+          : {
+              items: mergeBrainDumpColumns(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (payload.state as any)?.left || [],
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (payload.state as any)?.right || []
+              ),
+            }
+      writeLocalBundle(payload.key, nextState, payload.updatedAt, {
         skipBroadcast: true,
       })
     }
@@ -131,8 +161,47 @@ const initChannel = () => {
   channelInitialized = true
 }
 
+const normalizeLane = (item: BrainDumpItem): BrainDumpLane =>
+  item.lane === 'right' ? 'right' : 'left'
+
+export const dedupeBrainDumpItems = (items: BrainDumpItem[]) => {
+  const seen = new Set<string>()
+  const deduped: BrainDumpItem[] = []
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const item = items[i]
+    if (!item?.id) continue
+    if (seen.has(item.id)) continue
+    seen.add(item.id)
+    deduped.push({ ...item, lane: normalizeLane(item) })
+  }
+  deduped.reverse()
+  return deduped
+}
+
+export const splitBrainDumpItems = (items: BrainDumpItem[]) => {
+  const left: BrainDumpItem[] = []
+  const right: BrainDumpItem[] = []
+  items.forEach((item) => {
+    const lane = normalizeLane(item)
+    if (lane === 'right') right.push({ ...item, lane })
+    else left.push({ ...item, lane })
+  })
+  return { left, right }
+}
+
+export const mergeBrainDumpColumns = (left: BrainDumpItem[], right: BrainDumpItem[]) =>
+  dedupeBrainDumpItems([
+    ...left.map((item) => ({ ...item, lane: 'left' as const })),
+    ...right.map((item) => ({ ...item, lane: 'right' as const })),
+  ])
+
+export const getNextBrainDumpLane = (items: BrainDumpItem[]): BrainDumpLane => {
+  const { left, right } = splitBrainDumpItems(items)
+  return left.length <= right.length ? 'left' : 'right'
+}
+
 export const readBrainDumpStorage = (userId?: string): BrainDumpState => {
-  if (typeof window === 'undefined') return { left: [], right: [] }
+  if (typeof window === 'undefined') return { items: [] }
   initChannel()
   try {
     const key = getStorageKey(userId)
@@ -145,26 +214,27 @@ export const readBrainDumpStorage = (userId?: string): BrainDumpState => {
     const fallbackLeft = window.localStorage.getItem(`${BRAIN_DUMP_STORAGE_KEY}-left${suffix}`)
     const fallbackRight = window.localStorage.getItem(`${BRAIN_DUMP_STORAGE_KEY}-right${suffix}`)
 
-    if (!raw && !fallbackLeft && !fallbackRight) return { left: [], right: [] }
+    if (!raw && !fallbackLeft && !fallbackRight) return { items: [] }
     if (raw) {
       try {
         const parsed = JSON.parse(raw)
-        return {
-          left: Array.isArray(parsed.left) ? parsed.left : [],
-          right: Array.isArray(parsed.right) ? parsed.right : [],
+        if (Array.isArray(parsed.items)) {
+          return { items: dedupeBrainDumpItems(parsed.items) }
         }
+        const left = Array.isArray(parsed.left) ? parsed.left : []
+        const right = Array.isArray(parsed.right) ? parsed.right : []
+        return { items: mergeBrainDumpColumns(left, right) }
       } catch (e) {
         console.warn('BrainDump storage corrupted or invalid JSON, ignoring.', e)
       }
     }
 
-    return {
-      left: fallbackLeft ? JSON.parse(fallbackLeft) : [],
-      right: fallbackRight ? JSON.parse(fallbackRight) : [],
-    }
+    const left = fallbackLeft ? JSON.parse(fallbackLeft) : []
+    const right = fallbackRight ? JSON.parse(fallbackRight) : []
+    return { items: mergeBrainDumpColumns(left, right) }
   } catch (error) {
     console.error('Failed to read Brain Dump storage', error)
-    return { left: [], right: [] }
+    return { items: [] }
   }
 }
 
@@ -181,7 +251,7 @@ export const fetchCloudBrainDump = async (user: User): Promise<BrainDumpState | 
     return null
   }
 
-  if (!data) return { left: [], right: [] }
+  if (!data) return { items: [] }
 
   const left: BrainDumpItem[] = []
   const right: BrainDumpItem[] = []
@@ -212,15 +282,21 @@ export const fetchCloudBrainDump = async (user: User): Promise<BrainDumpState | 
     else right.push(bdItem)
   })
 
-  return { left, right }
+  return { items: mergeBrainDumpColumns(left, right) }
 }
 
-export const saveBrainDump = async (state: BrainDumpState, user?: User | null) => {
+export const saveBrainDump = async (
+  state: BrainDumpState | { left: BrainDumpItem[]; right: BrainDumpItem[] },
+  user?: User | null
+) => {
+  const items = 'items' in state ? state.items : mergeBrainDumpColumns(state.left, state.right)
+  const normalizedItems = dedupeBrainDumpItems(items)
+  const { left, right } = splitBrainDumpItems(normalizedItems)
   const updatedAt = Date.now()
   if (typeof window !== 'undefined') {
     const key = getStorageKey(user?.id)
     initChannel()
-    writeLocalBundle(key, state, updatedAt)
+    writeLocalBundle(key, { items: normalizedItems }, updatedAt)
   }
 
   // Cloud Save
@@ -285,8 +361,8 @@ export const saveBrainDump = async (state: BrainDumpState, user?: User | null) =
     }
 
     // Process items (upload images)
-    const leftItems = await Promise.all(state.left.map(processItemForCloud))
-    const rightItems = await Promise.all(state.right.map(processItemForCloud))
+    const leftItems = await Promise.all(left.map(processItemForCloud))
+    const rightItems = await Promise.all(right.map(processItemForCloud))
 
     // Prepare payloads
     const leftPayload = leftItems.map((item) => ({
@@ -339,7 +415,7 @@ export const saveBrainDump = async (state: BrainDumpState, user?: User | null) =
 export const syncBrainDump = async (user: User) => {
   if (typeof window === 'undefined') return
   const state = readBrainDumpStorage()
-  if (state.left.length === 0 && state.right.length === 0) return
+  if (state.items.length === 0) return
 
   await saveBrainDump(state, user)
 }

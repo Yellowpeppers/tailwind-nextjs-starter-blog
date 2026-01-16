@@ -17,10 +17,24 @@ if (proxyUrl) {
 
 export async function POST(request: Request) {
   try {
-    const { task } = await request.json()
+    const body = await request.json()
+    const { task, userId, language = 'zh' } = body
 
     if (!task) {
       return NextResponse.json({ error: 'Task is required' }, { status: 400 })
+    }
+
+    // Check if user is logged in - Guest users cannot use AI Task Breaker
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error:
+            language === 'zh'
+              ? '请先登录后使用 AI 任务拆解'
+              : 'Please login to use AI Task Breaker',
+        },
+        { status: 401 }
+      )
     }
 
     const apiKey = process.env.GOOGLE_API_KEY

@@ -22,6 +22,7 @@ import {
   uploadImage,
   type FocusItem,
 } from './focusStationStorage'
+import { archiveTask, archiveTasks } from './archivedTasksStorage'
 import { useThemeColor, type UIStyle } from '@/context/ThemeColorContext'
 import PlanComparisonModal from '@/components/auth/PlanComparisonModal'
 
@@ -486,16 +487,31 @@ export const FocusStation = ({
     [onTaskCompleteAction]
   )
 
-  const removeItemStable = useCallback((id: string) => {
-    setItems((prev) => prev.filter((t) => t.id !== id))
-  }, [])
+  const removeItemStable = useCallback(
+    async (id: string) => {
+      const taskToRemove = itemsRef.current.find((t) => t.id === id)
 
-  const handleClearAll = useCallback(() => {
+      // 先归档到历史表（登录用户）
+      if (user && taskToRemove) {
+        await archiveTask(taskToRemove, user, 'deleted')
+      }
+
+      // 再从列表移除
+      setItems((prev) => prev.filter((t) => t.id !== id))
+    },
+    [user]
+  )
+
+  const handleClearAll = useCallback(async () => {
     if (itemsRef.current.length === 0) return
     if (confirm(lang === 'en' ? 'Clear all tasks?' : '清空所有任务？')) {
+      // 先归档所有任务（登录用户）
+      if (user && itemsRef.current.length > 0) {
+        await archiveTasks(itemsRef.current, user, 'deleted')
+      }
       setItems([])
     }
-  }, [lang])
+  }, [lang, user])
 
   return (
     <>

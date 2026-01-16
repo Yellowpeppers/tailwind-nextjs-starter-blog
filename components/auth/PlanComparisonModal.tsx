@@ -21,28 +21,42 @@ export default function PlanComparisonModal({
 
   const features = [
     {
-      name: t.comparePlans.features.focusWidgets,
-      free: t.comparePlans.values.basic,
-      pro: t.comparePlans.values.allAccess,
+      name: t.comparePlans.features.bubuAI || 'BuBu AI 助手',
+      free: t.comparePlans.values.tenPerDay || '10 次/天',
+      pro: t.comparePlans.values.unlimited,
     },
     {
       name: t.comparePlans.features.aiTaskBreaker,
       free: t.comparePlans.values.threePerDay,
       pro: true,
     },
-    { name: t.comparePlans.features.cloudSync, free: true, pro: true },
-    { name: t.comparePlans.features.stats, free: true, pro: true },
     {
-      name: t.comparePlans.features.customBackgrounds,
-      free: t.comparePlans.values.limited,
-      pro: t.comparePlans.values.inDev,
+      name: t.comparePlans.features.voiceInput || '语音输入',
+      free: false,
+      pro: true,
     },
-    { name: t.comparePlans.features.prioritySupport, free: false, pro: true },
+    {
+      name: t.comparePlans.features.bubuPersonality || 'BuBu 性格切换',
+      free: t.comparePlans.values.gentleOnly || '仅温柔',
+      pro: t.comparePlans.values.allThree || '全部 3 种',
+    },
+    { name: t.comparePlans.features.cloudSync, free: true, pro: true },
+    {
+      name: t.comparePlans.features.stats,
+      free: t.comparePlans.values.basic,
+      pro: t.comparePlans.values.detailedReport || '详细报表',
+    },
+    {
+      name: t.comparePlans.features.taskHistory || '任务历史',
+      free: false,
+      pro: true,
+    },
     {
       name: t.comparePlans.features.unlimitedTasks,
-      free: t.comparePlans.values.limit10,
+      free: t.comparePlans.values.limit20 || '最多 20 个',
       pro: t.comparePlans.values.unlimited,
     },
+    { name: t.comparePlans.features.prioritySupport, free: false, pro: true },
   ]
 
   return (

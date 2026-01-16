@@ -17,8 +17,8 @@ if (proxyUrl) {
 
 // Constants
 const HISTORY_LIMIT = 10 // Keep last 10 rounds (20 messages)
-const DAILY_LIMIT_FREE = 20 // Free users: 20 conversations per day
-const DAILY_LIMIT_PRO = 200 // Pro users: 200 conversations per day
+const DAILY_LIMIT_FREE = 10 // Free users: 10 conversations per day
+const DAILY_LIMIT_PRO = -1 // Pro users: unlimited (-1 means no limit)
 
 // Context types for type safety
 interface FocusTask {
@@ -490,6 +490,11 @@ function checkRateLimit(clientId: string, isPro: boolean): { allowed: boolean; r
   const now = Date.now()
   const limit = isPro ? DAILY_LIMIT_PRO : DAILY_LIMIT_FREE
 
+  // Pro users with unlimited (-1) always allowed
+  if (limit === -1) {
+    return { allowed: true, remaining: -1 }
+  }
+
   const record = rateLimitMap.get(clientId)
 
   // Reset if it's a new day
@@ -532,6 +537,20 @@ export async function POST(request: Request) {
     // Validate input
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'Message is required' }, { status: 400 })
+    }
+
+    // Check if user is logged in - Guest users cannot use BuBu AI
+    if (!userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            language === 'zh'
+              ? '请先登录后使用 BuBu AI 助手'
+              : 'Please login to use BuBu AI Assistant',
+        },
+        { status: 401 }
+      )
     }
 
     // Rate limiting

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from '@/context/LanguageContext'
 import { useThemeColor, UIStyle } from '@/context/ThemeColorContext'
 import { useAuth } from '@/context/AuthContext'
 import { useDragAndDrop } from '@formkit/drag-and-drop/react'
 import { animations } from '@formkit/drag-and-drop'
 import { isEqual } from 'lodash'
-import { BrainDumpItem } from '../brainDumpStorage'
+import { BrainDumpItem, mergeBrainDumpColumns, splitBrainDumpItems } from '../brainDumpStorage'
 import { BrainDumpStickyNote } from '../components/BrainDumpStickyNote'
 import { UseBrainDumpResult } from '../hooks/useBrainDump'
 import { TrashIcon, PlusIcon } from '../icons'
@@ -25,22 +25,17 @@ export const BrainDumpWidget = ({
   const { user } = useAuth()
 
   const { state, actions } = brainDump
-  const { leftItems, rightItems } = state
-  const {
-    setLeftItems,
-    setRightItems,
-    addItem,
-    clearAll,
-    deleteItem,
-    updateItemText,
-    handlePasteImage,
-  } = actions
+  const { items } = state
+  const { setItems, addItem, clearAll, deleteItem, updateItemText, handlePasteImage } = actions
+
+  const { left: leftItems, right: rightItems } = useMemo(() => splitBrainDumpItems(items), [items])
 
   const [inputValue, setInputValue] = useState('')
   const [pendingImage, setPendingImage] = useState<string | null>(null)
 
   // Dragging state to disable hover effects
   const [isDragging, setIsDragging] = useState(false)
+  const isSyncingListsRef = useRef(false)
 
   const dragStatePlugin = useCallback((parent: HTMLElement) => {
     const handleDragStart = () => setIsDragging(true)
@@ -64,16 +59,9 @@ export const BrainDumpWidget = ({
       group: 'brain-dump',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       plugins: [animations(), dragStatePlugin as any],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      handleEnd: (data: any) => {
+
+      handleEnd: () => {
         setIsDragging(false)
-        if (data.values) {
-          setLeftItems((prev) => {
-            const newValues = data.values as BrainDumpItem[]
-            if (isEqual(prev, newValues)) return prev // Avoid loop
-            return newValues
-          })
-        }
       },
     }
   )
@@ -84,38 +72,42 @@ export const BrainDumpWidget = ({
       group: 'brain-dump',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       plugins: [animations(), dragStatePlugin as any],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      handleEnd: (data: any) => {
+
+      handleEnd: () => {
         setIsDragging(false)
-        if (data.values) {
-          setRightItems((prev) => {
-            const newValues = data.values as BrainDumpItem[]
-            if (isEqual(prev, newValues)) return prev
-            return newValues
-          })
-        }
       },
     }
   )
 
   // Sync FormKit when master items change
   useEffect(() => {
+    isSyncingListsRef.current = true
     setLeftList(leftItems)
   }, [leftItems, setLeftList])
 
   useEffect(() => {
+    isSyncingListsRef.current = true
     setRightList(rightItems)
   }, [rightItems, setRightList])
+
+  useEffect(() => {
+    if (isSyncingListsRef.current) {
+      if (isEqual(leftList, leftItems) && isEqual(rightList, rightItems)) {
+        isSyncingListsRef.current = false
+      }
+      return
+    }
+    if (isEqual(leftList, leftItems) && isEqual(rightList, rightItems)) return
+    const merged = mergeBrainDumpColumns(leftList, rightList)
+    setItems((prev) => (isEqual(prev, merged) ? prev : merged))
+  }, [leftItems, rightItems, leftList, rightList, setItems])
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
-  const [editColumn, setEditColumn] = useState<'left' | 'right'>('left')
-
   const handleEditStart = useCallback((id: string, text: string, column: 'left' | 'right') => {
     setEditingId(id)
     setEditValue(text)
-    setEditColumn(column)
   }, [])
 
   const handleEditChange = useCallback((value: string) => {
@@ -239,8 +231,8 @@ export const BrainDumpWidget = ({
 
       {/* Columns */}
       <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto rounded-xl border border-dashed border-gray-200 p-2 dark:border-gray-700 [&::-webkit-scrollbar]:hidden">
-        <div className="grid h-full grid-cols-2 gap-4">
-          <div ref={leftParent} className="flex min-h-full flex-col gap-3">
+        <div className="grid grid-cols-2 items-start gap-4">
+          <div ref={leftParent} className="flex flex-col gap-3">
             {leftList.map((item) => (
               <BrainDumpStickyNote
                 key={item.id}
@@ -258,7 +250,7 @@ export const BrainDumpWidget = ({
             ))}
           </div>
 
-          <div ref={rightParent} className="flex min-h-full flex-col gap-3">
+          <div ref={rightParent} className="flex flex-col gap-3">
             {rightList.map((item) => (
               <BrainDumpStickyNote
                 key={item.id}

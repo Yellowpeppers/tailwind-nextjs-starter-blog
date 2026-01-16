@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { data: profile } = await supabase
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       .single()
 
     if (!profile?.stripe_customer_id) {
-      return new NextResponse('No Stripe customer found', { status: 404 })
+      return NextResponse.json({ error: 'No Stripe customer found' }, { status: 404 })
     }
 
     // Create Stripe Customer Portal session
@@ -32,6 +32,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url })
   } catch (error) {
     console.error('[STRIPE_PORTAL_ERROR]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }

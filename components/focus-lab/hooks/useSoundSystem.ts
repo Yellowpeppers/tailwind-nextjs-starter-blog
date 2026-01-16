@@ -24,6 +24,7 @@ export const useSoundSystem = () => {
   // Logic Refs
   const isLoaded = useRef(false)
   const isRemoteUpdate = useRef(false)
+  const autoPauseAppliedRef = useRef(false)
   const prevSoundSettingsRef = useRef<{
     active_tracks?: Record<string, ActiveTrack>
     master_volume?: number
@@ -81,6 +82,15 @@ export const useSoundSystem = () => {
     const nextVolume = soundSettings?.master_volume
     const prev = prevSoundSettingsRef.current
 
+    if (!autoPauseAppliedRef.current) {
+      const hasTracks = !!nextTracks && Object.keys(nextTracks).length > 0
+      const shouldAutoPause = hasTracks && (soundSettings?.enabled ?? true)
+      if (shouldAutoPause) {
+        updateSettings('focus_lab.sound.enabled', false)
+      }
+      autoPauseAppliedRef.current = true
+    }
+
     // Check equality to avoid loop
     if (
       isEqual(nextTracks, prev.active_tracks) &&
@@ -104,16 +114,14 @@ export const useSoundSystem = () => {
     } else {
       isRemoteUpdate.current = false
     }
-  }, [isSettingsLoaded, settings.focus_lab?.sound])
+  }, [isSettingsLoaded, settings.focus_lab?.sound, updateSettings])
 
   // 3. Save Settings Debounced
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const saveSoundSettings = useCallback(
     debounce((tracks: Record<string, ActiveTrack>, volume: number) => {
-      updateSettings('focus_lab.sound', {
-        active_tracks: tracks,
-        master_volume: volume,
-      })
+      updateSettings('focus_lab.sound.active_tracks', tracks)
+      updateSettings('focus_lab.sound.master_volume', volume)
     }, 1000),
     [updateSettings]
   )

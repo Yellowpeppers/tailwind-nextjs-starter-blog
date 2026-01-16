@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { readStationStorage, saveStationItems, createFocusItem } from '../focusStationStorage'
 
 export const useTaskBreaker = (onViewChange?: (isResult: boolean) => void) => {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const { user } = useAuth()
 
   // State
@@ -53,8 +53,20 @@ export const useTaskBreaker = (onViewChange?: (isResult: boolean) => void) => {
       const response = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task }),
+        body: JSON.stringify({
+          task,
+          userId: user?.id,
+          language,
+        }),
       })
+
+      if (response.status === 401) {
+        // User not logged in
+        const data = await response.json()
+        setIsLoading(false)
+        setError(data.error || '请先登录后使用此功能')
+        return
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch steps')

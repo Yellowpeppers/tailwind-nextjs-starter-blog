@@ -78,9 +78,8 @@ export const useFocusLabStats = (options: UseFocusLabStatsOptions = {}) => {
 
     const done = items.filter((item: FocusItem) => {
       if (!item.completed) return false
-      if (item.created_at) return new Date(item.created_at).getTime() >= dayStart
-      // Default to true if no timestamp (legacy behavior)
-      return true
+      if (typeof item.completed_at !== 'number') return false
+      return item.completed_at >= dayStart
     })
     setTasksCompletedToday(done.length)
   }, [userId])

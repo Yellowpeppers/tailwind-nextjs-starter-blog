@@ -17,6 +17,7 @@ export type FocusItem = {
   completed_at?: number | null
   position: number
   created_at?: string
+  total_focus_minutes?: number // New field to track effort
 }
 
 const fallbackId = () => `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -126,6 +127,7 @@ export const createFocusItem = (type: FocusItemType, content: string): FocusItem
     completed: false,
     completed_at: null,
     position: Date.now(),
+    total_focus_minutes: 0,
   }
 }
 
@@ -147,6 +149,7 @@ export const readStationStorage = (userId?: string): FocusItem[] => {
       ...item,
       completed: (item.completed as boolean) ?? false,
       completed_at: (item.completed_at as number) ?? null,
+      total_focus_minutes: (item.total_focus_minutes as number) ?? 0,
     })) as FocusItem[]
   } catch (error) {
     console.error('Failed to read Focus Station storage', error)
@@ -176,6 +179,7 @@ export const fetchCloudItems = async (user: User): Promise<FocusItem[] | null> =
     position: d.position,
     completed: d.is_completed || false,
     completed_at: d.completed_at ? new Date(d.completed_at).getTime() : null,
+    total_focus_minutes: Number(d.total_focus_minutes || 0),
   }))
 }
 
@@ -198,6 +202,7 @@ export const saveStationItems = async (items: FocusItem[], user?: User | null) =
         is_completed: item.completed,
         completed_at: item.completed_at ? new Date(item.completed_at).toISOString() : null,
         position: index,
+        total_focus_minutes: item.total_focus_minutes || 0,
         updated_at: new Date().toISOString(),
       }))
 
@@ -218,6 +223,17 @@ export const saveStationItems = async (items: FocusItem[], user?: User | null) =
           if (retryError) {
             console.error('Cloud save fallback error:', retryError.message)
           }
+        } else if (
+          error &&
+          error.message &&
+          error.message.includes("Could not find the 'total_focus_minutes' column")
+        ) {
+          console.warn('Schema mismatch: Retrying sync without total_focus_minutes field...')
+          const fallbackPayload = dbPayload.map(({ total_focus_minutes, ...rest }) => rest)
+          const { error: retryError } = await supabase
+            .from('focus_items')
+            .upsert(fallbackPayload, { onConflict: 'id' })
+          if (retryError) console.error('Cloud save fallback error (duration):', retryError.message)
         } else if (error) {
           console.error('Cloud save error (focus_items):', error.message || error)
         }
@@ -269,4 +285,19 @@ export const syncLocalToCloud = async (user: User) => {
   const localItems = readStationStorage(user.id)
   if (localItems.length === 0) return
   await saveStationItems(localItems, user)
+}
+
+/**
+ * 为指定任务累加专注时长
+ */
+export const incrementTaskDuration = (taskId: string, minutes: number, userId?: string) => {
+  if (typeof window === 'undefined') return
+  const items = readStationStorage(userId)
+  const updated = items.map((item) => {
+    if (item.id === taskId) {
+      return { ...item, total_focus_minutes: (item.total_focus_minutes || 0) + minutes }
+    }
+    return item
+  })
+  void saveStationItems(updated, userId ? ({ id: userId } as User) : null)
 }

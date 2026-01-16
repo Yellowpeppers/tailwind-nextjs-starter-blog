@@ -11,8 +11,10 @@ export const TaskBreakerCard = memo(function TaskBreakerCard({
   onDeleteAction,
   className,
   isFocused,
+  onLogin,
 }: {
   onDeleteAction?: () => void
+  onLogin?: () => void
   className?: string
   isFocused?: boolean
 }) {
@@ -31,7 +33,12 @@ export const TaskBreakerCard = memo(function TaskBreakerCard({
       isFocused={isFocused}
       variant={isResultView ? 'default' : 'ai-assistant'}
     >
-      <TaskBreakerWidget taskBreaker={taskBreaker} uiStyle={uiStyle} isResultView={isResultView} />
+      <TaskBreakerWidget
+        taskBreaker={taskBreaker}
+        uiStyle={uiStyle}
+        isResultView={isResultView}
+        onLogin={onLogin}
+      />
     </CardShell>
   )
 })

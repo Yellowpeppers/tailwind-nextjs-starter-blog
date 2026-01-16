@@ -16,14 +16,17 @@ import type { ChatMessage, PersonalityType, BuBuApiResponse, BuBuAction } from '
 
 export const useBuBuChat = ({
   stats,
+  isPro = false,
 }: {
   stats?: { todayMinutes: number; completedTaskCount: number }
+  isPro?: boolean
 } = {}) => {
   const { language } = useTranslation()
   const { user } = useAuth()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [remaining, setRemaining] = useState<number | null>(null) // Remaining daily uses
   const supabase = createClient() // Initialize Supabase client
 
   // Load personality from localStorage
@@ -125,6 +128,8 @@ export const useBuBuChat = ({
             })),
             personality,
             language,
+            userId: user?.id, // Pass user ID for auth check
+            isPro, // Pass Pro status to API
             stats, // Pass stats to API
             // Add Context Awareness - only extract serializable fields
             context: await (async () => {
@@ -157,6 +162,11 @@ export const useBuBuChat = ({
           throw new Error(data.error)
         }
 
+        // Update remaining count (only for free users)
+        if (typeof data.data.remaining === 'number') {
+          setRemaining(data.data.remaining)
+        }
+
         // Ensure reply is a string (API might return object in some edge cases)
         const replyContent =
           typeof data.data.reply === 'string' ? data.data.reply : JSON.stringify(data.data.reply)
@@ -185,7 +195,7 @@ export const useBuBuChat = ({
       }
     },
 
-    [messages, personality, language, saveMessageToCloud, user?.id]
+    [messages, personality, language, isPro, saveMessageToCloud, user?.id, stats]
   )
 
   // Confirm action (add tasks or idea) - WITH ACTUAL INTEGRATION
@@ -461,6 +471,7 @@ export const useBuBuChat = ({
     messages,
     isLoading,
     error,
+    remaining, // Daily remaining uses
     personality,
     setPersonality,
     sendMessage,

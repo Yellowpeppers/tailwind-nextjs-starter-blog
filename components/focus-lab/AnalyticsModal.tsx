@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { FocusSession, getHistory, getTodaySessions, fetchCloudHistory } from './focusStorage'
 import { useTranslation } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
+import { ProAnalyticsSection } from './ProAnalyticsSection'
+import { FeatureGateModal } from './FeatureGateModal'
 
 // Helper to format duration
 const formatDuration = (minutes: number) => {
@@ -15,7 +17,19 @@ const formatDuration = (minutes: number) => {
   return `${m}m`
 }
 
-export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
+interface AnalyticsModalProps {
+  onClose: () => void
+  isPro?: boolean
+  onUpgrade?: () => void
+  onLogin?: () => void
+}
+
+export const AnalyticsModal = ({
+  onClose,
+  isPro = false,
+  onUpgrade,
+  onLogin,
+}: AnalyticsModalProps) => {
   const { t, language: lang } = useTranslation()
   const { user } = useAuth()
   const [sessions, setSessions] = useState<FocusSession[]>([])
@@ -552,6 +566,15 @@ export const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
               )}
             </div>
           </div>
+
+          {/* Pro Analytics Section */}
+          <ProAnalyticsSection
+            sessions={sessions}
+            isPro={isPro}
+            onUpgrade={onUpgrade}
+            onLogin={onLogin}
+            user={user}
+          />
         </div>
       </motion.div>
     </motion.div>
