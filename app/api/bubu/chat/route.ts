@@ -872,31 +872,33 @@ export async function POST(request: Request) {
     })
 
     if (!functionCall) {
-      // Fallback: return direct text response
       const text = response.text()?.trim()
-      incrementRateLimit(clientId)
 
-      // 防止空白回复 - 提供更有意义的 fallback
-      let replyText = text
-      if (!text) {
-        console.warn('[BuBu API] Empty response detected for message:', message)
-        // 根据消息内容提供更智能的 fallback
-        if (message.includes('番茄') || message.includes('专注') || message.includes('timer')) {
-          replyText = '好的，我帮你启动番茄钟！🍅 请点击右侧的计时器开始吧～'
-        } else if (message.includes('任务') || message.includes('task')) {
-          replyText = '我看到你想处理任务！📋 你可以在左侧添加任务，或者告诉我具体想做什么？'
-        } else {
-          replyText = '我在认真听呢！💙 可以再说一遍吗？'
-        }
+      // 如果有文本内容，直接返回
+      if (text) {
+        incrementRateLimit(clientId)
+        return NextResponse.json({
+          success: true,
+          data: {
+            reply: text,
+            remaining: rateLimit.remaining - 1,
+          },
+        })
       }
 
-      return NextResponse.json({
-        success: true,
-        data: {
-          reply: replyText,
-          remaining: rateLimit.remaining - 1,
+      // ❌ 空白响应 - 返回错误让前端触发重试
+      console.error(
+        '[BuBu API] Empty response - no function call and no text for message:',
+        message
+      )
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'BuBu 没有正确响应，请点击重试按钮再试一次',
+          retryable: true, // 标记为可重试
         },
-      })
+        { status: 503 }
+      )
     }
 
     const { name, args } = functionCall
@@ -904,9 +906,18 @@ export async function POST(request: Request) {
 
     // Handle different function calls
     if (name === 'chat_only') {
+      const replyText = args.reply?.trim()
+
+      // 如果 reply 为空，返回错误让用户重试
+      if (!replyText) {
+        console.error('[BuBu API] chat_only returned empty reply')
+        return NextResponse.json(
+          { success: false, error: 'BuBu 响应为空，请点击重试', retryable: true },
+          { status: 503 }
+        )
+      }
+
       incrementRateLimit(clientId)
-      // 防止空白回复：如果 reply 为空则使用 fallback
-      const replyText = args.reply?.trim() || '我在呢！有什么想聊的吗？💙'
       return NextResponse.json({
         success: true,
         data: {
