@@ -517,6 +517,7 @@ export const dictionary = {
         platformStatus: 'Member Status',
         focusMember: 'Pro Member',
         freeMember: 'Free Member',
+        proWorkspace: 'Pro Workspace',
         editProfile: 'Edit Profile',
         signOut: 'Sign Out',
         avatar: 'User Avatar',
@@ -527,6 +528,8 @@ export const dictionary = {
         cancel: 'Cancel',
         saveChanges: 'Save Changes',
         saveErrorPrefix: 'Error saving profile: ',
+        active: 'Active',
+        manageSubscription: 'Manage Subscription',
       },
     },
     test: {
@@ -1932,6 +1935,7 @@ export const dictionary = {
         platformStatus: '会员状态',
         focusMember: '高级版会员',
         freeMember: '免费会员',
+        proWorkspace: 'Pro 工作区',
         editProfile: '编辑档案',
         signOut: '退出登录',
         avatar: '用户头像',
@@ -1942,6 +1946,8 @@ export const dictionary = {
         cancel: '取消',
         saveChanges: '保存修改',
         saveErrorPrefix: '保存档案出错：',
+        active: '有效',
+        manageSubscription: '管理订阅',
       },
     },
     tools: {

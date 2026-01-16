@@ -141,9 +141,15 @@ export const useBuBuChat = ({
                 content: t.content,
                 completed: t.completed,
               }))
+              // Use splitBrainDumpItems to handle new unified state format
+              const { left, right } = await (async () => {
+                const { splitBrainDumpItems } =
+                  await import('@/components/focus-lab/brainDumpStorage')
+                return splitBrainDumpItems(ideas.items)
+              })()
               const safeIdeas = {
-                left: (ideas.left || []).map((i) => ({ content: i.text })),
-                right: (ideas.right || []).map((i) => ({ content: i.text })),
+                left: left.map((i) => ({ content: i.text })),
+                right: right.map((i) => ({ content: i.text })),
               }
 
               console.log('[useBuBuChat] Context loaded:', {
@@ -228,11 +234,10 @@ export const useBuBuChat = ({
           const idea = message.action.payload as string
           const currentState = await readBrainDumpStorage(user?.id)
 
-          // Create new item and add to left column
-          const newItem = createBrainDumpItem(idea)
+          // Create new item and add to items array with 'left' lane
+          const newItem = createBrainDumpItem(idea, undefined, 'left')
           const updatedState = {
-            left: [newItem, ...currentState.left],
-            right: currentState.right,
+            items: [newItem, ...currentState.items],
           }
 
           // Save to storage
@@ -304,10 +309,9 @@ export const useBuBuChat = ({
           const ideasToDelete = message.action.payload as string[]
           const currentState = await readBrainDumpStorage(user?.id)
 
-          // Filter out the ideas from both columns
+          // Filter out the ideas from items array
           const updatedState = {
-            left: currentState.left.filter((i) => !ideasToDelete.includes(i.text)),
-            right: currentState.right.filter((i) => !ideasToDelete.includes(i.text)),
+            items: currentState.items.filter((i) => !ideasToDelete.includes(i.text)),
           }
 
           // Save to storage
@@ -346,12 +350,9 @@ export const useBuBuChat = ({
           }
           const currentState = await readBrainDumpStorage(user?.id)
 
-          // Update in both columns
+          // Update in items array
           const updatedState = {
-            left: currentState.left.map((i) =>
-              i.text === oldContent ? { ...i, text: newContent } : i
-            ),
-            right: currentState.right.map((i) =>
+            items: currentState.items.map((i) =>
               i.text === oldContent ? { ...i, text: newContent } : i
             ),
           }

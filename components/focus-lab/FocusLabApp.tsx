@@ -565,8 +565,7 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
       const hasLocal =
         station.length > 0 ||
         todo.length > 0 ||
-        brain.left.length > 0 ||
-        brain.right.length > 0 ||
+        brain.items.length > 0 ||
         (dopamine && dopamine.length > 0)
 
       if (hasLocal) {
@@ -629,10 +628,13 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
       const regenerateBrainIds = (items: any[]) =>
         items.map((i) => ({ ...i, id: crypto.randomUUID() }))
 
-      if (localBrain.left.length > 0 || localBrain.right.length > 0) {
-        const mergedLeft = [...(cloudBrain?.left || []), ...regenerateBrainIds(localBrain.left)]
-        const mergedRight = [...(cloudBrain?.right || []), ...regenerateBrainIds(localBrain.right)]
-        await saveBrainDump({ left: mergedLeft, right: mergedRight }, user)
+      if (localBrain.items.length > 0) {
+        // Merge with cloud brain items
+        const mergedItems = [
+          ...(cloudBrain?.items || []),
+          ...localBrain.items.map((i) => ({ ...i, id: crypto.randomUUID() })),
+        ]
+        await saveBrainDump({ items: mergedItems }, user)
         // Clear local keys (v2 and v1)
         window.localStorage.removeItem('focus-lab-brain-dump-list-v2')
         window.localStorage.removeItem('focus-lab-brain-dump-list')
