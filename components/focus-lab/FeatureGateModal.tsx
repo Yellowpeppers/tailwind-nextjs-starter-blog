@@ -58,7 +58,7 @@ export const FeatureGateModal = ({
           lang === 'zh'
             ? '升级 Pro 后，你可以无限使用 AI 助手、享受语音输入、查看详细报表，还能解锁更多性格模式 🚀'
             : 'Upgrade to Pro for unlimited AI, voice input, detailed reports, and more personality modes 🚀',
-        actionText: lang === 'zh' ? '查看 Pro 权益' : 'View Pro Benefits',
+        actionText: lang === 'zh' ? '开启 7 天免费试用' : 'Start 7-Day Free Trial',
         cancelText: lang === 'zh' ? '继续免费使用' : 'Continue Free',
       }
 
@@ -157,12 +157,21 @@ export const FeatureGateModal = ({
                 >
                   {content.actionText}
                 </button>
-                <button
-                  onClick={onClose}
-                  className="w-full rounded-xl py-3 text-center font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  {content.cancelText}
-                </button>
+                {/* Only show 'Continue Free' if it's NOT a hard-gated feature */}
+                {!(
+                  feature.includes('BuBu') ||
+                  feature.includes('Voice') ||
+                  feature.includes('语音') ||
+                  feature.includes('Personality') ||
+                  feature.includes('性格')
+                ) && (
+                  <button
+                    onClick={onClose}
+                    className="w-full rounded-xl py-3 text-center font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  >
+                    {content.cancelText}
+                  </button>
+                )}
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
+import { GoogleGenerativeAI, SchemaType, type GenerateContentResult } from '@google/generative-ai'
 import { NextResponse } from 'next/server'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
 
@@ -17,7 +17,7 @@ if (proxyUrl) {
 
 // Constants
 const HISTORY_LIMIT = 10 // Keep last 10 rounds (20 messages)
-const DAILY_LIMIT_FREE = 10 // Free users: 10 conversations per day
+const DAILY_LIMIT_FREE = 0 // Free users: No access, prompt for trial
 const DAILY_LIMIT_PRO = -1 // Pro users: unlimited (-1 means no limit)
 
 // Context types for type safety
@@ -814,8 +814,7 @@ export async function POST(request: Request) {
 
     // 自动重试配置: 空白响应时最多重试1次
     const MAX_ATTEMPTS = 2
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let result: any = null
+    let result: GenerateContentResult | null = null
     let lastAttemptError: string | null = null
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -932,7 +931,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const { name, args } = functionCall
+    const { name, args: rawArgs } = functionCall
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const args = rawArgs as Record<string, any>
     console.log('[BuBu API] Function call detected:', { name, args })
 
     // Handle different function calls

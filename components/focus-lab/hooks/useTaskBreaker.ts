@@ -5,7 +5,7 @@ import { readStationStorage, saveStationItems, createFocusItem } from '../focusS
 
 export const useTaskBreaker = (onViewChange?: (isResult: boolean) => void) => {
   const { t, language } = useTranslation()
-  const { user } = useAuth()
+  const { user, isPro } = useAuth()
 
   // State
   const [task, setTask] = useState('')
@@ -57,6 +57,7 @@ export const useTaskBreaker = (onViewChange?: (isResult: boolean) => void) => {
           task,
           userId: user?.id,
           language,
+          isPro,
         }),
       })
 
@@ -97,7 +98,7 @@ export const useTaskBreaker = (onViewChange?: (isResult: boolean) => void) => {
         timeoutsRef.current.push(timer)
       })
     }
-  }, [task, t, onViewChange, clearTimers])
+  }, [task, t, onViewChange, clearTimers, user?.id, language, isPro])
 
   const handleTransferToTodo = useCallback(() => {
     if (visibleSteps.length === 0 || isLoading || isTransferring || hasTransferred) return

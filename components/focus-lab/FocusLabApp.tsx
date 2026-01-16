@@ -623,11 +623,6 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
       const cloudBrain = await fetchCloudBrainDump(user)
       const localBrain = readBrainDumpStorage() // Guest
 
-      // Helper to regenerate IDs to avoid RLS conflicts if items were recycled from another user
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const regenerateBrainIds = (items: any[]) =>
-        items.map((i) => ({ ...i, id: crypto.randomUUID() }))
-
       if (localBrain.items.length > 0) {
         // Merge with cloud brain items
         const mergedItems = [

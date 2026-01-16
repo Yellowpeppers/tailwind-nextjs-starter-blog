@@ -209,37 +209,12 @@ export const saveStationItems = async (items: FocusItem[], user?: User | null) =
       try {
         const { error } = await supabase.from('focus_items').upsert(dbPayload, { onConflict: 'id' })
 
-        // 1. Handle missing column error by retrying without 'completed_at'
-        if (
-          error &&
-          error.message &&
-          error.message.includes("Could not find the 'completed_at' column")
-        ) {
-          console.warn('Schema mismatch: Retrying sync without completed_at field...')
-          const fallbackPayload = dbPayload.map(({ completed_at, ...rest }) => rest)
-          const { error: retryError } = await supabase
-            .from('focus_items')
-            .upsert(fallbackPayload, { onConflict: 'id' })
-          if (retryError) {
-            console.error('Cloud save fallback error:', retryError.message)
-          }
-        } else if (
-          error &&
-          error.message &&
-          error.message.includes("Could not find the 'total_focus_minutes' column")
-        ) {
-          console.warn('Schema mismatch: Retrying sync without total_focus_minutes field...')
-          const fallbackPayload = dbPayload.map(({ total_focus_minutes, ...rest }) => rest)
-          const { error: retryError } = await supabase
-            .from('focus_items')
-            .upsert(fallbackPayload, { onConflict: 'id' })
-          if (retryError) console.error('Cloud save fallback error (duration):', retryError.message)
-        } else if (error) {
+        if (error) {
           console.error('Cloud save error (focus_items):', error.message || error)
         }
 
-        // 2. Cleanup old items (only if sync was successful or partially successful)
-        if (!error || (error.message && error.message.includes('completed_at'))) {
+        // 2. Cleanup old items (only if sync was successful)
+        if (!error) {
           if (items.length > 0) {
             const ids = items.map((i) => i.id)
             await supabase

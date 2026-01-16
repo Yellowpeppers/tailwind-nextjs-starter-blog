@@ -15,10 +15,45 @@ if (proxyUrl) {
   }
 }
 
+// Rate limiting constants
+const DAILY_LIMIT_FREE = 3
+const DAILY_LIMIT_PRO = -1 // -1 means unlimited
+
+// Simple in-memory rate limiting
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+function checkRateLimit(clientId: string, isPro: boolean): { allowed: boolean; remaining: number } {
+  const now = Date.now()
+  const limit = isPro ? DAILY_LIMIT_PRO : DAILY_LIMIT_FREE
+
+  const record = rateLimitMap.get(clientId)
+
+  // Reset if it's a new day
+  if (!record || now > record.resetAt) {
+    const tomorrow = new Date()
+    tomorrow.setHours(24, 0, 0, 0)
+    rateLimitMap.set(clientId, { count: 0, resetAt: tomorrow.getTime() })
+    return { allowed: true, remaining: limit }
+  }
+
+  if (record.count >= limit) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  return { allowed: true, remaining: limit - record.count }
+}
+
+function incrementRateLimit(clientId: string) {
+  const record = rateLimitMap.get(clientId)
+  if (record) {
+    record.count += 1
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { task, userId, language = 'zh' } = body
+    const { task, userId, language = 'zh', isPro = false } = body
 
     if (!task) {
       return NextResponse.json({ error: 'Task is required' }, { status: 400 })
@@ -36,6 +71,24 @@ export async function POST(request: Request) {
         { status: 401 }
       )
     }
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(userId, isPro)
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            language === 'zh'
+              ? `今日使用次数已达上限 (Pro: ${DAILY_LIMIT_PRO}次/天)`
+              : `Daily limit reached (Pro: ${DAILY_LIMIT_PRO}/day)`,
+        },
+        { status: 429 }
+      )
+    }
+
+    // Increment ONLY after successful generation? Or before?
+    // Usually before or here to prevent abuse.
+    incrementRateLimit(userId)
 
     const apiKey = process.env.GOOGLE_API_KEY
     if (!apiKey) {

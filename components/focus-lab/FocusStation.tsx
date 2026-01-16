@@ -313,15 +313,15 @@ export const FocusStation = ({
   const [parent, listItems, setListItems] = useDragAndDrop<HTMLDivElement, FocusItem>(items, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     plugins: [animations(), dragStatePlugin as any],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    handleEnd: (data: any) => {
+    handleEnd: (data: unknown) => {
+      const { values } = data as { values: FocusItem[] }
       // Sync back to master state when drag ends
       // Check if order actually changed to avoid loop?
       // FormKit returns the new list in data.values
       // We should update our master 'items' state so it gets saved to storage/DB
-      if (data.values) {
+      if (values) {
         setItems((prev) => {
-          const newValues = data.values as FocusItem[]
+          const newValues = values as FocusItem[]
           if (isEqual(prev, newValues)) return prev
           return newValues
         })

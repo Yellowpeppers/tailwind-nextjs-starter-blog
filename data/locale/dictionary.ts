@@ -965,7 +965,8 @@ export const dictionary = {
         tenPerDay: '10 times/day',
         gentleOnly: 'Gentle only',
         allThree: 'All 3 types',
-        detailedReport: 'Detailed Reports',
+        detailedReport: 'Pro Reports',
+        sevenDayTrial: '7-Day Free Trial',
       },
       intervals: {
         month: 'Monthly',
@@ -2092,7 +2093,8 @@ export const dictionary = {
         tenPerDay: '每天 10 次',
         gentleOnly: '仅温柔',
         allThree: '全部 3 种',
-        detailedReport: '详细报表',
+        detailedReport: 'Pro 报表',
+        sevenDayTrial: '7天免费试用',
       },
       intervals: {
         month: '月度',

@@ -22,13 +22,13 @@ export default function PlanComparisonModal({
   const features = [
     {
       name: t.comparePlans.features.bubuAI || 'BuBu AI 助手',
-      free: t.comparePlans.values.tenPerDay || '10 次/天',
+      free: t.comparePlans.values.sevenDayTrial || '7天免费试用',
       pro: t.comparePlans.values.unlimited,
     },
     {
       name: t.comparePlans.features.aiTaskBreaker,
       free: t.comparePlans.values.threePerDay,
-      pro: true,
+      pro: t.comparePlans.values.unlimited,
     },
     {
       name: t.comparePlans.features.voiceInput || '语音输入',
@@ -37,14 +37,18 @@ export default function PlanComparisonModal({
     },
     {
       name: t.comparePlans.features.bubuPersonality || 'BuBu 性格切换',
-      free: t.comparePlans.values.gentleOnly || '仅温柔',
+      free: false,
       pro: t.comparePlans.values.allThree || '全部 3 种',
     },
-    { name: t.comparePlans.features.cloudSync, free: true, pro: true },
+    {
+      name: t.comparePlans.features.cloudSync,
+      free: t.comparePlans.values.limited || '有限',
+      pro: true,
+    },
     {
       name: t.comparePlans.features.stats,
       free: t.comparePlans.values.basic,
-      pro: t.comparePlans.values.detailedReport || '详细报表',
+      pro: t.comparePlans.values.detailedReport || 'Pro 报表',
     },
     {
       name: t.comparePlans.features.taskHistory || '任务历史',

@@ -230,6 +230,13 @@ export const BuBuChatModal = ({
       return
     }
 
+    // New: Check for Pro status immediately for chat
+    if (!isPro) {
+      setGateFeature(lang === 'zh' ? 'BuBu AI 助手' : 'BuBu AI Assistant')
+      setShowUpgradeGate(true)
+      return
+    }
+
     sendMessage(messageToSend)
     setInputValue('')
     // Reset height manually after send
@@ -440,8 +447,8 @@ export const BuBuChatModal = ({
                   </Transition>
                 </Menu>
                 <div className="flex items-center gap-2">
-                  {/* Remaining uses indicator (free users only) */}
-                  {!isPro && remaining !== null && remaining >= 0 && (
+                  {/* Remaining uses indicator (free users only) - Hide for now since free limit is 0 and triggers paywall */}
+                  {!isPro && remaining !== null && remaining > 0 && (
                     <div className="flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs dark:bg-gray-800">
                       <span className="text-gray-500 dark:text-gray-400">
                         今日剩余{' '}

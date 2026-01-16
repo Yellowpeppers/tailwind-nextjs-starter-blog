@@ -232,14 +232,14 @@ const MessageItem = memo(
       () => ({
         // Override link to open in new tab
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        a: ({ node, children, ...props }: any) => (
+        a: ({ node, children, ...props }: React.ComponentPropsWithoutRef<'a'> & { node?: any }) => (
           <a target="_blank" rel="noopener noreferrer" {...props}>
             {children}
           </a>
         ),
         // Reduce margin on paragraphs with typewriter effect for last message
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        p: ({ node, children, ...props }: any) => {
+        p: ({ node, children, ...props }: React.ComponentPropsWithoutRef<'p'> & { node?: any }) => {
           const isAssistant = message.role === 'assistant'
 
           if (isLastMessage && isAssistant && typeof children === 'string') {
