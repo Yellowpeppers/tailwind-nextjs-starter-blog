@@ -811,49 +811,80 @@ export async function POST(request: Request) {
 
     // Use models that work (same as existing Gemini API)
     const modelCandidates = ['gemini-2.5-flash', 'gemini-1.5-flash']
-    let result
 
-    for (const modelName of modelCandidates) {
-      try {
-        console.log(`[BuBu API] Attempting with model: ${modelName}`)
+    // 自动重试配置: 空白响应时最多重试1次
+    const MAX_ATTEMPTS = 2
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: any = null
+    let lastAttemptError: string | null = null
 
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            temperature: 0.85, // 提高创造性减少重复回复
-            maxOutputTokens: 500,
-          },
-        })
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      for (const modelName of modelCandidates) {
+        try {
+          const attemptInfo = attempt > 0 ? ` (retry ${attempt})` : ''
+          console.log(`[BuBu API] Attempting with model: ${modelName}${attemptInfo}`)
 
-        // Build chat history for Gemini
-        const chatHistory = trimmedHistory.map((msg) => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }],
-        }))
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              temperature: 0.85 + attempt * 0.05, // 重试时稍微提高随机性
+              maxOutputTokens: 500,
+            },
+          })
 
-        // Start chat with function calling
-        const chat = model.startChat({
-          history: chatHistory,
-          systemInstruction: {
-            role: 'system',
-            parts: [{ text: systemPrompt }],
-          },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          tools: [{ functionDeclarations: BUBU_FUNCTIONS as any }],
-        })
+          // Build chat history for Gemini
+          const chatHistory = trimmedHistory.map((msg) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }],
+          }))
 
-        result = await chat.sendMessage(message)
-        console.log(`[BuBu API] Success with model: ${modelName}`)
-        break
-      } catch (error) {
-        console.error(`[BuBu API] Model ${modelName} failed:`, error)
-        // Continue to next model
+          // Start chat with function calling
+          const chat = model.startChat({
+            history: chatHistory,
+            systemInstruction: {
+              role: 'system',
+              parts: [{ text: systemPrompt }],
+            },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            tools: [{ functionDeclarations: BUBU_FUNCTIONS as any }],
+          })
+
+          result = await chat.sendMessage(message)
+          console.log(`[BuBu API] Success with model: ${modelName}`)
+
+          // 检查是否为有效响应(有function call或非空文本)
+          const tempResponse = result.response
+          const tempFunctionCall = tempResponse.functionCalls()?.[0]
+          const tempText = tempResponse.text()?.trim()
+
+          if (tempFunctionCall || tempText) {
+            // 有效响应，跳出所有循环
+            break
+          } else {
+            // 空白响应，继续重试
+            console.warn(`[BuBu API] Empty response on attempt ${attempt + 1}, will retry...`)
+            lastAttemptError = 'Empty response'
+            result = null // 标记为需要重试
+          }
+          break // 成功调用模型(即使空白)，跳出内层循环
+        } catch (error) {
+          console.error(`[BuBu API] Model ${modelName} failed:`, error)
+          lastAttemptError = String(error)
+          // Continue to next model
+        }
       }
+
+      // 如果有有效结果，跳出重试循环
+      if (result) break
     }
 
     if (!result) {
       return NextResponse.json(
-        { success: false, error: 'All models failed to respond' },
+        {
+          success: false,
+          error: lastAttemptError || 'All models failed to respond',
+          retryable: true,
+        },
         { status: 502 }
       )
     }
