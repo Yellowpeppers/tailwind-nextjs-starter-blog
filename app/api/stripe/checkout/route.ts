@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://neurohackslab.com'}/focuslab?canceled=true`,
       customer: customerId,
       allow_promotion_codes: true,
+      payment_method_collection: 'always',
       payment_method_types: ['card'],
       line_items: [
         {
