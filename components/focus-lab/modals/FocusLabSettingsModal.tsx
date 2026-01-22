@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/context/LanguageContext'
+import { usePathname, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useThemeColor, ThemeColor, UIStyle } from '@/context/ThemeColorContext'
 import { GRID_PRESETS } from '@/components/focus-lab/constants'
@@ -44,6 +45,8 @@ export const FocusLabSettingsModal = ({
   onResetLayout,
 }: FocusLabSettingsModalProps) => {
   const { t, language: lang } = useTranslation()
+  const pathname = usePathname()
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
 
@@ -110,6 +113,24 @@ export const FocusLabSettingsModal = ({
               </h2>
 
               <div className="space-y-4">
+                {/* Language Switcher */}
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <span className="font-medium dark:text-gray-200">
+                    {lang === 'zh' ? 'Language' : '语言'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const newLang = lang === 'en' ? 'zh' : 'en'
+                      // Replace the first occurrence of the current lang in the path
+                      const newPath = pathname.replace(`/${lang}`, `/${newLang}`)
+                      router.push(newPath)
+                    }}
+                    className={`rounded-md px-3 py-1.5 text-sm transition-colors ${getToggleButtonClass(false).replace('bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400', 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300')}`}
+                  >
+                    {lang === 'zh' ? '中文' : 'English'}
+                  </button>
+                </div>
+
                 {/* Dark Mode */}
                 <div
                   className={`flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800 ${isLightModeOnlyStyle ? 'opacity-50' : ''}`}

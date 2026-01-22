@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { createPortal } from 'react-dom'
+import { usePathname, useRouter } from 'next/navigation'
 
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -77,6 +78,7 @@ import {
   StarIcon,
   LogoutIcon,
   HelpIcon,
+  TranslateIcon,
 } from '@/components/focus-lab/icons'
 import {
   GreetingInfo,
@@ -180,6 +182,9 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
   const { user } = useAuth()
   const { t, language: lang } = useTranslation()
+  const pathname = usePathname()
+  const router = useRouter()
+
   const { settings, updateSettings, isLoaded: isSettingsLoaded } = useFocusSettingsContext()
   const displayName = user
     ? user.user_metadata?.full_name ||
@@ -920,6 +925,16 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
                     label={lang === 'zh' ? '使用引导' : 'Tour'}
                     onClick={startTour}
                   />
+                  <FocusSidebarAction
+                    id="sidebar-language"
+                    icon={<TranslateIcon className="h-6 w-6" />}
+                    label={lang === 'zh' ? 'English' : '切换中文'}
+                    onClick={() => {
+                      const newLang = lang === 'en' ? 'zh' : 'en'
+                      const newPath = pathname.replace(`/${lang}`, `/${newLang}`)
+                      router.push(newPath)
+                    }}
+                  />
                   {lang === 'zh' && (
                     <FocusSidebarAction
                       icon={<span className="icon-[solar--chat-round-dots-bold-duotone] h-6 w-6" />}
@@ -1019,12 +1034,26 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
                   )}
                 >
                   <span className="text-lg font-bold dark:text-white">Focus Lab</span>
-                  <button
-                    onClick={onExitAction}
-                    className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600"
-                  >
-                    Exit
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const newLang = lang === 'en' ? 'zh' : 'en'
+                        // Replace the first occurrence of the current lang in the path
+                        // This assumes the path starts with /en or /zh
+                        const newPath = pathname.replace(`/${lang}`, `/${newLang}`)
+                        router.push(newPath)
+                      }}
+                      className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      {lang === 'en' ? '中文' : 'En'}
+                    </button>
+                    <button
+                      onClick={onExitAction}
+                      className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      {lang === 'zh' ? '退出' : 'Exit'}
+                    </button>
+                  </div>
                 </div>
               )}
 

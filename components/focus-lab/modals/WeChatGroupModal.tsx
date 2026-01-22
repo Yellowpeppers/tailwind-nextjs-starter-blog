@@ -36,7 +36,7 @@ export const WeChatGroupModal = ({ isOpen, onClose }: { isOpen: boolean; onClose
                 <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/static/images/focuslab/qr/latest.jpg"
+                    src="/static/images/focuslab/qr/latest.jpg?v=2"
                     alt="WeChat Group QR"
                     className="h-64 w-64 object-cover"
                   />
