@@ -305,14 +305,26 @@ export const BuBuChatModal = ({
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Modal */}
+            {/* Modal - Responsive Animation */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, x: '-50%', y: 'calc(-50% + 20px)' }}
-              animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
-              exit={{ opacity: 0, scale: 0.95, x: '-50%', y: 'calc(-50% + 20px)' }}
+              initial={
+                typeof window !== 'undefined' && window.innerWidth < 768
+                  ? { opacity: 0, y: '100%', x: 0 } // Mobile: Slide up from bottom
+                  : { opacity: 0, scale: 0.95, x: '-50%', y: '-50%' } // Desktop: Center scale
+              }
+              animate={
+                typeof window !== 'undefined' && window.innerWidth < 768
+                  ? { opacity: 1, scale: 1, y: 0, x: 0 } // Mobile: Reset to natural position
+                  : { opacity: 1, scale: 1, x: '-50%', y: '-50%' } // Desktop: Center
+              }
+              exit={
+                typeof window !== 'undefined' && window.innerWidth < 768
+                  ? { opacity: 0, y: '100%', x: 0 }
+                  : { opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }
+              }
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              drag
-              dragListener={false}
+              drag={typeof window !== 'undefined' && window.innerWidth >= 768} // Only drag on desktop
+              dragListener={typeof window !== 'undefined' && window.innerWidth >= 768}
               dragControls={dragControls}
               dragMomentum={false}
               dragElastic={0}
