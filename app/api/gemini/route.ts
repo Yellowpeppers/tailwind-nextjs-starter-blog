@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextResponse } from 'next/server'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
+import { createClient } from '@/lib/supabase-server'
+import { syncMembershipForUser } from '@/lib/server-membership'
 
 // Configure proxy if available
 const proxyUrl = process.env.HTTP_PROXY
@@ -25,6 +27,11 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 function checkRateLimit(clientId: string, isPro: boolean): { allowed: boolean; remaining: number } {
   const now = Date.now()
   const limit = isPro ? DAILY_LIMIT_PRO : DAILY_LIMIT_FREE
+
+  // Pro users with unlimited (-1) always allowed
+  if (limit === -1) {
+    return { allowed: true, remaining: -1 }
+  }
 
   const record = rateLimitMap.get(clientId)
 
@@ -53,14 +60,20 @@ function incrementRateLimit(clientId: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { task, userId, language = 'zh', isPro = false } = body
+    const { task, language = 'zh' } = body
 
     if (!task) {
       return NextResponse.json({ error: 'Task is required' }, { status: 400 })
     }
 
-    // Check if user is logged in - Guest users cannot use AI Task Breaker
-    if (!userId) {
+    // 服务端基于 Cookie Session 判定登录态（不信任客户端传参）
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    // Guest users cannot use AI Task Breaker
+    if (!user) {
       return NextResponse.json(
         {
           error:
@@ -72,15 +85,18 @@ export async function POST(request: Request) {
       )
     }
 
+    const synced = await syncMembershipForUser({ userId: user.id, email: user.email })
+    const isPro = synced.isPro
+
     // Rate limiting
-    const rateLimit = checkRateLimit(userId, isPro)
+    const rateLimit = checkRateLimit(user.id, isPro)
     if (!rateLimit.allowed) {
       return NextResponse.json(
         {
           error:
             language === 'zh'
-              ? `今日使用次数已达上限 (Pro: ${DAILY_LIMIT_PRO}次/天)`
-              : `Daily limit reached (Pro: ${DAILY_LIMIT_PRO}/day)`,
+              ? `今日使用次数已达上限 (Free: ${DAILY_LIMIT_FREE}次/天)`
+              : `Daily limit reached (Free: ${DAILY_LIMIT_FREE}/day)`,
         },
         { status: 429 }
       )
@@ -88,7 +104,7 @@ export async function POST(request: Request) {
 
     // Increment ONLY after successful generation? Or before?
     // Usually before or here to prevent abuse.
-    incrementRateLimit(userId)
+    incrementRateLimit(user.id)
 
     const apiKey = process.env.GOOGLE_API_KEY
     if (!apiKey) {

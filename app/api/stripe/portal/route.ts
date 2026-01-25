@@ -23,10 +23,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No Stripe customer found' }, { status: 404 })
     }
 
+    // 回跳优先使用 referer，避免 locale 路径丢失导致 404
+    // 注意：不信任 referer 的 origin，避免 open redirect；仅在同源时使用其 pathname。
+    const referer = req.headers.get('referer')
+    const requestUrl = new URL(req.url)
+    const baseOrigin =
+      req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin
+    let returnUrl = new URL('/en/focuslab/app', baseOrigin)
+    if (referer) {
+      try {
+        const r = new URL(referer)
+        if (r.origin === baseOrigin) {
+          returnUrl = new URL(r.pathname, baseOrigin)
+        }
+      } catch {
+        // ignore invalid referer
+      }
+    }
+
+    // Portal 返回后触发一次自愈同步（避免 webhook 延迟导致前端仍显示 Free）
+    returnUrl.searchParams.set('syncMembership', 'true')
+
     // Create Stripe Customer Portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/focuslab`,
+      return_url: returnUrl.toString(),
     })
 
     return NextResponse.json({ url: session.url })

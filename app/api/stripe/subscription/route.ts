@@ -24,15 +24,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ interval: null })
     }
 
-    // Get Active Stripe subscriptions
+    // Get Stripe subscriptions (active/trialing)
     const subscriptions = await stripe.subscriptions.list({
       customer: profile.stripe_customer_id,
-      status: 'active',
-      limit: 1,
+      status: 'all',
+      limit: 10,
       expand: ['data.items.data.price'],
     })
 
-    const sub = subscriptions.data[0]
+    const sub = subscriptions.data.find((s) => s.status === 'active' || s.status === 'trialing')
     if (!sub) {
       return NextResponse.json({ interval: null })
     }
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       interval,
-      current_period_end: subAny.current_period_end,
+      current_period_end: subAny.items.data[0]?.current_period_end ?? null,
       cancel_at_period_end: subAny.cancel_at_period_end, // if user cancelled but still active
       status: subAny.status,
     })

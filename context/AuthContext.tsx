@@ -18,6 +18,7 @@ type AuthContextType = {
   }) => Promise<{ error: Error | null }>
   refreshUser: () => Promise<void>
   subscriptionStatus: string | null
+  subscriptionEndDate: string | null
   isPro: boolean
 }
 
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null)
   const supabase = createClient()
 
   // Derived state for ease of use
@@ -43,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null)
         setLoading(false)
         setSubscriptionStatus(null)
+        setSubscriptionEndDate(null)
         // Clear any lingering local storage if needed, though supabase client handles it
         return
       }
@@ -63,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check if profile exists
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, subscription_status')
+        .select('id, email, subscription_status, subscription_end_date')
         .eq('id', user.id)
         .single()
 
@@ -75,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from('profiles')
           .upsert(
             { id: user.id, email: user.email, subscription_status: 'free' },
-            { onConflict: 'id' }
+            { onConflict: 'id', ignoreDuplicates: true }
           )
 
         if (insertError) {
@@ -89,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           console.log('Profile successfully restored.')
           setSubscriptionStatus('free')
+          setSubscriptionEndDate(null)
         }
       } else {
         // Profile exists, sync email if missing
@@ -97,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setSubscriptionStatus(data.subscription_status || 'free')
+        setSubscriptionEndDate(data.subscription_end_date || null)
       }
     }
 
@@ -104,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ensureProfile()
     } else {
       setSubscriptionStatus(null)
+      setSubscriptionEndDate(null)
     }
   }, [user, supabase])
 
@@ -121,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(null)
           setUser(null)
           setSubscriptionStatus(null)
+          setSubscriptionEndDate(null)
           return
         }
       }
@@ -128,15 +135,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (user) {
         setUser(user)
 
-        // Also refresh profile data (subscription_status)
+        // Also refresh profile data (subscription_status / subscription_end_date)
         const { data: profile } = await supabase
           .from('profiles')
-          .select('subscription_status')
+          .select('subscription_status, subscription_end_date')
           .eq('id', user.id)
           .single()
 
         if (profile) {
           setSubscriptionStatus(profile.subscription_status || 'free')
+          setSubscriptionEndDate(profile.subscription_end_date || null)
         }
       }
 
@@ -150,10 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
+    const locale = window.location.pathname.split('/')[1] || 'en'
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/${locale}/auth/callback`,
       },
     })
   }
@@ -211,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateProfile,
         refreshUser,
         subscriptionStatus,
+        subscriptionEndDate,
         isPro,
       }}
     >

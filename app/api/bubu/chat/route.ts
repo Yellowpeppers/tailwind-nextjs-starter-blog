@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI, SchemaType, type GenerateContentResult } from '@google/generative-ai'
 import { NextResponse } from 'next/server'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
+import { createClient } from '@/lib/supabase-server'
+import { syncMembershipForUser } from '@/lib/server-membership'
 
 // Configure proxy if available
 const proxyUrl = process.env.HTTP_PROXY
@@ -754,8 +756,6 @@ export async function POST(request: Request) {
       history = [],
       personality = 'gentle',
       language = 'zh',
-      userId,
-      isPro = false,
       context, // Extract context
       stats, // Extract stats
     } = body
@@ -765,8 +765,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Message is required' }, { status: 400 })
     }
 
-    // Check if user is logged in - Guest users cannot use BuBu AI
-    if (!userId) {
+    // 服务端基于 Cookie Session 判定登录态（不信任客户端传参）
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    // Guest users cannot use BuBu AI
+    if (!user) {
       return NextResponse.json(
         {
           success: false,
@@ -779,9 +785,28 @@ export async function POST(request: Request) {
       )
     }
 
+    const synced = await syncMembershipForUser({ userId: user.id, email: user.email })
+    const isPro = synced.isPro
+
+    // Free 用户不开放 BuBu（避免 body.isPro 被伪造绕过）
+    if (!isPro) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            language === 'zh'
+              ? 'BuBu AI 仅对会员开放（你可以先开通 7 天试用）'
+              : 'BuBu AI is available to Pro members only (start a 7-day trial).',
+        },
+        { status: 403 }
+      )
+    }
+
     // Rate limiting
-    const clientId = userId || request.headers.get('x-forwarded-for') || 'anonymous'
+    const clientId = user.id
     const rateLimit = checkRateLimit(clientId, isPro)
+    const remainingAfterThisRequest =
+      rateLimit.remaining === -1 ? -1 : Math.max(rateLimit.remaining - 1, 0)
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -911,7 +936,7 @@ export async function POST(request: Request) {
           success: true,
           data: {
             reply: text,
-            remaining: rateLimit.remaining - 1,
+            remaining: remainingAfterThisRequest,
           },
         })
       }
@@ -954,7 +979,7 @@ export async function POST(request: Request) {
         success: true,
         data: {
           reply: replyText,
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -969,7 +994,7 @@ export async function POST(request: Request) {
             type: 'add_tasks',
             payload: args.tasks,
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -984,7 +1009,7 @@ export async function POST(request: Request) {
             type: 'add_idea',
             payload: args.idea,
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -999,7 +1024,7 @@ export async function POST(request: Request) {
             type: 'delete_idea',
             payload: args.ideas,
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1017,7 +1042,7 @@ export async function POST(request: Request) {
               newContent: args.newContent,
             },
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1035,7 +1060,7 @@ export async function POST(request: Request) {
               newContent: args.newContent,
             },
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1054,7 +1079,7 @@ export async function POST(request: Request) {
               taskContent: args.taskContent,
             },
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1073,7 +1098,7 @@ export async function POST(request: Request) {
               volume: args.volume,
             },
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1088,7 +1113,7 @@ export async function POST(request: Request) {
             type: 'complete_task',
             payload: args.tasks,
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1103,7 +1128,7 @@ export async function POST(request: Request) {
             type: 'delete_task',
             payload: args.tasks,
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1118,7 +1143,7 @@ export async function POST(request: Request) {
             type: 'uncomplete_task',
             payload: args.tasks,
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1134,7 +1159,7 @@ export async function POST(request: Request) {
             type: 'add_tasks',
             payload: args.steps, // 拆解后的步骤列表
           },
-          remaining: rateLimit.remaining - 1,
+          remaining: remainingAfterThisRequest,
         },
       })
     }
@@ -1145,7 +1170,7 @@ export async function POST(request: Request) {
       success: true,
       data: {
         reply: args.reply || response.text(),
-        remaining: rateLimit.remaining - 1,
+        remaining: remainingAfterThisRequest,
       },
     })
   } catch (error) {

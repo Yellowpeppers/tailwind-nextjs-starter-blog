@@ -3,6 +3,18 @@ import { NextResponse } from 'next/server'
 
 export async function DELETE(request: Request) {
   try {
+    const adminKey = process.env.ADMIN_API_KEY
+    if (!adminKey) {
+      console.error('[ADMIN_DELETE_USER] Missing ADMIN_API_KEY')
+      return NextResponse.json({ error: 'Admin endpoint not configured' }, { status: 500 })
+    }
+
+    const authHeader = request.headers.get('authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
+    if (!token || token !== adminKey) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { userId } = await request.json()
 
     if (!userId) {

@@ -95,6 +95,7 @@ export const FocusSidebarBrand = () => {
 export const FocusSidebarProfile = ({
   userName,
   planLabel,
+  membershipNote,
   avatarUrl,
   avatarColor,
   isPro,
@@ -102,6 +103,7 @@ export const FocusSidebarProfile = ({
 }: {
   userName: string
   planLabel: string
+  membershipNote?: string | null
   avatarUrl?: string
   avatarColor?: string
   isPro?: boolean
@@ -158,6 +160,9 @@ export const FocusSidebarProfile = ({
             {userName}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">{planLabel}</span>
+          {membershipNote ? (
+            <span className="text-[11px] text-gray-400 dark:text-gray-500">{membershipNote}</span>
+          ) : null}
         </motion.div>
       </button>
     </div>

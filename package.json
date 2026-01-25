@@ -9,6 +9,7 @@
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx --fix app components context lib layouts scripts",
+    "test:unit": "node --test --import tsx tests/unit/*.test.ts",
     "mcp:supabase": "npx -y @supabase/mcp-server-postgrest",
     "prepare": "husky",
     "test:e2e": "playwright test",
@@ -106,6 +107,7 @@
     "prettier": "^3.0.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "supabase-mcp": "^1.5.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.1.3"
   },
   "lint-staged": {

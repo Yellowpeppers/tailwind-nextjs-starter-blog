@@ -47,3 +47,7 @@ yarn-error.log*
 # Contentlayer
 .contentlayer
 .env*.local
+
+# MCP server config (may contain secrets)
+mcp-server-config.json
+mcp-server-config.local.json

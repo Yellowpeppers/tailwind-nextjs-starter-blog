@@ -5,6 +5,7 @@ import { Menu, Transition } from '@headlessui/react'
 import { UserCircleIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/context/AuthContext'
 import { useTranslation } from '@/context/LanguageContext'
+import { localeToHtmlLang } from '@/lib/i18n'
 import Link from './Link'
 import Image from 'next/image'
 
@@ -21,8 +22,8 @@ export default function UserMenu({
   onOpenProfile,
   onOpenPlan,
 }: UserMenuProps) {
-  const { t } = useTranslation()
-  const { user, signOut } = useAuth()
+  const { t, language } = useTranslation()
+  const { user, signOut, isPro, subscriptionEndDate } = useAuth()
 
   if (!user) {
     return (
@@ -81,6 +82,18 @@ export default function UserMenu({
 
   const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
   const initial = displayName[0].toUpperCase()
+  const formattedSubscriptionEndDate = subscriptionEndDate
+    ? (() => {
+        const d = new Date(subscriptionEndDate)
+        if (Number.isNaN(d.getTime())) return null
+        return new Intl.DateTimeFormat(localeToHtmlLang(language), {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          timeZone: 'UTC',
+        }).format(d)
+      })()
+    : null
 
   return (
     <Menu as="div" className="relative ml-3">
@@ -92,9 +105,11 @@ export default function UserMenu({
           <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md transition-transform group-hover:scale-105">
             {initial}
             {/* Pro Badge */}
-            <div className="absolute -right-1 -bottom-1 flex h-4 min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1 text-[8px] font-bold text-amber-900 ring-2 ring-white dark:ring-gray-900">
-              {t.userMenu.proBadge}
-            </div>
+            {isPro && (
+              <div className="absolute -right-1 -bottom-1 flex h-4 min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1 text-[8px] font-bold text-amber-900 ring-2 ring-white dark:ring-gray-900">
+                {t.userMenu.proBadge}
+              </div>
+            )}
           </div>
         </Menu.Button>
       </div>
@@ -114,6 +129,12 @@ export default function UserMenu({
             <p className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">
               {user.email}
             </p>
+            {isPro && formattedSubscriptionEndDate ? (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t.userMenu.membershipExpires}
+                {formattedSubscriptionEndDate}
+              </p>
+            ) : null}
           </div>
           <div className="py-1">
             <Menu.Item>

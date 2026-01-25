@@ -152,6 +152,7 @@ export const dictionary = {
         planComparison: 'Compare Plans',
         proMember: 'Pro Member',
         freePlan: 'Free Plan',
+        expiresAt: 'Expires: ',
       },
       loading: {
         title: 'Loading Focus Lab',
@@ -930,6 +931,7 @@ export const dictionary = {
       upgrade: 'Upgrade / Plan',
       signOut: 'Sign Out',
       proBadge: 'PRO',
+      membershipExpires: 'Expires: ',
     },
     comparePlans: {
       title: 'Compare Plans',
@@ -1273,6 +1275,7 @@ export const dictionary = {
         planComparison: '版本对比',
         proMember: '专业会员',
         freePlan: '免费版',
+        expiresAt: '到期：',
       },
       loading: {
         title: '正在加载 Focus Lab',
@@ -2058,6 +2061,7 @@ export const dictionary = {
       upgrade: '升级 / 计划',
       signOut: '退出登录',
       proBadge: '专业版',
+      membershipExpires: '到期：',
     },
     comparePlans: {
       title: '会员计划',

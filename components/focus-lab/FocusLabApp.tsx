@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase'
+import { localeToHtmlLang } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { createPortal } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
@@ -180,7 +181,7 @@ const FocusLabMobileGrid = ({
 export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => {
   const { theme, setTheme } = useTheme()
   const { themeColor, setThemeColor, uiStyle, setUiStyle } = useThemeColor()
-  const { user } = useAuth()
+  const { user, isPro, refreshUser, subscriptionEndDate } = useAuth()
   const { t, language: lang } = useTranslation()
   const pathname = usePathname()
   const router = useRouter()
@@ -191,6 +192,21 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
       user.email?.split('@')[0] ||
       (lang === 'zh' ? '探索者' : 'Explorer')
     : undefined
+  const formattedSubscriptionEndDate = useMemo(() => {
+    if (!subscriptionEndDate) return null
+    const d = new Date(subscriptionEndDate)
+    if (Number.isNaN(d.getTime())) return null
+    return new Intl.DateTimeFormat(localeToHtmlLang(lang), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'UTC',
+    }).format(d)
+  }, [subscriptionEndDate, lang])
+  const membershipNote =
+    isPro && formattedSubscriptionEndDate
+      ? `${t.focusLab.sidebar.expiresAt}${formattedSubscriptionEndDate}`
+      : null
 
   // Enforce Light Mode for Warm/Green/Cartoon Style
   useEffect(() => {
@@ -230,25 +246,31 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authTrigger, setAuthTrigger] = useState<'generic' | 'stats'>('generic')
   // const { user } = useAuth() // Moved up
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
-
   useEffect(() => {
-    if (user) {
-      const fetchProfile = async () => {
-        const { data } = await createClient()
-          .from('profiles')
-          .select('subscription_status')
-          .eq('id', user.id)
-          .single()
-        if (data) {
-          setSubscriptionStatus(data.subscription_status)
-        }
-      }
-      fetchProfile()
-    }
-  }, [user])
+    // 支付回跳后，Webhook 可能有延迟；这里做一次“自愈同步”保证会员态及时更新
+    if (!user) return
+    const params = new URLSearchParams(window.location.search)
+    const shouldSync = params.get('success') === 'true' || params.get('syncMembership') === 'true'
+    if (!shouldSync) return
 
-  const isPro = subscriptionStatus === 'premium'
+    const run = async () => {
+      try {
+        await fetch('/api/stripe/sync', { method: 'POST' })
+      } catch (e) {
+        console.warn('[FocusLab] Stripe sync failed:', e)
+      } finally {
+        await refreshUser()
+        params.delete('success')
+        params.delete('canceled')
+        params.delete('syncMembership')
+        const next = params.toString()
+        const nextUrl = `${window.location.pathname}${next ? `?${next}` : ''}`
+        window.history.replaceState({}, '', nextUrl)
+      }
+    }
+
+    run()
+  }, [user, refreshUser])
   const upgradeLabel = isPro
     ? lang === 'zh'
       ? '会员权益'
@@ -986,6 +1008,7 @@ export const FocusLabApp = ({ onExitAction }: { onExitAction?: () => void }) => 
                       : 'Explorer'
                   }
                   planLabel={isPro ? t.focusLab.sidebar.proMember : t.focusLab.sidebar.freePlan}
+                  membershipNote={membershipNote}
                   avatarUrl={user?.user_metadata?.avatar_url}
                   avatarColor={user?.user_metadata?.avatar_color}
                   isPro={isPro}
